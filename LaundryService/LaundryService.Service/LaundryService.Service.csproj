@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LaundryService.Domain\LaundryService.Domain.csproj" />
     <ProjectReference Include="..\LaundryService.Dto\LaundryService.Dto.csproj" />
   </ItemGroup>

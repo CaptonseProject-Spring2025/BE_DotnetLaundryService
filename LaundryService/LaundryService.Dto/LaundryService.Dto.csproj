@@ -10,8 +10,4 @@
     <Folder Include="Responses\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\LaundryService.Domain\LaundryService.Domain.csproj" />
-  </ItemGroup>
-
 </Project>

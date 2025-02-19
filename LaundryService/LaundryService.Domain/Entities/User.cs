@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LaundryService.Domain.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace LaundryService.Domain.Entities;
@@ -9,7 +10,7 @@ public partial class User
 
     public string? Fullname { get; set; }
 
-    public string? Username { get; set; }
+    public string Username { get; set; } = null!;
 
     public string? Email { get; set; }
 

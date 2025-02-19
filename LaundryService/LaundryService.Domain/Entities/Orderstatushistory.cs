@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LaundryService.Domain.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace LaundryService.Domain.Entities;
@@ -9,7 +10,7 @@ public partial class Orderstatushistory
 
     public Guid Orderid { get; set; }
 
-    public string? Status { get; set; }
+    public OrderStatusEnum? Status { get; set; }
 
     public string? Statusdescription { get; set; }
 

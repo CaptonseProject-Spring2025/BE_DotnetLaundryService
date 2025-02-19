@@ -1,4 +1,7 @@
+using LaundryService.Domain.Interfaces;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Infrastructure;
+using LaundryService.Service;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -8,12 +11,18 @@ builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
 
 //Add DBConnection
-builder.Services.AddDbContextPool<LaundryServiceDbContext>(options =>
+builder.Services.AddDbContext<LaundryServiceDbContext>(options =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DbConnection"));
 });
 
 // Add services to the container.
+builder.Services.AddScoped<Func<LaundryServiceDbContext>>(provider => () => provider.GetRequiredService<LaundryServiceDbContext>());
+builder.Services.AddScoped<DbFactory>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

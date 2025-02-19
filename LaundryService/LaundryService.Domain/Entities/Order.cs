@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LaundryService.Domain.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace LaundryService.Domain.Entities;
@@ -47,7 +48,7 @@ public partial class Order
 
     public decimal? Totalprice { get; set; }
 
-    public string? Currentstatus { get; set; }
+    public OrderStatusEnum? Currentstatus { get; set; }
 
     public DateTime? Createdat { get; set; }
 
