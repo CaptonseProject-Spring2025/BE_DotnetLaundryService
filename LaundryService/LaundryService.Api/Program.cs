@@ -1,4 +1,17 @@
+using LaundryService.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) =>
+    configuration.ReadFrom.Configuration(context.Configuration));
+
+//Add DBConnection
+builder.Services.AddDbContextPool<LaundryServiceDbContext>(options =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DbConnection"));
+});
 
 // Add services to the container.
 

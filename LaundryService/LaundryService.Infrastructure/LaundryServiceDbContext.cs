@@ -7,9 +7,9 @@ namespace LaundryService.Infrastructure;
 
 public partial class LaundryServiceDbContext : DbContext
 {
-    public LaundryServiceDbContext()
-    {
-    }
+    //public LaundryServiceDbContext()
+    //{
+    //}
 
     public LaundryServiceDbContext(DbContextOptions<LaundryServiceDbContext> options)
         : base(options)
@@ -65,10 +65,6 @@ public partial class LaundryServiceDbContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Usermembershipstatus> Usermembershipstatuses { get; set; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Server=laundry-service-do-user-18659129-0.g.db.ondigitalocean.com;Port=25060;Database=laundryservicedb;User Id=doadmin;Password=AVNS_G1h3M3baslfGtdCjUAZ;TrustServerCertificate=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

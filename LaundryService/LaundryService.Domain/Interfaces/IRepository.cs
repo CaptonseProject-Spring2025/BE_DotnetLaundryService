@@ -41,7 +41,7 @@ namespace LaundryService.Domain.Interfaces
         /// <summary>
         /// Remove one item from an entity by asynchronous method
         /// </summary>
-        Task DeleteAsync(int id, bool saveChanges = true);
+        Task DeleteAsync(Guid id, bool saveChanges = true);
 
         /// <summary>
         /// Remove one item from an entity by asynchronous method

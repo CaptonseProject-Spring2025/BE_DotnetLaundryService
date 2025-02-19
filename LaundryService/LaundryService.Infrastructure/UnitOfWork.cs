@@ -7,20 +7,23 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace LaundryService.Infrastructure
 {
     public class UnitOfWork : IUnitOfWork
     {
-        public DbContext DbContext { get; private set; }
-        private Dictionary<string, object> Repositories { get; }
-        private IDbContextTransaction _transaction;
+        public DbContext DbContext { get; private set; } //DbContext được sử dụng cho UnitOfWork này.
+        private readonly ConcurrentDictionary<string, object> _repositories;
+        private IDbContextTransaction _transaction; //Giao dịch hiện tại của DbContext.
         private IsolationLevel? _isolationLevel;
 
         public UnitOfWork(DbFactory dbFactory)
         {
-            //DbContext = dbFactory.DbContext;
-            Repositories = new Dictionary<string, dynamic>();
+            // Khởi tạo DbContext từ DbFactory
+            DbContext = dbFactory.DbContext;
+            _repositories = new ConcurrentDictionary<string, object>();
         }
 
         //public IPersonRepository PersonRepository => _personRepository ??= new PersonRepository(DbContext);
@@ -54,50 +57,41 @@ namespace LaundryService.Infrastructure
         	*/
             await DbContext.SaveChangesAsync();
 
-            if (_transaction == null) return;
-            await _transaction.CommitAsync();
-
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
 
         public async Task RollbackTransaction()
         {
-            if (_transaction == null) return;
-
-            await _transaction.RollbackAsync();
-
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
 
         public void Dispose()
         {
-            if (DbContext == null)
-                return;
-
-            // Dispose DbContext mà không cần kiểm tra trạng thái kết nối
-            DbContext.Dispose();
+            DbContext?.Dispose();
             DbContext = null;
         }
 
+        /// <summary>
+        /// Trả về một repository cho kiểu thực thể được chỉ định. 
+        /// Nếu repository đã tồn tại trong scope, repository đó sẽ được trả về.
+        /// </summary>
+        /// <typeparam name="TEntity">Kiểu thực thể.</typeparam>
+        /// <returns>Repository cho kiểu thực thể tương ứng.</returns>
         public IRepository<TEntity> Repository<TEntity>() where TEntity : class
         {
-            var type = typeof(TEntity);
-            var typeName = type.Name;
-
-            lock (Repositories)
-            {
-                if (Repositories.ContainsKey(typeName))
-                {
-                    return (IRepository<TEntity>)Repositories[typeName];
-                }
-
-                var repository = new Repository<TEntity>(DbContext);
-
-                Repositories.Add(typeName, repository);
-                return repository;
-            }
+            var typeName = typeof(TEntity).Name;
+            // Sử dụng ConcurrentDictionary để tránh lock thủ công
+            return (IRepository<TEntity>)_repositories.GetOrAdd(typeName, _ => new Repository<TEntity>(DbContext));
         }
     }
 }

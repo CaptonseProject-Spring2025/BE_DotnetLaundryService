@@ -68,9 +68,9 @@ namespace LaundryService.Infrastructure
         }
 
         /// <summary>
-        /// Xóa một thực thể bằng khóa chính, có thể lưu thay đổi ngay
+        /// Xóa một thực thể bằng khóa chính (kiểu Guid) với tùy chọn lưu thay đổi ngay
         /// </summary>
-        public async Task DeleteAsync(int id, bool saveChanges = true)
+        public async Task DeleteAsync(Guid id, bool saveChanges = true)
         {
             var entity = await Entities.FindAsync(id);
             if (entity != null)

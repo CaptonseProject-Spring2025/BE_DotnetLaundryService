@@ -10,14 +10,14 @@ namespace LaundryService.Infrastructure
     public class DbFactory : IDisposable
     {
         private bool _disposed;
-        //private readonly Func<Context> _instanceFunc;
+        private Func<LaundryServiceDbContext> _instanceFunc;
         private DbContext _dbContext;
-        //public DbContext DbContext => _dbContext ?? (_dbContext = _instanceFunc.Invoke());
+        public DbContext DbContext => _dbContext ?? (_dbContext = _instanceFunc.Invoke());
 
-        //public DbFactory(Func<Context> dbContextFactory)
-        //{
-        //    _instanceFunc = dbContextFactory;
-        //}
+        public DbFactory(Func<LaundryServiceDbContext> dbContextFactory)
+        {
+            _instanceFunc = dbContextFactory;
+        }
 
         public void Dispose()
         {
