@@ -106,7 +106,7 @@ namespace LaundryService.Service
             };
         }
 
-        public async Task<RefreshTokenResponse> RefreshTokenAsync(Guid userId, string refreshToken)
+        public async Task<String> RefreshTokenAsync(Guid userId, string refreshToken)
         {
             // Tìm user theo UserId
             var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Userid == userId);
@@ -134,15 +134,25 @@ namespace LaundryService.Service
             }
 
             // Sinh JWT mới
-            string newToken = _jwtService.GenerateJwtToken(user);
-
-            return new RefreshTokenResponse
-            {
-                UserId = user.Userid,
-                Token = newToken
-            };
+            return _jwtService.GenerateJwtToken(user);
         }
 
+        public async Task LogoutAsync(Guid userId)
+        {
+            //Tìm user theo UserId
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Userid == userId);
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User not found.");
+            }
+
+            //Xóa refresh token trong database
+            user.Refreshtoken = null;
+            user.Refreshtokenexpirytime = null;
+
+            await _unitOfWork.Repository<User>().UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
         {

@@ -1,7 +1,9 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LaundryService.Api.Controllers
 {
@@ -66,6 +68,7 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize]
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
@@ -76,8 +79,15 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                var response = await _authService.RefreshTokenAsync(request.UserId, request.RefreshToken);
-                return Ok(response);
+                //Lấy UserId từ Token
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { Message = "Invalid token" });
+                }
+
+                var newToken = await _authService.RefreshTokenAsync(Guid.Parse(userId), request.RefreshToken);
+                return Ok(new { Token = newToken });
             }
             catch (KeyNotFoundException ex)
             {
@@ -93,7 +103,37 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                //Lấy UserId từ Token
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { Message = "Invalid token" });
+                }
 
+                await _authService.LogoutAsync(Guid.Parse(userId));
+                return Ok(new { Message = "Logout successful" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred" });
+            }
+        }
+
+        [Authorize(Roles = "Customer")]
         [HttpGet("user-by-phone")]
         public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)
         {
