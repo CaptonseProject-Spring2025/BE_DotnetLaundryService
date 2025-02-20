@@ -78,7 +78,7 @@ namespace LaundryService.Service
 
         private async Task<LoginResponse> GenerateLoginResponse(User user)
         {
-            // Sinh JWT token
+            // Taoj JWT token
             string token = _jwtService.GenerateJwtToken(user);
 
             // Tạo refresh token (bản gốc và bản hash)
@@ -105,6 +105,44 @@ namespace LaundryService.Service
                 RefreshTokenExpiry = user.Refreshtokenexpirytime.Value
             };
         }
+
+        public async Task<RefreshTokenResponse> RefreshTokenAsync(Guid userId, string refreshToken)
+        {
+            // Tìm user theo UserId
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Userid == userId);
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User not found.");
+            }
+
+            // Kiểm tra trạng thái Active
+            if (user.Status != UserStatusEnum.Active.ToString())
+            {
+                throw new ApplicationException("User account is not active.");
+            }
+
+            // Kiểm tra refresh token có hợp lệ không
+            if (string.IsNullOrEmpty(user.Refreshtoken) || !BCrypt.Net.BCrypt.Verify(refreshToken, user.Refreshtoken))
+            {
+                throw new ApplicationException("Invalid refresh token.");
+            }
+
+            // Kiểm tra refresh token có hết hạn không
+            if (user.Refreshtokenexpirytime < DateTime.UtcNow)
+            {
+                throw new ApplicationException("Refresh token has expired.");
+            }
+
+            // Sinh JWT mới
+            string newToken = _jwtService.GenerateJwtToken(user);
+
+            return new RefreshTokenResponse
+            {
+                UserId = user.Userid,
+                Token = newToken
+            };
+        }
+
 
         public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
         {

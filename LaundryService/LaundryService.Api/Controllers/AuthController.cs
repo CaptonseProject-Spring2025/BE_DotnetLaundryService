@@ -66,6 +66,33 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var response = await _authService.RefreshTokenAsync(request.UserId, request.RefreshToken);
+                return Ok(response);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred" });
+            }
+        }
+
 
         [HttpGet("user-by-phone")]
         public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)

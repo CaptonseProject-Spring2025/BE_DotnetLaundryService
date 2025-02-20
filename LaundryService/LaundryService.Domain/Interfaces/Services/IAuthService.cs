@@ -15,6 +15,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<LoginResponse> LoginAsync(LoginRequest request);
 
+        Task<RefreshTokenResponse> RefreshTokenAsync(Guid userId, string refreshToken);
+
         Task<User> GetUserByPhoneNumberAsync(string phoneNumber);
     }
 }
