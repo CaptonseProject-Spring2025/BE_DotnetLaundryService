@@ -22,13 +22,13 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Discountcode> Discountcodes { get; set; }
 
+    public virtual DbSet<Discountcodeuser> Discountcodeusers { get; set; }
+
     public virtual DbSet<Driverlocationhistory> Driverlocationhistories { get; set; }
 
     public virtual DbSet<Extra> Extras { get; set; }
 
     public virtual DbSet<Extracategory> Extracategories { get; set; }
-
-    public virtual DbSet<Membershiptier> Membershiptiers { get; set; }
 
     public virtual DbSet<Message> Messages { get; set; }
 
@@ -54,6 +54,10 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Rating> Ratings { get; set; }
 
+    public virtual DbSet<Rewardredemptionoption> Rewardredemptionoptions { get; set; }
+
+    public virtual DbSet<Rewardtransaction> Rewardtransactions { get; set; }
+
     public virtual DbSet<Servicecategory> Servicecategories { get; set; }
 
     public virtual DbSet<Servicedetail> Servicedetails { get; set; }
@@ -63,8 +67,6 @@ public partial class LaundryServiceDbContext : DbContext
     public virtual DbSet<Subservice> Subservices { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
-
-    public virtual DbSet<Usermembershipstatus> Usermembershipstatuses { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,9 +81,7 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Addressid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("addressid");
-            entity.Property(e => e.Addresslabel)
-                .HasDefaultValueSql("'Home'::text")
-                .HasColumnName("addresslabel");
+            entity.Property(e => e.Addresslabel).HasColumnName("addresslabel");
             entity.Property(e => e.Contactname).HasColumnName("contactname");
             entity.Property(e => e.Contactphone).HasColumnName("contactphone");
             entity.Property(e => e.Datecreated)
@@ -89,14 +89,11 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("datecreated");
             entity.Property(e => e.Datemodified)
-                .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("datemodified");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Detailaddress).HasColumnName("detailaddress");
-            entity.Property(e => e.Isdefault)
-                .HasDefaultValue(false)
-                .HasColumnName("isdefault");
+            entity.Property(e => e.Isdefault).HasColumnName("isdefault");
             entity.Property(e => e.Latitude)
                 .HasPrecision(9, 6)
                 .HasColumnName("latitude");
@@ -177,6 +174,33 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("value");
         });
 
+        modelBuilder.Entity<Discountcodeuser>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("discountcodeusers_pkey");
+
+            entity.ToTable("discountcodeusers");
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("id");
+            entity.Property(e => e.Assignedat)
+                .HasDefaultValueSql("now()")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("assignedat");
+            entity.Property(e => e.Discountcodeid).HasColumnName("discountcodeid");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+
+            entity.HasOne(d => d.Discountcode).WithMany(p => p.Discountcodeusers)
+                .HasForeignKey(d => d.Discountcodeid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("discountcodeusers_discountcodeid_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Discountcodeusers)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("discountcodeusers_userid_fkey");
+        });
+
         modelBuilder.Entity<Driverlocationhistory>(entity =>
         {
             entity.HasKey(e => e.Historyid).HasName("driverlocationhistory_pkey");
@@ -191,9 +215,9 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Driverid).HasColumnName("driverid");
-            entity.Property(e => e.Latitude)
+            entity.Property(e => e.Latitudep)
                 .HasPrecision(9, 6)
-                .HasColumnName("latitude");
+                .HasColumnName("latitudep");
             entity.Property(e => e.Longitude)
                 .HasPrecision(9, 6)
                 .HasColumnName("longitude");
@@ -254,36 +278,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Name).HasColumnName("name");
         });
 
-        modelBuilder.Entity<Membershiptier>(entity =>
-        {
-            entity.HasKey(e => e.Tierid).HasName("membershiptiers_pkey");
-
-            entity.ToTable("membershiptiers");
-
-            entity.Property(e => e.Tierid)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("tierid");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-            entity.Property(e => e.Description).HasColumnName("description");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.Lowerbound)
-                .HasPrecision(10)
-                .HasColumnName("lowerbound");
-            entity.Property(e => e.Tiername).HasColumnName("tiername");
-            entity.Property(e => e.Updatedat)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("updatedat");
-            entity.Property(e => e.Upperbound)
-                .HasPrecision(10)
-                .HasColumnName("upperbound");
-        });
-
         modelBuilder.Entity<Message>(entity =>
         {
             entity.HasKey(e => e.Messageid).HasName("message_pkey");
@@ -309,7 +303,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.Typeis).HasColumnName("typeis");
             entity.Property(e => e.Updatedate)
-                .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updatedate");
             entity.Property(e => e.Userid).HasColumnName("userid");
@@ -617,7 +610,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Paymentstatus).HasColumnName("paymentstatus");
             entity.Property(e => e.Transactionid).HasColumnName("transactionid");
             entity.Property(e => e.Updatedat)
-                .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updatedat");
 
@@ -687,6 +679,56 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ratings_userid_fkey");
+        });
+
+        modelBuilder.Entity<Rewardredemptionoption>(entity =>
+        {
+            entity.HasKey(e => e.Optionid).HasName("rewardredemptionoptions_pkey");
+
+            entity.ToTable("rewardredemptionoptions");
+
+            entity.Property(e => e.Optionid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("optionid");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("now()")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Discountamount)
+                .HasPrecision(10)
+                .HasColumnName("discountamount");
+            entity.Property(e => e.Optiondescription).HasColumnName("optiondescription");
+            entity.Property(e => e.Requiredpoints).HasColumnName("requiredpoints");
+        });
+
+        modelBuilder.Entity<Rewardtransaction>(entity =>
+        {
+            entity.HasKey(e => e.Rewardtransactionid).HasName("rewardtransactions_pkey");
+
+            entity.ToTable("rewardtransactions");
+
+            entity.Property(e => e.Rewardtransactionid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("rewardtransactionid");
+            entity.Property(e => e.Note).HasColumnName("note");
+            entity.Property(e => e.Optionid).HasColumnName("optionid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Points).HasColumnName("points");
+            entity.Property(e => e.Transactiondate)
+                .HasDefaultValueSql("now()")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("transactiondate");
+            entity.Property(e => e.Transactiontype).HasColumnName("transactiontype");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+
+            entity.HasOne(d => d.Option).WithMany(p => p.Rewardtransactions)
+                .HasForeignKey(d => d.Optionid)
+                .HasConstraintName("rewardtransactions_optionid_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Rewardtransactions)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("rewardtransactions_userid_fkey");
         });
 
         modelBuilder.Entity<Servicecategory>(entity =>
@@ -791,8 +833,6 @@ public partial class LaundryServiceDbContext : DbContext
 
             entity.HasIndex(e => e.Phonenumber, "users_phonenumber_key").IsUnique();
 
-            entity.HasIndex(e => e.Username, "users_username_key").IsUnique();
-
             entity.Property(e => e.Userid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("userid");
@@ -802,7 +842,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("datecreated");
             entity.Property(e => e.Datemodified)
-                .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("datemodified");
             entity.Property(e => e.Dob).HasColumnName("dob");
@@ -814,50 +853,15 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Gender).HasColumnName("gender");
             entity.Property(e => e.Password).HasColumnName("password");
             entity.Property(e => e.Phonenumber).HasColumnName("phonenumber");
-            entity.Property(e => e.Phonenumberconfirmed)
-                .HasDefaultValue(false)
-                .HasColumnName("phonenumberconfirmed");
             entity.Property(e => e.Refreshtoken).HasColumnName("refreshtoken");
             entity.Property(e => e.Refreshtokenexpirytime)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("refreshtokenexpirytime");
-            entity.Property(e => e.Role)
-                .HasDefaultValueSql("'CUSTOMER'::text")
-                .HasColumnName("role");
-            entity.Property(e => e.Status)
-                .HasDefaultValueSql("'ACTIVE'::text")
-                .HasColumnName("status");
-            entity.Property(e => e.Username).HasColumnName("username");
-        });
-
-        modelBuilder.Entity<Usermembershipstatus>(entity =>
-        {
-            entity.HasKey(e => e.Usermembershipid).HasName("usermembershipstatus_pkey");
-
-            entity.ToTable("usermembershipstatus");
-
-            entity.Property(e => e.Usermembershipid)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("usermembershipid");
-            entity.Property(e => e.Lastupdated)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("lastupdated");
-            entity.Property(e => e.Tierid).HasColumnName("tierid");
-            entity.Property(e => e.Totalspending)
-                .HasPrecision(10)
-                .HasColumnName("totalspending");
-            entity.Property(e => e.Userid).HasColumnName("userid");
-
-            entity.HasOne(d => d.Tier).WithMany(p => p.Usermembershipstatuses)
-                .HasForeignKey(d => d.Tierid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("usermembershipstatus_tierid_fkey");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Usermembershipstatuses)
-                .HasForeignKey(d => d.Userid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("usermembershipstatus_userid_fkey");
+            entity.Property(e => e.Rewardpoints)
+                .HasDefaultValue(0)
+                .HasColumnName("rewardpoints");
+            entity.Property(e => e.Role).HasColumnName("role");
+            entity.Property(e => e.Status).HasColumnName("status");
         });
 
         OnModelCreatingPartial(modelBuilder);

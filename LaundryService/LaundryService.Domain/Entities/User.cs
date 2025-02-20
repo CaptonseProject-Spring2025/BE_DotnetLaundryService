@@ -1,5 +1,4 @@
-﻿using LaundryService.Domain.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace LaundryService.Domain.Entities;
@@ -9,8 +8,6 @@ public partial class User
     public Guid Userid { get; set; }
 
     public string? Fullname { get; set; }
-
-    public string Username { get; set; } = null!;
 
     public string? Email { get; set; }
 
@@ -30,7 +27,7 @@ public partial class User
 
     public string? Phonenumber { get; set; }
 
-    public bool? Phonenumberconfirmed { get; set; }
+    public int? Rewardpoints { get; set; }
 
     public DateTime? Datecreated { get; set; }
 
@@ -45,6 +42,8 @@ public partial class User
     public virtual ICollection<Conversation> ConversationUseroneNavigations { get; set; } = new List<Conversation>();
 
     public virtual ICollection<Conversation> ConversationUsertwoNavigations { get; set; } = new List<Conversation>();
+
+    public virtual ICollection<Discountcodeuser> Discountcodeusers { get; set; } = new List<Discountcodeuser>();
 
     public virtual ICollection<Driverlocationhistory> Driverlocationhistories { get; set; } = new List<Driverlocationhistory>();
 
@@ -62,5 +61,5 @@ public partial class User
 
     public virtual ICollection<Rating> Ratings { get; set; } = new List<Rating>();
 
-    public virtual ICollection<Usermembershipstatus> Usermembershipstatuses { get; set; } = new List<Usermembershipstatus>();
+    public virtual ICollection<Rewardtransaction> Rewardtransactions { get; set; } = new List<Rewardtransaction>();
 }

@@ -23,7 +23,7 @@ namespace LaundryService.Service
         public async Task<User> RegisterAsync(RegisterRequest request)
         {
             // Kiểm tra email hoặc username đã tồn tại chưa
-            var existingUser = await _unitOfWork.Repository<User>().GetAsync(u => u.Email == request.Email || u.Username == request.Username);
+            var existingUser = await _unitOfWork.Repository<User>().GetAsync(u => u.Email == request.Email);
             if (existingUser != null)
             {
                 throw new Exception("Email hoặc Username đã tồn tại.");
@@ -35,14 +35,12 @@ namespace LaundryService.Service
             var newUser = new User
             {
                 Fullname = request.Fullname,
-                Username = request.Username,
                 Email = request.Email,
                 Password = hashedPassword,
                 Phonenumber = request.Phonenumber,
                 Role = RoleEnum.Customer.ToString(), // Gán mặc định role là Customer
                 Status = UserStatusEnum.Active.ToString(),
-                Emailconfirmed = false,
-                Phonenumberconfirmed = false
+                Emailconfirmed = false
             };
 
             // Thêm vào database

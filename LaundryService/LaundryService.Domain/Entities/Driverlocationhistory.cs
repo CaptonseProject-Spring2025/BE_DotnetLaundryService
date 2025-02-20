@@ -11,7 +11,7 @@ public partial class Driverlocationhistory
 
     public Guid? Orderid { get; set; }
 
-    public decimal Latitude { get; set; }
+    public decimal Latitudep { get; set; }
 
     public decimal Longitude { get; set; }
 

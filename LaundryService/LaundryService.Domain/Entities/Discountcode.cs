@@ -31,5 +31,7 @@ public partial class Discountcode
 
     public DateTime? Createdat { get; set; }
 
+    public virtual ICollection<Discountcodeuser> Discountcodeusers { get; set; } = new List<Discountcodeuser>();
+
     public virtual ICollection<Orderdiscount> Orderdiscounts { get; set; } = new List<Orderdiscount>();
 }

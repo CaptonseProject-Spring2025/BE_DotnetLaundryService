@@ -9,13 +9,13 @@ public partial class Address
 
     public Guid Userid { get; set; }
 
-    public string Addresslabel { get; set; } = null!;
+    public string? Addresslabel { get; set; }
 
-    public string Contactname { get; set; } = null!;
+    public string? Contactname { get; set; }
 
-    public string Contactphone { get; set; } = null!;
+    public string? Contactphone { get; set; }
 
-    public string Detailaddress { get; set; } = null!;
+    public string? Detailaddress { get; set; }
 
     public string? Description { get; set; }
 

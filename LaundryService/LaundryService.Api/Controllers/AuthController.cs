@@ -7,7 +7,7 @@ namespace LaundryService.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseApiController
     {
         private readonly IAuthService _authService;
 
@@ -33,7 +33,7 @@ namespace LaundryService.Api.Controllers
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
         {
-            if (request.Email == "test@gmail.com" && request.Password == "Password@1")
+            if (request.PhoneNumber == "test@gmail.com" && request.Password == "Password@1")
             {
                 return Ok(new { Message = "Login successfully" });
             }

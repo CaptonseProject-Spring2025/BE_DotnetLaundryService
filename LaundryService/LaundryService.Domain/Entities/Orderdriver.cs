@@ -1,5 +1,4 @@
-﻿using LaundryService.Domain.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace LaundryService.Domain.Entities;
@@ -12,7 +11,7 @@ public partial class Orderdriver
 
     public Guid Driverid { get; set; }
 
-    public DriverRoleEnum? Role { get; set; }
+    public string? Role { get; set; }
 
     public DateTime? Assignedat { get; set; }
 
