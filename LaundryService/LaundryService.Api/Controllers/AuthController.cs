@@ -19,26 +19,71 @@ namespace LaundryService.Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
-                var newUser = await _authService.RegisterAsync(request);
-                return Ok(new { Message = "Đăng ký thành công", UserId = newUser.Userid });
+                var response = await _authService.RegisterAsync(request);
+                return Ok(response);
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                return StatusCode(500, new { Message = "An unexpected error occurred" });
             }
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            if (request.PhoneNumber == "test@gmail.com" && request.Password == "Password@1")
+            if (!ModelState.IsValid)
             {
-                return Ok(new { Message = "Login successfully" });
+                return BadRequest(ModelState);
             }
 
-            return Unauthorized(new { Message = "Email or Password is not correct" });
+            try
+            {
+                var response = await _authService.LoginAsync(request);
+                return Ok(response);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred" });
+            }
         }
+
+
+        [HttpGet("user-by-phone")]
+        public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)
+        {
+            try
+            {
+                var user = await _authService.GetUserByPhoneNumberAsync(phoneNumber);
+                return Ok(user);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred" });
+            }
+        }
+
     }
 }

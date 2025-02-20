@@ -5,11 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 
 namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IAuthService
     {
-        Task<User> RegisterAsync(RegisterRequest request);
+        Task<LoginResponse> RegisterAsync(RegisterRequest request);
+
+        Task<LoginResponse> LoginAsync(LoginRequest request);
+
+        Task<User> GetUserByPhoneNumberAsync(string phoneNumber);
     }
 }

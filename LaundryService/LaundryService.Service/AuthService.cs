@@ -8,25 +8,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LaundryService.Dto.Responses;
 
 namespace LaundryService.Service
 {
     public class AuthService : IAuthService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IJwtService _jwtService;
 
-        public AuthService(IUnitOfWork unitOfWork)
+        public AuthService(IUnitOfWork unitOfWork, IJwtService jwtService)
         {
             _unitOfWork = unitOfWork;
+            _jwtService = jwtService;
         }
 
-        public async Task<User> RegisterAsync(RegisterRequest request)
+        public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
         {
-            // Kiểm tra email hoặc username đã tồn tại chưa
-            var existingUser = await _unitOfWork.Repository<User>().GetAsync(u => u.Email == request.Email);
+            // Kiểm tra số điện thoại đã tồn tại chưa
+            var existingUser = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == request.PhoneNumber);
             if (existingUser != null)
             {
-                throw new Exception("Email hoặc Username đã tồn tại.");
+                throw new ApplicationException("Phone number is already registered.");
             }
 
             // Hash password bằng BCrypt
@@ -34,20 +37,84 @@ namespace LaundryService.Service
 
             var newUser = new User
             {
-                Fullname = request.Fullname,
-                Email = request.Email,
+                Fullname = request.FullName,
+                Phonenumber = request.PhoneNumber,
                 Password = hashedPassword,
-                Phonenumber = request.Phonenumber,
-                Role = RoleEnum.Customer.ToString(), // Gán mặc định role là Customer
-                Status = UserStatusEnum.Active.ToString(),
-                Emailconfirmed = false
+                Dob = request.Dob,
+                Gender = request.Gender,
+                Role = RoleEnum.Customer.ToString(),
+                Status = UserStatusEnum.Active.ToString()
             };
 
             // Thêm vào database
             await _unitOfWork.Repository<User>().InsertAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
 
-            return newUser;
+            // Đăng nhập tự động sau khi đăng ký thành công
+            return await GenerateLoginResponse(newUser);
         }
+
+        public async Task<LoginResponse> LoginAsync(LoginRequest request)
+        {
+            // Tìm user theo số điện thoại và kiểm tra trạng thái Active
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == request.PhoneNumber);
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User not found.");
+            }
+            if (user.Status != "Active")
+            {
+                throw new ApplicationException("User account is not active.");
+            }
+
+            // Kiểm tra mật khẩu
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+            {
+                throw new ApplicationException("Invalid password.");
+            }
+
+            return await GenerateLoginResponse(user);
+        }
+
+        private async Task<LoginResponse> GenerateLoginResponse(User user)
+        {
+            // Sinh JWT token
+            string token = _jwtService.GenerateJwtToken(user);
+
+            // Tạo refresh token (bản gốc và bản hash)
+            string rawRefreshToken = Guid.NewGuid().ToString();
+            string hashedRefreshToken = BCrypt.Net.BCrypt.HashPassword(rawRefreshToken);
+
+            // Cập nhật refresh token vào database
+            user.Refreshtoken = hashedRefreshToken;
+            user.Refreshtokenexpirytime = DateTime.Now.AddDays(7);
+
+            await _unitOfWork.Repository<User>().UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Trả về thông tin đăng nhập
+            return new LoginResponse
+            {
+                UserId = user.Userid,
+                PhoneNumber = user.Phonenumber,
+                FullName = user.Fullname,
+                Role = user.Role,
+                Rewardpoints = user.Rewardpoints,
+                Token = token,
+                RefreshToken = rawRefreshToken, // Trả về bản gốc (không hash)
+                RefreshTokenExpiry = user.Refreshtokenexpirytime.Value
+            };
+        }
+
+        public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
+        {
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber);
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User not found.");
+            }
+            return user;
+        }
+
     }
 }

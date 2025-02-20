@@ -30,8 +30,9 @@ namespace LaundryService.Service
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Fullname.ToString()),
-                    new Claim(ClaimTypes.Role, user.Role.ToString())
+                    new Claim(ClaimTypes.NameIdentifier, user.Userid.ToString()),
+                    new Claim(ClaimTypes.MobilePhone, user.Phonenumber),
+                    new Claim(ClaimTypes.Role, user.Role)
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpiryInMinutes"])),
                 Issuer = _configuration["Jwt:Issuer"],
