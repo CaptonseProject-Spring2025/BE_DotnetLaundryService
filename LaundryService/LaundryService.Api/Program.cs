@@ -5,6 +5,7 @@ using LaundryService.Infrastructure;
 using LaundryService.Service;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -86,6 +87,15 @@ builder.Services.AddSwaggerGen(options =>
             new string[] {}
         }
     });
+});
+
+builder.Services.AddMemoryCache();
+
+builder.Services.AddSingleton<ISpeedSmsService, SpeedSmsService>(provider =>
+{
+    var configuration = provider.GetRequiredService<IConfiguration>(); // Get IConfiguration directly
+    var memoryCache = provider.GetRequiredService<IMemoryCache>(); // Get IMemoryCache from DI container
+    return new SpeedSmsService(configuration, memoryCache); // Pass IConfiguration directly
 });
 
 
