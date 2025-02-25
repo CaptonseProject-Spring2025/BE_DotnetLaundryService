@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LaundryService.Dto.Responses;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace LaundryService.Service
 {
@@ -16,14 +17,16 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJwtService _jwtService;
+        private readonly IMemoryCache _memoryCache;
 
-        public AuthService(IUnitOfWork unitOfWork, IJwtService jwtService)
+        public AuthService(IUnitOfWork unitOfWork, IJwtService jwtService, IMemoryCache memoryCache)
         {
             _unitOfWork = unitOfWork;
             _jwtService = jwtService;
+            _memoryCache = memoryCache;
         }
 
-        public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
+        public async Task<LoginResponse> RegisterAsync(RegisterRequest request, string otpToken)
         {
             // Kiểm tra số điện thoại đã tồn tại chưa
             var existingUser = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == request.PhoneNumber);
@@ -31,6 +34,14 @@ namespace LaundryService.Service
             {
                 throw new ApplicationException("Phone number is already registered.");
             }
+
+            if (!_memoryCache.TryGetValue($"token_{request.PhoneNumber}", out string storedToken) || storedToken != otpToken)
+            {
+                throw new ApplicationException("Invalid or expired OTP token.");
+            }
+
+            // Xóa token khỏi cache sau khi sử dụng
+            _memoryCache.Remove($"token_{request.PhoneNumber}");
 
             // Hash password bằng BCrypt
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);

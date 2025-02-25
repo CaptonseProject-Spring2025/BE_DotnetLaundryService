@@ -11,7 +11,7 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IAuthService
     {
-        Task<LoginResponse> RegisterAsync(RegisterRequest request);
+        Task<LoginResponse> RegisterAsync(RegisterRequest request, string otpToken);
 
         Task<LoginResponse> LoginAsync(LoginRequest request);
 

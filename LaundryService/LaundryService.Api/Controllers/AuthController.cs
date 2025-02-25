@@ -19,7 +19,7 @@ namespace LaundryService.Api.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request, [FromQuery] string otpToken)
         {
             if (!ModelState.IsValid)
             {
@@ -28,7 +28,7 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                var response = await _authService.RegisterAsync(request);
+                var response = await _authService.RegisterAsync(request, otpToken);
                 return Ok(response);
             }
             catch (ApplicationException ex)

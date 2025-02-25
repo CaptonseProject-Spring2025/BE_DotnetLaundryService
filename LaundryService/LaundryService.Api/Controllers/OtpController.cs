@@ -71,15 +71,8 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                bool isVerified = await _smsService.VerifyOTP(request.Phone, request.OTP);
-                if (isVerified)
-                {
-                    return Ok(new { Message = "OTP verified successfully" });
-                }
-                else
-                {
-                    return Unauthorized(new { Message = "Invalid OTP" });
-                }
+                string token = await _smsService.VerifyOTPAndGenerateToken(request.Phone, request.OTP);
+                return Ok(new { Message = "OTP verified successfully", Token = token });
             }
             catch (ApplicationException ex)
             {
