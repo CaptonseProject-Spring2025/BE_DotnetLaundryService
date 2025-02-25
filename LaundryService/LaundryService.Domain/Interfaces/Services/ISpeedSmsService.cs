@@ -11,5 +11,6 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<string> SendOTP(string phone);
         Task<string> ResendOTP(string phone);
         Task<bool> VerifyOTP(string phone, string otpToVerify);
+        Task<string> VerifyOTPAndGenerateToken(string phone, string oTP);
     }
 }

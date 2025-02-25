@@ -125,5 +125,40 @@ namespace LaundryService.Service
                 throw new ApplicationException("Error while verifying OTP: " + ex.Message);
             }
         }
+
+        public async Task<string> VerifyOTPAndGenerateToken(string phone, string otpToVerify)
+        {
+            try
+            {
+                if (_memoryCache.TryGetValue(phone, out string storedOtp))
+                {
+                    if (storedOtp == otpToVerify)
+                    {
+                        // Xóa OTP khỏi cache sau khi xác minh thành công
+                        _memoryCache.Remove(phone);
+
+                        // Tạo token ngẫu nhiên
+                        string token = Guid.NewGuid().ToString();
+
+                        // Lưu token vào cache với thời gian tồn tại 5 phút
+                        _memoryCache.Set($"token_{phone}", token, TimeSpan.FromMinutes(5));
+
+                        return token;
+                    }
+                    else
+                    {
+                        throw new ApplicationException("OTP does not match.");
+                    }
+                }
+                else
+                {
+                    throw new ApplicationException("OTP not found or expired.");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("Error while verifying OTP: " + ex.Message);
+            }
+        }
     }
 }
