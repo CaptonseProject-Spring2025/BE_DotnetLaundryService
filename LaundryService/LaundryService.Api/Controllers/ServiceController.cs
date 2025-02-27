@@ -1,5 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,7 @@ namespace LaundryService.Api.Controllers
             _serviceService = serviceService;
         }
 
+        [Authorize]
         [HttpGet("services")]
         public async Task<IActionResult> GetAll()
         {
@@ -23,6 +25,7 @@ namespace LaundryService.Api.Controllers
             return Ok(categories);
         }
 
+        [Authorize]
         [HttpGet("services{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -43,6 +46,7 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("services")]
         public async Task<IActionResult> CreateServiceCategory([FromForm] CreateServiceCategoryRequest request)
         {
@@ -73,6 +77,7 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("services{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateServiceCategoryRequest request)
         {
@@ -85,6 +90,7 @@ namespace LaundryService.Api.Controllers
             return Ok(updatedCategory);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("services{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
