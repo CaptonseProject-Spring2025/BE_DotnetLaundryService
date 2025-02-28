@@ -14,12 +14,12 @@ namespace LaundryService.Service
     public class ServiceService : IServiceService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IHostingEnvironment _webHostEnvironment;
+        private readonly IFileStorageService _fileStorageService;
 
-        public ServiceService(IUnitOfWork unitOfWork, IHostingEnvironment webHostEnvironment)
+        public ServiceService(IUnitOfWork unitOfWork, IFileStorageService fileStorageService)
         {
             _unitOfWork = unitOfWork;
-            _webHostEnvironment = webHostEnvironment;
+            _fileStorageService = fileStorageService;
         }
 
         public async Task<IEnumerable<Servicecategory>> GetAllAsync()
@@ -39,7 +39,7 @@ namespace LaundryService.Service
 
         public async Task<Servicecategory> CreateServiceCategoryAsync(CreateServiceCategoryRequest request)
         {
-            // Kiểm tra trùng tên danh mục
+            // Check for duplicate category name
             var existingCategory = await _unitOfWork.Repository<Servicecategory>().GetAsync(c => c.Name == request.Name);
 
             if (existingCategory != null)
@@ -47,32 +47,17 @@ namespace LaundryService.Service
                 throw new ApplicationException("Service category name already exists.");
             }
 
-            // Tạo tên file ảnh duy nhất
-            var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(request.Icon.FileName)}";
-            var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads/service-categories");
+            // Upload icon to B2
+            var iconUrl = await _fileStorageService.UploadFileAsync(request.Icon, "system-image");
 
-            // Đảm bảo thư mục tồn tại
-            if (!Directory.Exists(uploadPath))
-            {
-                Directory.CreateDirectory(uploadPath);
-            }
-
-            var filePath = Path.Combine(uploadPath, uniqueFileName);
-
-            // Lưu file vào thư mục
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await request.Icon.CopyToAsync(stream);
-            }
-
-            // Tạo mới danh mục dịch vụ
+            // Create new service category
             var newCategory = new Servicecategory
             {
                 Name = request.Name,
-                Icon = $"/uploads/service-categories/{uniqueFileName}"
+                Icon = iconUrl
             };
 
-            // Lưu vào database
+            // Save to database
             await _unitOfWork.Repository<Servicecategory>().InsertAsync(newCategory);
             await _unitOfWork.SaveChangesAsync();
 
@@ -87,36 +72,23 @@ namespace LaundryService.Service
                 throw new KeyNotFoundException("Service category not found.");
             }
 
-            // Cập nhật tên (nếu có)
+            // Update name if provided
             if (!string.IsNullOrEmpty(request.Name))
             {
                 category.Name = request.Name;
             }
 
-            // Nếu có ảnh mới, lưu ảnh mới và xóa ảnh cũ
+            // Update icon if provided
             if (request.Icon != null)
             {
-                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(request.Icon.FileName)}";
-                var uploadPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads/service-categories");
-                Directory.CreateDirectory(uploadPath);
-                var filePath = Path.Combine(uploadPath, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await request.Icon.CopyToAsync(stream);
-                }
-
-                // Xóa ảnh cũ
+                // Delete old icon from B2
                 if (!string.IsNullOrEmpty(category.Icon))
                 {
-                    var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath, category.Icon.TrimStart('/'));
-                    if (File.Exists(oldFilePath))
-                    {
-                        File.Delete(oldFilePath);
-                    }
+                    await _fileStorageService.DeleteFileAsync(category.Icon);
                 }
 
-                category.Icon = $"/uploads/service-categories/{uniqueFileName}";
+                // Upload new icon to B2
+                category.Icon = await _fileStorageService.UploadFileAsync(request.Icon, "system-image");
             }
 
             await _unitOfWork.Repository<Servicecategory>().UpdateAsync(category);
@@ -132,21 +104,17 @@ namespace LaundryService.Service
                 throw new KeyNotFoundException("Service category not found.");
             }
 
-            // Kiểm tra nếu có SubService liên quan thì không cho phép xóa
+            // Check if there are related sub-services
             var subServiceCount = _unitOfWork.Repository<Subservice>().GetAll().Count(s => s.Categoryid == id);
             if (subServiceCount > 0)
             {
                 throw new ApplicationException("Cannot delete service category because it has related sub-services.");
             }
 
-            // Xóa ảnh
+            // Delete icon from B2
             if (!string.IsNullOrEmpty(category.Icon))
             {
-                var filePath = Path.Combine(_webHostEnvironment.WebRootPath, category.Icon.TrimStart('/'));
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
+                await _fileStorageService.DeleteFileAsync(category.Icon);
             }
 
             await _unitOfWork.Repository<Servicecategory>().DeleteAsync(category);
