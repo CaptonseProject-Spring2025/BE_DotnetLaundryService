@@ -17,7 +17,6 @@ namespace LaundryService.Api.Controllers
             _serviceService = serviceService;
         }
 
-        [Authorize]
         [HttpGet("services")]
         public async Task<IActionResult> GetAll()
         {
@@ -25,7 +24,6 @@ namespace LaundryService.Api.Controllers
             return Ok(categories);
         }
 
-        [Authorize]
         [HttpGet("services{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
