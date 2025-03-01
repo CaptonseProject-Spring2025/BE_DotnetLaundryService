@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LaundryService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/otp")]
     [ApiController]
     public class OtpController : ControllerBase
     {

@@ -1,4 +1,7 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using Amazon.Runtime.Internal;
+using LaundryService.Domain.Entities;
+using LaundryService.Domain.Interfaces;
+using LaundryService.Domain.Interfaces.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -17,8 +20,8 @@ namespace LaundryService.Service
         public SpeedSmsService(IConfiguration configuration, IMemoryCache memoryCache)
         {
             // Directly fetch values from configuration
-            _accessToken = configuration["AppSettings:AccessToken"];
-            _senderToken = configuration["AppSettings:SenderToken"];
+            _accessToken = configuration["SpeedSMS:AccessToken"];
+            _senderToken = configuration["SpeedSMS:SenderToken"];
             _memoryCache = memoryCache;
         }
 

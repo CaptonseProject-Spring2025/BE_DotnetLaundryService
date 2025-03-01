@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LaundryService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/categories")]
     [ApiController]
     public class ServiceController : BaseApiController
     {
@@ -17,14 +17,14 @@ namespace LaundryService.Api.Controllers
             _serviceService = serviceService;
         }
 
-        [HttpGet("services")]
+        [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var categories = await _serviceService.GetAllAsync();
             return Ok(categories);
         }
 
-        [HttpGet("services{id}")]
+        [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             try
@@ -45,7 +45,7 @@ namespace LaundryService.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPost("services")]
+        [HttpPost]
         public async Task<IActionResult> CreateServiceCategory([FromForm] CreateServiceCategoryRequest request)
         {
             if (!ModelState.IsValid)
@@ -76,7 +76,7 @@ namespace LaundryService.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpPut("services{id}")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateServiceCategoryRequest request)
         {
             if (!ModelState.IsValid)
@@ -89,7 +89,7 @@ namespace LaundryService.Api.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        [HttpDelete("services{id}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
             try

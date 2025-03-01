@@ -144,7 +144,11 @@ namespace LaundryService.Service
                 throw new ApplicationException("Refresh token has expired.");
             }
 
-            // Sinh JWT mới
+            user.Refreshtokenexpirytime = DateTime.Now.AddDays(7);
+            await _unitOfWork.Repository<User>().UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Tạo JWT mới và trả về response
             return _jwtService.GenerateJwtToken(user);
         }
 
