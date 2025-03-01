@@ -196,16 +196,6 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
-        {
-            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber);
-            if (user == null)
-            {
-                throw new KeyNotFoundException("User not found.");
-            }
-            return user;
-        }
-
         public async Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber)
         {
             if (await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber) != null) return true;

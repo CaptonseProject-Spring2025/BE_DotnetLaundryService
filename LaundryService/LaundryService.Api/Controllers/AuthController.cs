@@ -156,25 +156,6 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        [Authorize(Roles = "Customer")]
-        [HttpGet("user-by-phone")]
-        public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)
-        {
-            try
-            {
-                var user = await _authService.GetUserByPhoneNumberAsync(phoneNumber);
-                return Ok(user);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
-            }
-        }
-
         [HttpPost("check-phone")]
         public async Task<IActionResult> CheckPhoneNumberExists(string phone)
         {
