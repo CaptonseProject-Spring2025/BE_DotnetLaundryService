@@ -22,9 +22,16 @@ namespace LaundryService.Service
             _fileStorageService = fileStorageService;
         }
 
-        public async Task<IEnumerable<Servicecategory>> GetAllAsync()
+        public async Task<IEnumerable<object>> GetAllAsync()
         {
-            return await _unitOfWork.Repository<Servicecategory>().GetAllAsync();
+            var categories = await _unitOfWork.Repository<Servicecategory>().GetAllAsync();
+            return categories.Select(c => new
+            {
+                CategoryId = c.Categoryid,
+                Name = c.Name,
+                Icon = c.Icon,
+                CreatedAt = c.Createdat
+            }).ToList();
         }
 
         public async Task<Servicecategory> GetByIdAsync(Guid id)
