@@ -29,14 +29,17 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                var category = await _serviceService.GetByIdAsync(id);
-                return Ok(new
-                {
-                    CategoryId = category.Categoryid,
-                    Name = category.Name,
-                    Icon = category.Icon,
-                    CreatedAt = category.Createdat
-                });
+                var category = await _serviceService.GetCategoryDetailsAsync(id);
+                return Ok(category);
+
+                //var category = await _serviceService.GetByIdAsync(id);
+                //return Ok(new
+                //{
+                //    CategoryId = category.Categoryid,
+                //    Name = category.Name,
+                //    Icon = category.Icon,
+                //    CreatedAt = category.Createdat
+                //});
             }
             catch (KeyNotFoundException ex)
             {

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using LaundryService.Dto.Responses;
 
 namespace LaundryService.Service
 {
@@ -127,6 +128,47 @@ namespace LaundryService.Service
             await _unitOfWork.Repository<Servicecategory>().DeleteAsync(category);
             await _unitOfWork.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<CategoryDetailResponse> GetCategoryDetailsAsync(Guid id)
+        {
+            var category = await _unitOfWork.Repository<Servicecategory>().GetAsync(c => c.Categoryid == id);
+            if (category == null)
+            {
+                throw new KeyNotFoundException("Service category not found.");
+            }
+
+            // Lấy danh sách subcategories
+            var subCategories = _unitOfWork.Repository<Subservice>()
+                .GetAll()
+                .Where(s => s.Categoryid == id)
+                .Select(s => new SubCategory
+                {
+                    SubCategoryId = s.Subserviceid,
+                    Name = s.Name,
+                    ServiceDetails = _unitOfWork.Repository<Servicedetail>()
+                        .GetAll()
+                        .Where(sd => sd.Subserviceid == s.Subserviceid)
+                        .Select(sd => new ServiceDetailResponse
+                        {
+                            ServiceId = sd.Serviceid,
+                            Name = sd.Name,
+                            Description = sd.Description,
+                            Price = sd.Price,
+                            ImageUrl = sd.Image,
+                            CreatedAt = sd.Createdat
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            return new CategoryDetailResponse
+            {
+                CategoryId = category.Categoryid,
+                Name = category.Name,
+                Icon = category.Icon,
+                SubCategories = subCategories
+            };
         }
     }
 }
