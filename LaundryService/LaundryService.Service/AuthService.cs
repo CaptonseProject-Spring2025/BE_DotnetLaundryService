@@ -195,11 +195,5 @@ namespace LaundryService.Service
             await _unitOfWork.Repository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
         }
-
-        public async Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber)
-        {
-            if (await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber) != null) return true;
-            return false;
-        }
     }
 }

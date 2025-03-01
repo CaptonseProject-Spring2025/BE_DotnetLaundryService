@@ -155,27 +155,5 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
-
-        [HttpPost("check-phone")]
-        public async Task<IActionResult> CheckPhoneNumberExists(string phone)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                if (await _authService.CheckPhoneNumberExistsAsync(phone))
-                {
-                    return Ok(new { Message = "Phone number is exists" });
-                }
-                return BadRequest(new { Message = "Phone number is not exists" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
-            }
-        }
     }
 }

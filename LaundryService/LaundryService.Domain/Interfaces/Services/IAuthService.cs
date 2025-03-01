@@ -19,8 +19,6 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task LogoutAsync(Guid userId);
 
-        Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
-
         Task ResetPasswordAsync(string phoneNumber, string newPassword, string otpToken);
     }
 }
