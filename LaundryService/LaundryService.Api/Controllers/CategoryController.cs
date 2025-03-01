@@ -8,11 +8,11 @@ namespace LaundryService.Api.Controllers
 {
     [Route("api/categories")]
     [ApiController]
-    public class ServiceController : BaseApiController
+    public class CategoryController : BaseApiController
     {
         private readonly IServiceService _serviceService;
 
-        public ServiceController(IServiceService serviceService)
+        public CategoryController(IServiceService serviceService)
         {
             _serviceService = serviceService;
         }
