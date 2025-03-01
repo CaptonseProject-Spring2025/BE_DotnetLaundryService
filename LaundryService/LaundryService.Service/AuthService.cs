@@ -169,6 +169,33 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task ResetPasswordAsync(string phoneNumber, string newPassword, string otpToken)
+        {
+            // Kiểm tra user tồn tại
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber);
+            if (user == null)
+            {
+                throw new ApplicationException("User not found.");
+            }
+
+            // Kiểm tra token tạm trong cache
+            if (!_memoryCache.TryGetValue($"token_{phoneNumber}", out string storedToken) || storedToken != otpToken)
+            {
+                throw new ApplicationException("Invalid or expired OTP token.");
+            }
+
+            // Xóa token khỏi cache sau khi sử dụng
+            _memoryCache.Remove($"token_{phoneNumber}");
+
+            // Hash mật khẩu mới bằng BCrypt
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            // Cập nhật password trong database
+            user.Password = hashedPassword;
+            await _unitOfWork.Repository<User>().UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
         {
             var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber);

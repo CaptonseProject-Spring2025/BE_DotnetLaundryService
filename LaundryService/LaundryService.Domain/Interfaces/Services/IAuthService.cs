@@ -22,5 +22,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<User> GetUserByPhoneNumberAsync(string phoneNumber);
 
         Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
+
+        Task ResetPasswordAsync(string phoneNumber, string newPassword, string otpToken);
     }
 }

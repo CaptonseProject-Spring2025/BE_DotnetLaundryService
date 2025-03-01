@@ -133,6 +133,29 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                await _authService.ResetPasswordAsync(request.PhoneNumber, request.NewPassword, request.OtpToken);
+                return Ok(new { Message = "Password has been reset successfully." });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
         [Authorize(Roles = "Customer")]
         [HttpGet("user-by-phone")]
         public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)
