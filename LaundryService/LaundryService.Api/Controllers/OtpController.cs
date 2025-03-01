@@ -9,10 +9,12 @@ namespace LaundryService.Api.Controllers
     public class OtpController : ControllerBase
     {
         private readonly ISpeedSmsService _smsService;
+        private readonly IAuthService _authService;
 
-        public OtpController(ISpeedSmsService smsService)
+        public OtpController(ISpeedSmsService smsService, IAuthService authService)
         {
             _smsService = smsService;
+            _authService = authService;
         }
 
         [HttpPost("send")]
@@ -21,6 +23,39 @@ namespace LaundryService.Api.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
+            }
+
+            if (await _authService.CheckPhoneNumberExistsAsync(request.Phone))
+            {
+                return BadRequest(new { Message = "Phone number is already registered." });
+            }
+
+            try
+            {
+                var response = await _smsService.SendOTP(request.Phone);
+                return Ok(response);
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred: " + ex.Message });
+            }
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> SendOTPResetPass([FromBody] SendOtpRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (!await _authService.CheckPhoneNumberExistsAsync(request.Phone))
+            {
+                return BadRequest(new { Message = "Phone number is not registered." });
             }
 
             try

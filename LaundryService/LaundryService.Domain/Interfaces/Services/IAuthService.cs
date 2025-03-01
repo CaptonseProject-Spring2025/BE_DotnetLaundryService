@@ -20,5 +20,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task LogoutAsync(Guid userId);
 
         Task<User> GetUserByPhoneNumberAsync(string phoneNumber);
+
+        Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
     }
 }
