@@ -68,7 +68,6 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        [Authorize]
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
@@ -79,19 +78,12 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                //Lấy UserId từ Token
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
+                var (accessToken, refreshToken) = await _authService.RefreshTokenAsync(request.RefreshToken);
+                return Ok(new
                 {
-                    return Unauthorized(new { Message = "Invalid token" });
-                }
-
-                var newToken = await _authService.RefreshTokenAsync(Guid.Parse(userId), request.RefreshToken);
-                return Ok(new { Token = newToken });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                });
             }
             catch (ApplicationException ex)
             {
