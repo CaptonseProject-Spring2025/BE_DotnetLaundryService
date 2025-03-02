@@ -15,12 +15,12 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<LoginResponse> LoginAsync(LoginRequest request);
 
-        Task<String> RefreshTokenAsync(Guid userId, string refreshToken);
+        Task<(string AccessToken, string RefreshToken)> RefreshTokenAsync(string refreshToken);
 
         Task LogoutAsync(Guid userId);
 
-        Task<User> GetUserByPhoneNumberAsync(string phoneNumber);
-
         Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
+
+        Task ResetPasswordAsync(string phoneNumber, string newPassword, string otpToken);
     }
 }

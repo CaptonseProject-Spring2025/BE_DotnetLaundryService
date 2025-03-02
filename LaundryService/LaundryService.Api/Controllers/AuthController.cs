@@ -68,7 +68,6 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        [Authorize]
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
@@ -79,19 +78,12 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                //Lấy UserId từ Token
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
+                var (accessToken, refreshToken) = await _authService.RefreshTokenAsync(request.RefreshToken);
+                return Ok(new
                 {
-                    return Unauthorized(new { Message = "Invalid token" });
-                }
-
-                var newToken = await _authService.RefreshTokenAsync(Guid.Parse(userId), request.RefreshToken);
-                return Ok(new { Token = newToken });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                });
             }
             catch (ApplicationException ex)
             {
@@ -133,27 +125,8 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        [Authorize(Roles = "Customer")]
-        [HttpGet("user-by-phone")]
-        public async Task<IActionResult> GetUserByPhone([FromQuery] string phoneNumber)
-        {
-            try
-            {
-                var user = await _authService.GetUserByPhoneNumberAsync(phoneNumber);
-                return Ok(user);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
-            }
-        }
-
-        [HttpPost("check-phone")]
-        public async Task<IActionResult> CheckPhoneNumberExists(string phone)
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -162,15 +135,16 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                if (await _authService.CheckPhoneNumberExistsAsync(phone))
-                {
-                    return Ok(new { Message = "Phone number is exists" });
-                }
-                return BadRequest(new { Message = "Phone number is not exists" });
+                await _authService.ResetPasswordAsync(request.PhoneNumber, request.NewPassword, request.OtpToken);
+                return Ok(new { Message = "Password has been reset successfully." });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
     }

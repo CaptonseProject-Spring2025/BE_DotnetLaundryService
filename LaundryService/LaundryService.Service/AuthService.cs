@@ -117,39 +117,41 @@ namespace LaundryService.Service
             };
         }
 
-        public async Task<String> RefreshTokenAsync(Guid userId, string refreshToken)
+        public async Task<(string AccessToken, string RefreshToken)> RefreshTokenAsync(string refreshToken)
         {
-            // Tìm user theo UserId
-            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Userid == userId);
+            // Lấy danh sách người dùng từ DB
+            var users = await _unitOfWork.Repository<User>().GetAllAsync();
+
+            // Tìm user có refresh token hợp lệ
+            var user = users.FirstOrDefault(u => u.Refreshtoken != null && BCrypt.Net.BCrypt.Verify(refreshToken, u.Refreshtoken));
+
             if (user == null)
-            {
-                throw new KeyNotFoundException("User not found.");
-            }
-
-            // Kiểm tra trạng thái Active
-            if (user.Status != UserStatusEnum.Active.ToString())
-            {
-                throw new ApplicationException("User account is not active.");
-            }
-
-            // Kiểm tra refresh token có hợp lệ không
-            if (string.IsNullOrEmpty(user.Refreshtoken) || !BCrypt.Net.BCrypt.Verify(refreshToken, user.Refreshtoken))
             {
                 throw new ApplicationException("Invalid refresh token.");
             }
 
-            // Kiểm tra refresh token có hết hạn không
+            // Kiểm tra thời gian hết hạn của refresh token
             if (user.Refreshtokenexpirytime < DateTime.UtcNow)
             {
                 throw new ApplicationException("Refresh token has expired.");
             }
 
+            // Tạo JWT Token mới
+            string newAccessToken = _jwtService.GenerateJwtToken(user);
+
+            // Tạo Refresh Token mới
+            string newRawRefreshToken = Guid.NewGuid().ToString();
+            string newHashedRefreshToken = BCrypt.Net.BCrypt.HashPassword(newRawRefreshToken);
+
+            // Cập nhật Refresh Token trong DB
+            user.Refreshtoken = newHashedRefreshToken;
             user.Refreshtokenexpirytime = DateTime.Now.AddDays(7);
+
             await _unitOfWork.Repository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            // Tạo JWT mới và trả về response
-            return _jwtService.GenerateJwtToken(user);
+            // Chỉ trả về Access Token và Refresh Token mới
+            return (newAccessToken, newRawRefreshToken);
         }
 
         public async Task LogoutAsync(Guid userId)
@@ -169,14 +171,31 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<User> GetUserByPhoneNumberAsync(string phoneNumber)
+        public async Task ResetPasswordAsync(string phoneNumber, string newPassword, string otpToken)
         {
+            // Kiểm tra user tồn tại
             var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber);
             if (user == null)
             {
-                throw new KeyNotFoundException("User not found.");
+                throw new ApplicationException("User not found.");
             }
-            return user;
+
+            // Kiểm tra token tạm trong cache
+            if (!_memoryCache.TryGetValue($"token_{phoneNumber}", out string storedToken) || storedToken != otpToken)
+            {
+                throw new ApplicationException("Invalid or expired OTP token.");
+            }
+
+            // Xóa token khỏi cache sau khi sử dụng
+            _memoryCache.Remove($"token_{phoneNumber}");
+
+            // Hash mật khẩu mới bằng BCrypt
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            // Cập nhật password trong database
+            user.Password = hashedPassword;
+            await _unitOfWork.Repository<User>().UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber)
