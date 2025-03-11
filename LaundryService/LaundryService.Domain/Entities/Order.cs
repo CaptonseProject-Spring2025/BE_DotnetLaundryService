@@ -9,7 +9,7 @@ public partial class Order
 
     public Guid Userid { get; set; }
 
-    public string Pickuplabel { get; set; } = null!;
+    public string? Pickuplabel { get; set; }
 
     public string Pickupname { get; set; } = null!;
 
@@ -23,7 +23,7 @@ public partial class Order
 
     public decimal? Pickuplongitude { get; set; }
 
-    public string Deliverylabel { get; set; } = null!;
+    public string? Deliverylabel { get; set; }
 
     public string Deliveryname { get; set; } = null!;
 
@@ -43,9 +43,13 @@ public partial class Order
 
     public decimal? Shippingfee { get; set; }
 
+    public decimal? Shippingdiscount { get; set; }
+
     public decimal? Applicablefee { get; set; }
 
     public decimal? Totalprice { get; set; }
+
+    public decimal? Discount { get; set; }
 
     public string? Currentstatus { get; set; }
 
@@ -53,13 +57,11 @@ public partial class Order
 
     public virtual ICollection<Driverlocationhistory> Driverlocationhistories { get; set; } = new List<Driverlocationhistory>();
 
+    public virtual ICollection<Orderassignmenthistory> Orderassignmenthistories { get; set; } = new List<Orderassignmenthistory>();
+
     public virtual ICollection<Orderdiscount> Orderdiscounts { get; set; } = new List<Orderdiscount>();
 
-    public virtual ICollection<Orderdriver> Orderdrivers { get; set; } = new List<Orderdriver>();
-
     public virtual ICollection<Orderitem> Orderitems { get; set; } = new List<Orderitem>();
-
-    public virtual ICollection<Orderphoto> Orderphotos { get; set; } = new List<Orderphoto>();
 
     public virtual ICollection<Orderstatushistory> Orderstatushistories { get; set; } = new List<Orderstatushistory>();
 

@@ -19,8 +19,6 @@ public partial class Message
 
     public DateTime? Creationdate { get; set; }
 
-    public DateTime? Updatedate { get; set; }
-
     public bool? Issent { get; set; }
 
     public bool? Isseen { get; set; }

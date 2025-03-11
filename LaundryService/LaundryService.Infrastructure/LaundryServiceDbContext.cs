@@ -36,9 +36,9 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Order> Orders { get; set; }
 
-    public virtual DbSet<Orderdiscount> Orderdiscounts { get; set; }
+    public virtual DbSet<Orderassignmenthistory> Orderassignmenthistories { get; set; }
 
-    public virtual DbSet<Orderdriver> Orderdrivers { get; set; }
+    public virtual DbSet<Orderdiscount> Orderdiscounts { get; set; }
 
     public virtual DbSet<Orderextra> Orderextras { get; set; }
 
@@ -93,7 +93,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("datemodified");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Detailaddress).HasColumnName("detailaddress");
-            entity.Property(e => e.Isdefault).HasColumnName("isdefault");
             entity.Property(e => e.Latitude)
                 .HasPrecision(9, 6)
                 .HasColumnName("latitude");
@@ -302,9 +301,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Message1).HasColumnName("message");
             entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.Typeis).HasColumnName("typeis");
-            entity.Property(e => e.Updatedate)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("updatedate");
             entity.Property(e => e.Userid).HasColumnName("userid");
 
             entity.HasOne(d => d.Conversation).WithMany(p => p.Messages)
@@ -331,12 +327,14 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("createdat");
+            entity.Property(e => e.Customerid).HasColumnName("customerid");
             entity.Property(e => e.Ispushenabled).HasColumnName("ispushenabled");
             entity.Property(e => e.Isread)
                 .HasDefaultValue(false)
                 .HasColumnName("isread");
             entity.Property(e => e.Message).HasColumnName("message");
             entity.Property(e => e.Notificationtype).HasColumnName("notificationtype");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Title).HasColumnName("title");
             entity.Property(e => e.Userid).HasColumnName("userid");
 
@@ -377,6 +375,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Deliverytime)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("deliverytime");
+            entity.Property(e => e.Discount)
+                .HasPrecision(10)
+                .HasColumnName("discount");
             entity.Property(e => e.Pickupaddressdetail).HasColumnName("pickupaddressdetail");
             entity.Property(e => e.Pickupdescription).HasColumnName("pickupdescription");
             entity.Property(e => e.Pickuplabel).HasColumnName("pickuplabel");
@@ -391,6 +392,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Pickuptime)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("pickuptime");
+            entity.Property(e => e.Shippingdiscount)
+                .HasPrecision(10)
+                .HasColumnName("shippingdiscount");
             entity.Property(e => e.Shippingfee)
                 .HasPrecision(10)
                 .HasColumnName("shippingfee");
@@ -403,6 +407,41 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("orders_userid_fkey");
+        });
+
+        modelBuilder.Entity<Orderassignmenthistory>(entity =>
+        {
+            entity.HasKey(e => e.Assignmentid).HasName("orderassignmenthistory_pkey");
+
+            entity.ToTable("orderassignmenthistory");
+
+            entity.Property(e => e.Assignmentid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("assignmentid");
+            entity.Property(e => e.Assignedat)
+                .HasDefaultValueSql("now()")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("assignedat");
+            entity.Property(e => e.Assignedto).HasColumnName("assignedto");
+            entity.Property(e => e.Completedat)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("completedat");
+            entity.Property(e => e.Declinereason).HasColumnName("declinereason");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Role).HasColumnName("role");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'Assigned'::text")
+                .HasColumnName("status");
+
+            entity.HasOne(d => d.AssignedtoNavigation).WithMany(p => p.Orderassignmenthistories)
+                .HasForeignKey(d => d.Assignedto)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("orderassignmenthistory_assignedto_fkey");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Orderassignmenthistories)
+                .HasForeignKey(d => d.Orderid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("orderassignmenthistory_orderid_fkey");
         });
 
         modelBuilder.Entity<Orderdiscount>(entity =>
@@ -433,34 +472,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Orderid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("orderdiscounts_orderid_fkey");
-        });
-
-        modelBuilder.Entity<Orderdriver>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("orderdrivers_pkey");
-
-            entity.ToTable("orderdrivers");
-
-            entity.Property(e => e.Id)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("id");
-            entity.Property(e => e.Assignedat)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("assignedat");
-            entity.Property(e => e.Driverid).HasColumnName("driverid");
-            entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Role).HasColumnName("role");
-
-            entity.HasOne(d => d.Driver).WithMany(p => p.Orderdrivers)
-                .HasForeignKey(d => d.Driverid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("orderdrivers_driverid_fkey");
-
-            entity.HasOne(d => d.Order).WithMany(p => p.Orderdrivers)
-                .HasForeignKey(d => d.Orderid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("orderdrivers_orderid_fkey");
         });
 
         modelBuilder.Entity<Orderextra>(entity =>
@@ -533,25 +544,13 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Photoid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("photoid");
-            entity.Property(e => e.Createdat)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("createdat");
-            entity.Property(e => e.Driverid).HasColumnName("driverid");
-            entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Photosequence).HasColumnName("photosequence");
-            entity.Property(e => e.Phototype).HasColumnName("phototype");
             entity.Property(e => e.Photourl).HasColumnName("photourl");
+            entity.Property(e => e.Statushistoryid).HasColumnName("statushistoryid");
 
-            entity.HasOne(d => d.Driver).WithMany(p => p.Orderphotos)
-                .HasForeignKey(d => d.Driverid)
+            entity.HasOne(d => d.Statushistory).WithMany(p => p.Orderphotos)
+                .HasForeignKey(d => d.Statushistoryid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("orderphotos_driverid_fkey");
-
-            entity.HasOne(d => d.Order).WithMany(p => p.Orderphotos)
-                .HasForeignKey(d => d.Orderid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("orderphotos_orderid_fkey");
+                .HasConstraintName("orderphotos_statushistoryid_fkey");
         });
 
         modelBuilder.Entity<Orderstatushistory>(entity =>
@@ -563,10 +562,15 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Statushistoryid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("statushistoryid");
+            entity.Property(e => e.Assignedat)
+                .HasDefaultValueSql("now()")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("assignedat");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("createdat");
+            entity.Property(e => e.Notes).HasColumnName("notes");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.Statusdescription).HasColumnName("statusdescription");
@@ -742,6 +746,7 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Categoryid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("categoryid");
+            entity.Property(e => e.Banner).HasColumnName("banner");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")

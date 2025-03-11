@@ -51,9 +51,7 @@ public partial class User
 
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
-    public virtual ICollection<Orderdriver> Orderdrivers { get; set; } = new List<Orderdriver>();
-
-    public virtual ICollection<Orderphoto> Orderphotos { get; set; } = new List<Orderphoto>();
+    public virtual ICollection<Orderassignmenthistory> Orderassignmenthistories { get; set; } = new List<Orderassignmenthistory>();
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 

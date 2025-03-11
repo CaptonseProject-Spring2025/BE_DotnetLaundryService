@@ -23,8 +23,6 @@ public partial class Address
 
     public decimal? Longitude { get; set; }
 
-    public bool? Isdefault { get; set; }
-
     public DateTime? Datecreated { get; set; }
 
     public DateTime? Datemodified { get; set; }

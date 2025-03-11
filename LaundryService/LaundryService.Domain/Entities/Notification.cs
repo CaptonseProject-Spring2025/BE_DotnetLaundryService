@@ -17,6 +17,10 @@ public partial class Notification
 
     public bool? Isread { get; set; }
 
+    public Guid? Customerid { get; set; }
+
+    public Guid? Orderid { get; set; }
+
     public DateTime? Createdat { get; set; }
 
     public bool? Ispushenabled { get; set; }
