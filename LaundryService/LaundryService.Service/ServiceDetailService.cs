@@ -55,7 +55,8 @@ namespace LaundryService.Service
                 Name = request.Name,
                 Description = request.Description,
                 Price = request.Price,
-                Image = imageUrl
+                Image = imageUrl,
+                Createdat = DateTime.Now
             };
 
             await _unitOfWork.Repository<Servicedetail>().InsertAsync(newServiceDetail);
