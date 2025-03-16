@@ -53,6 +53,7 @@ builder.Services.AddScoped<IServiceService, ServiceService>();
 builder.Services.AddScoped<ISubCategoryService, SubCategoryService>();
 builder.Services.AddScoped<IServiceDetailService, ServiceDetailService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IExtraCategoryService, ExtraCategoryService>();
 
 builder.Services.AddControllers();
 
