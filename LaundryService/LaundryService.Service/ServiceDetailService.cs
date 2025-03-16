@@ -224,13 +224,32 @@ namespace LaundryService.Service
                     return response;
                 }
 
+                // Kiểm tra Extra nào đã tồn tại trong ServiceExtraMapping
+                var existingMappings = _unitOfWork.Repository<Serviceextramapping>()
+                    .GetAll()
+                    .Where(m => m.Serviceid == request.ServiceId && validExtras.Contains(m.Extraid))
+                    .Select(m => m.Extraid)
+                    .ToList();
+
+                // Lọc ra những Extra chưa tồn tại để thêm vào
+                var newExtras = validExtras.Except(existingMappings).ToList();
+
+                // Nếu tất cả ExtraIds đã tồn tại -> Không cần thêm mới
+                if (newExtras.Count == 0)
+                {
+                    response.SuccessCount = 0;
+                    response.FailedCount = request.ExtraIds.Count;
+                    response.FailedExtras = request.ExtraIds;
+                    return response;
+                }
+
                 // Cập nhật response
                 response.SuccessCount = validExtras.Count;
                 response.FailedCount = invalidExtras.Count;
                 response.FailedExtras = invalidExtras;
 
                 // Tạo danh sách mapping mới
-                var newMappings = validExtras.Select(extraId => new Serviceextramapping
+                var newMappings = newExtras.Select(extraId => new Serviceextramapping
                 {
                     Serviceid = request.ServiceId,
                     Extraid = extraId
@@ -248,6 +267,109 @@ namespace LaundryService.Service
             catch (Exception)
             {
                 // Nếu có lỗi, rollback toàn bộ
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task<ServiceDetailWithExtrasResponse> GetServiceDetailWithExtrasAsync(Guid serviceId)
+        {
+            // Lấy thông tin ServiceDetail
+            var serviceDetail = await _unitOfWork.Repository<Servicedetail>().GetAsync(s => s.Serviceid == serviceId);
+            if (serviceDetail == null)
+            {
+                throw new KeyNotFoundException("Service detail not found.");
+            }
+
+            // Lấy danh sách Extra được liên kết
+            var extraMappings = _unitOfWork.Repository<Serviceextramapping>()
+                .GetAll()
+                .Where(m => m.Serviceid == serviceId)
+                .ToList();
+
+            var extraIds = extraMappings.Select(m => m.Extraid).ToList();
+
+            // Lấy thông tin Extra và nhóm theo ExtraCategory
+            var extras = _unitOfWork.Repository<Extra>()
+                .GetAll()
+                .Where(e => extraIds.Contains(e.Extraid))
+                .ToList();
+
+            var extraCategories = extras
+                .GroupBy(e => e.Extracategoryid)
+                .Select(group => new ExtraCategoryWithExtrasResponse
+                {
+                    ExtraCategoryId = group.Key,
+                    CategoryName = _unitOfWork.Repository<Extracategory>()
+                        .GetAll()
+                        .Where(c => c.Extracategoryid == group.Key)
+                        .Select(c => c.Name)
+                        .FirstOrDefault(),
+                    Extras = group
+                        .OrderBy(e => e.Price) // Sắp xếp theo Price tăng dần
+                        .Select(e => new ExtraResponse
+                        {
+                            ExtraId = e.Extraid,
+                            Name = e.Name,
+                            Description = e.Description,
+                            Price = e.Price,
+                            ImageUrl = e.Image,
+                            CreatedAt = e.Createdat
+                        })
+                        .ToList()
+                })
+                .ToList();
+
+            // Tạo response object
+            return new ServiceDetailWithExtrasResponse
+            {
+                ServiceId = serviceDetail.Serviceid,
+                Name = serviceDetail.Name,
+                Description = serviceDetail.Description,
+                Price = serviceDetail.Price,
+                ImageUrl = serviceDetail.Image,
+                CreatedAt = serviceDetail.Createdat,
+                ExtraCategories = extraCategories
+            };
+        }
+
+        public async Task<bool> DeleteServiceExtraMappingsAsync(Guid serviceId)
+        {
+            // Bắt đầu transaction để đảm bảo tính nhất quán
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // Kiểm tra ServiceDetail có tồn tại không
+                var serviceDetail = await _unitOfWork.Repository<Servicedetail>().GetAsync(s => s.Serviceid == serviceId);
+                if (serviceDetail == null)
+                {
+                    throw new ArgumentException("Service detail not found.");
+                }
+
+                // Lấy danh sách ServiceExtraMapping liên quan
+                var mappings = _unitOfWork.Repository<Serviceextramapping>()
+                    .GetAll()
+                    .Where(m => m.Serviceid == serviceId)
+                    .ToList();
+
+                if (mappings.Count == 0)
+                {
+                    throw new KeyNotFoundException("No extra mappings found for this service.");
+                }
+
+                // Xóa các mappings
+                await _unitOfWork.Repository<Serviceextramapping>().DeleteRangeAsync(mappings);
+
+                // Lưu thay đổi & Commit transaction
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                return true;
+            }
+            catch (Exception)
+            {
+                // Nếu có lỗi, rollback transaction
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
