@@ -52,16 +52,6 @@ namespace LaundryService.Service
                 throw new ArgumentException("Extra category not found.");
             }
 
-            // Kiểm tra trùng tên trong cùng một ExtraCategory
-            var existingExtra = _unitOfWork.Repository<Extra>()
-                .GetAll()
-                .FirstOrDefault(e => e.Extracategoryid == request.ExtraCategoryId && e.Name == request.Name);
-
-            if (existingExtra != null)
-            {
-                throw new ArgumentException("An extra with this name already exists in the same category.");
-            }
-
             // Upload hình ảnh lên Backblaze B2 nếu có
             string imageUrl = null;
             if (request.Image != null)
