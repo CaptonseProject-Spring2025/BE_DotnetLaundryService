@@ -15,5 +15,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<ServiceDetailResponse> UpdateServiceDetailAsync(UpdateServiceDetailRequest request);
 
         Task<bool> DeleteServiceDetailAsync(Guid serviceId);
+
+        Task<AddExtrasToServiceDetailResponse> AddExtrasToServiceDetailAsync(AddExtrasToServiceDetailRequest request);
     }
 }

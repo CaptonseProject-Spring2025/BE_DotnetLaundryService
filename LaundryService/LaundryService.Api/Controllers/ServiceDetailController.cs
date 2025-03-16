@@ -61,7 +61,7 @@ namespace LaundryService.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
+                return StatusCode(500, new { Message = ex.Message });
             }
         }
 
@@ -84,7 +84,31 @@ namespace LaundryService.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "An unexpected error occurred" });
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("add-extras")]
+        public async Task<IActionResult> AddExtras([FromBody] AddExtrasToServiceDetailRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var result = await _serviceDetailService.AddExtrasToServiceDetailAsync(request);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
             }
         }
     }
