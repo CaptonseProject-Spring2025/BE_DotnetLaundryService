@@ -18,6 +18,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<AddExtrasToServiceDetailResponse> AddExtrasToServiceDetailAsync(AddExtrasToServiceDetailRequest request);
 
+        Task<AddExtrasToServiceDetailResponse> UpdateExtrasToServiceDetailAsync(AddExtrasToServiceDetailRequest request);
+
         Task<ServiceDetailWithExtrasResponse> GetServiceDetailWithExtrasAsync(Guid serviceId);
 
         Task<bool> DeleteServiceExtraMappingsAsync(Guid serviceId);

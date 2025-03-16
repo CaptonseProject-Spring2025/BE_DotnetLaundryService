@@ -112,6 +112,30 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpPut("update-extras")]
+        public async Task<IActionResult> UpdateServiceExtras([FromBody] AddExtrasToServiceDetailRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var result = await _serviceDetailService.UpdateExtrasToServiceDetailAsync(request);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
         [HttpGet("{serviceId}")]
         public async Task<IActionResult> GetById(Guid serviceId)
         {

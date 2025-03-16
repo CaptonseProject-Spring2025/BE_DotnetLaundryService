@@ -272,6 +272,83 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task<AddExtrasToServiceDetailResponse> UpdateExtrasToServiceDetailAsync(AddExtrasToServiceDetailRequest request)
+        {
+            var response = new AddExtrasToServiceDetailResponse();
+
+            // Bắt đầu transaction để đảm bảo tính nhất quán
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // Kiểm tra ServiceDetail có tồn tại không
+                var serviceDetail = await _unitOfWork.Repository<Servicedetail>().GetAsync(s => s.Serviceid == request.ServiceId);
+                if (serviceDetail == null)
+                {
+                    throw new ArgumentException("Service detail not found.");
+                }
+
+                // Lọc danh sách ExtraId hợp lệ (tồn tại trong DB)
+                var validExtras = _unitOfWork.Repository<Extra>()
+                    .GetAll()
+                    .Where(e => request.ExtraIds.Contains(e.Extraid))
+                    .Select(e => e.Extraid)
+                    .ToList();
+
+                // Tìm danh sách ExtraId không tồn tại
+                var invalidExtras = request.ExtraIds.Except(validExtras).ToList();
+
+                // Nếu tất cả ExtraIds đều không hợp lệ
+                if (validExtras.Count == 0)
+                {
+                    response.SuccessCount = 0;
+                    response.FailedCount = request.ExtraIds.Count;
+                    response.FailedExtras = request.ExtraIds;
+                    return response;
+                }
+
+                // Kiểm tra xem ServiceId đã có trong ServiceExtraMapping hay chưa
+                var existingMappings = _unitOfWork.Repository<Serviceextramapping>()
+                    .GetAll()
+                    .Where(m => m.Serviceid == request.ServiceId)
+                    .ToList();
+
+                if (existingMappings.Count > 0)
+                {
+                    // Nếu đã có Extra liên kết với ServiceDetail này, xóa toàn bộ trước khi cập nhật
+                    await _unitOfWork.Repository<Serviceextramapping>().DeleteRangeAsync(existingMappings);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                // Tạo danh sách mapping mới
+                var newMappings = validExtras.Select(extraId => new Serviceextramapping
+                {
+                    Serviceid = request.ServiceId,
+                    Extraid = extraId
+                }).ToList();
+
+                // Thêm vào database
+                await _unitOfWork.Repository<Serviceextramapping>().InsertRangeAsync(newMappings);
+
+                // Lưu thay đổi & Commit transaction
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // Cập nhật response
+                response.SuccessCount = validExtras.Count;
+                response.FailedCount = invalidExtras.Count;
+                response.FailedExtras = invalidExtras;
+
+                return response;
+            }
+            catch (Exception)
+            {
+                // Nếu có lỗi, rollback toàn bộ
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
         public async Task<ServiceDetailWithExtrasResponse> GetServiceDetailWithExtrasAsync(Guid serviceId)
         {
             // Lấy thông tin ServiceDetail
