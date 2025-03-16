@@ -10,6 +10,12 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IExtraService
     {
+        Task<ExtraResponse> GetExtraByIdAsync(Guid extraId);
+
         Task<ExtraResponse> CreateExtraAsync(CreateExtraRequest request);
+
+        Task<bool> DeleteExtraAsync(Guid extraId);
+
+        Task<ExtraResponse> UpdateExtraAsync(UpdateExtraRequest request);
     }
 }
