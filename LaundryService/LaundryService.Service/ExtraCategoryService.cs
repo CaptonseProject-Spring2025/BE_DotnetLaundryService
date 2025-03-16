@@ -20,6 +20,33 @@ namespace LaundryService.Service
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<List<ExtraCategoryDetailResponse>> GetAllExtraCategoriesAsync()
+        {
+            var extraCategories = await _unitOfWork.Repository<Extracategory>().GetAllAsync();
+
+            var result = extraCategories.Select(category => new ExtraCategoryDetailResponse
+            {
+                ExtraCategoryId = category.Extracategoryid,
+                Name = category.Name,
+                CreatedAt = category.Createdat,
+                Extras = _unitOfWork.Repository<Extra>()
+                    .GetAll()
+                    .Where(e => e.Extracategoryid == category.Extracategoryid)
+                    .Select(extra => new ExtraResponse
+                    {
+                        ExtraId = extra.Extraid,
+                        Name = extra.Name,
+                        Description = extra.Description,
+                        Price = extra.Price,
+                        ImageUrl = extra.Image,
+                        CreatedAt = extra.Createdat
+                    })
+                    .ToList()
+            }).ToList();
+
+            return result;
+        }
+
         public async Task<ExtraCategoryResponse> CreateExtraCategoryAsync(CreateExtraCategoryRequest request)
         {
             // Kiểm tra trùng tên ExtraCategory

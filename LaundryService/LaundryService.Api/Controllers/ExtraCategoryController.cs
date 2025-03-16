@@ -17,6 +17,20 @@ namespace LaundryService.Api.Controllers
             _extraCategoryService = extraCategoryService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                var extraCategories = await _extraCategoryService.GetAllExtraCategoriesAsync();
+                return Ok(extraCategories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
         [Authorize(Roles = "Admin")] // Chỉ Admin có quyền tạo ExtraCategory
         [HttpPost]
         public async Task<IActionResult> CreateExtraCategory([FromBody] CreateExtraCategoryRequest request)

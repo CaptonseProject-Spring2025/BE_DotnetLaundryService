@@ -10,6 +10,8 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IExtraCategoryService
     {
+        Task<List<ExtraCategoryDetailResponse>> GetAllExtraCategoriesAsync();
+
         Task<ExtraCategoryResponse> CreateExtraCategoryAsync(CreateExtraCategoryRequest request);
 
         Task<bool> DeleteExtraCategoryAsync(Guid id);
