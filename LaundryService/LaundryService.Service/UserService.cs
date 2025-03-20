@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LaundryService.Dto.Requests;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace LaundryService.Service
 {
@@ -153,6 +155,46 @@ namespace LaundryService.Service
         {
             if (await _unitOfWork.Repository<User>().GetAsync(u => u.Phonenumber == phoneNumber) != null) return true;
             return false;
+        }
+
+        public Guid GetCurrentUserIdOrThrow(HttpContext httpContext)
+        {
+            var userIdClaim = httpContext?.User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdClaim, out var userId) && userId != Guid.Empty)
+            {
+                return userId;
+            }
+            throw new UnauthorizedAccessException("Invalid token");
+        }
+
+        public async Task<IEnumerable<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role)
+        {
+            var currentUserId = GetCurrentUserIdOrThrow(httpContext);
+
+            var usersQuery = _unitOfWork.Repository<User>().GetAll().Where(u => u.Userid != currentUserId);
+
+            if (!string.IsNullOrEmpty(role))
+            {
+                usersQuery = usersQuery.Where(u => u.Role == role);
+            }
+
+            var users = await Task.FromResult(usersQuery.ToList());
+
+            return users.Select(u => new UserDetailResponse
+            {
+                UserId = u.Userid,
+                FullName = u.Fullname,
+                PhoneNumber = u.Phonenumber,
+                Email = u.Email,
+                Role = u.Role,
+                Status = u.Status,
+                Avatar = u.Avatar,
+                Dob = u.Dob,
+                Gender = u.Gender,
+                RewardPoints = u.Rewardpoints,
+                DateCreated = u.Datecreated,
+                DateModified = u.Datemodified
+            }).ToList();
         }
     }
 }
