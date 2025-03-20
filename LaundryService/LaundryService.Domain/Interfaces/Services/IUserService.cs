@@ -1,4 +1,5 @@
-﻿using LaundryService.Dto.Requests;
+﻿using LaundryService.Dto.Pagination;
+using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -19,6 +20,6 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
 
-        Task<IEnumerable<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role);
+        Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize);
     }
 }

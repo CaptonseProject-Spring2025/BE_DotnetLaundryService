@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using LaundryService.Dto.Requests;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using LaundryService.Dto.Pagination;
+using LaundryService.Infrastructure;
 
 namespace LaundryService.Service
 {
@@ -167,7 +169,7 @@ namespace LaundryService.Service
             throw new UnauthorizedAccessException("Invalid token");
         }
 
-        public async Task<IEnumerable<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role)
+        public async Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize)
         {
             var currentUserId = GetCurrentUserIdOrThrow(httpContext);
 
@@ -178,23 +180,27 @@ namespace LaundryService.Service
                 usersQuery = usersQuery.Where(u => u.Role == role);
             }
 
-            var users = await Task.FromResult(usersQuery.ToList());
+            usersQuery = usersQuery.OrderBy(u => u.Datecreated); // Sắp xếp theo CreatedAt
 
-            return users.Select(u => new UserDetailResponse
-            {
-                UserId = u.Userid,
-                FullName = u.Fullname,
-                PhoneNumber = u.Phonenumber,
-                Email = u.Email,
-                Role = u.Role,
-                Status = u.Status,
-                Avatar = u.Avatar,
-                Dob = u.Dob,
-                Gender = u.Gender,
-                RewardPoints = u.Rewardpoints,
-                DateCreated = u.Datecreated,
-                DateModified = u.Datemodified
-            }).ToList();
+            var paginatedUsers = await usersQuery
+                .Select(u => new UserDetailResponse
+                {
+                    UserId = u.Userid,
+                    FullName = u.Fullname,
+                    PhoneNumber = u.Phonenumber,
+                    Email = u.Email,
+                    Role = u.Role,
+                    Status = u.Status,
+                    Avatar = u.Avatar,
+                    Dob = u.Dob,
+                    Gender = u.Gender,
+                    RewardPoints = u.Rewardpoints,
+                    DateCreated = u.Datecreated,
+                    DateModified = u.Datemodified
+                })
+                .ToPagedListAsync(page, pageSize);
+
+            return paginatedUsers;
         }
     }
 }

@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LaundryService.Domain\LaundryService.Domain.csproj" />
     <ProjectReference Include="..\LaundryService.Dto\LaundryService.Dto.csproj" />
+    <ProjectReference Include="..\LaundryService.Infrastructure\LaundryService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

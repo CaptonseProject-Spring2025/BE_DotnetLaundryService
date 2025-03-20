@@ -108,11 +108,11 @@ namespace LaundryService.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<IActionResult> GetUsers([FromQuery] string? role)
+        public async Task<IActionResult> GetUsers([FromQuery] string? role, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var users = await _userService.GetUsersAsync(HttpContext, role);
+                var users = await _userService.GetUsersAsync(HttpContext, role, page, pageSize);
                 return Ok(users);
             }
             catch (UnauthorizedAccessException ex)
@@ -124,6 +124,5 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
-
     }
 }
