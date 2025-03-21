@@ -12,5 +12,6 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IAddressService
     {
         Task<AddressResponse> CreateAddressAsync(HttpContext httpContext, CreateAddressRequest request);
+        Task<bool> DeleteAddressAsync(HttpContext httpContext, Guid addressId);
     }
 }

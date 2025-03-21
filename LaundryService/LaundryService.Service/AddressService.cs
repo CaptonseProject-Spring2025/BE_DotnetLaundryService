@@ -88,5 +88,38 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<bool> DeleteAddressAsync(HttpContext httpContext, Guid addressId)
+        {
+            // Lấy UserId từ JWT token
+            var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user token.");
+            }
+
+            // Tìm địa chỉ theo ID
+            var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId && a.Userid == userId);
+            if (address == null)
+            {
+                throw new KeyNotFoundException("Address not found or does not belong to the user.");
+            }
+
+            // Bắt đầu Transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                await _unitOfWork.Repository<Address>().DeleteAsync(address);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                return true;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }
