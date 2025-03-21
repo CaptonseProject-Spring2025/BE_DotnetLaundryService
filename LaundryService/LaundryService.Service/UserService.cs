@@ -202,5 +202,77 @@ namespace LaundryService.Service
 
             return paginatedUsers;
         }
+
+        public async Task<UserDetailResponse> CreateUserAsync(CreateUserRequest request)
+        {
+            // 1. Kiểm tra xem số điện thoại đã tồn tại trong DB chưa
+            var existingUserByPhone = await _unitOfWork.Repository<User>()
+                .GetAsync(u => u.Phonenumber == request.PhoneNumber);
+
+            if (existingUserByPhone != null)
+            {
+                throw new ApplicationException("Phone number is already in use.");
+            }
+
+            // 2. Nếu có email, kiểm tra email đã tồn tại chưa (nếu rỗng thì bỏ qua)
+            if (!string.IsNullOrEmpty(request.Email))
+            {
+                var existingUserByEmail = await _unitOfWork.Repository<User>()
+                    .GetAsync(u => u.Email == request.Email);
+                if (existingUserByEmail != null)
+                {
+                    throw new ApplicationException("Email is already in use.");
+                }
+            }
+
+            // 3. Hash password
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+            // 4. Xử lý upload avatar (nếu có)
+            string? avatarUrl = null;
+            if (request.Avatar != null)
+            {
+                avatarUrl = await _fileStorageService.UploadFileAsync(request.Avatar, "user-avatars");
+            }
+
+            // 5. Tạo user entity
+            var newUser = new User
+            {
+                Fullname = request.FullName,
+                Email = request.Email,
+                Password = hashedPassword,
+                Role = request.Role,
+                Avatar = avatarUrl,
+                Dob = request.Dob,
+                Gender = request.Gender,
+                Phonenumber = request.PhoneNumber,
+                Rewardpoints = request.RewardPoints ?? 0, // nếu null thì set 0
+                Status = "Active",
+                Datecreated = DateTime.Now
+            };
+
+            // 6. Lưu vào DB
+            await _unitOfWork.Repository<User>().InsertAsync(newUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            // 7. Trả về UserDetailResponse
+            var response = new UserDetailResponse
+            {
+                UserId = newUser.Userid,
+                FullName = newUser.Fullname,
+                PhoneNumber = newUser.Phonenumber,
+                Email = newUser.Email,
+                Role = newUser.Role,
+                Status = newUser.Status,
+                Avatar = newUser.Avatar,
+                Dob = newUser.Dob,
+                Gender = newUser.Gender,
+                RewardPoints = newUser.Rewardpoints,
+                DateCreated = newUser.Datecreated,
+                DateModified = newUser.Datemodified
+            };
+
+            return response;
+        }
     }
 }

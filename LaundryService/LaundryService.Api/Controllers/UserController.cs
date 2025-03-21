@@ -124,5 +124,33 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Admin tạo mới 1 user
+        /// </summary>
+        [Authorize(Roles = "Admin")]
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateUser([FromForm] CreateUserRequest request)
+        {
+            // Lưu ý: [FromForm] để upload file (Avatar) qua multipart/form-data
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var newUser = await _userService.CreateUserAsync(request);
+                return Ok(newUser);
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
     }
 }
