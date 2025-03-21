@@ -17,6 +17,21 @@ namespace LaundryService.Api.Controllers
             _extraCategoryService = extraCategoryService;
         }
 
+        /// <summary>
+        /// Lấy toàn bộ danh mục ExtraCategory, kèm danh sách Extras bên trong
+        /// </summary>
+        /// <returns>
+        /// Danh sách (<see cref="ExtraCategoryDetailResponse"/>) chứa:
+        /// - <c>ExtraCategoryId</c>, <c>Name</c>, <c>CreatedAt</c>
+        /// - <c>Extras</c>: Danh sách Extra (ID, Name, Description, Price, ImageUrl, CreatedAt)
+        /// </returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - **200**: Lấy thành công
+        /// - **500**: Lỗi server
+        /// 
+        /// Không yêu cầu đăng nhập.
+        /// </remarks>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -31,6 +46,25 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Tạo mới một ExtraCategory (chỉ Admin)
+        /// </summary>
+        /// <param name="request">
+        /// Dữ liệu tạo mới:
+        /// - <c>Name</c>: Tên của ExtraCategory (bắt buộc, không được trùng)
+        /// </param>
+        /// <returns>
+        /// Trả về <see cref="ExtraCategoryResponse"/> nếu tạo thành công:
+        /// - <c>ExtraCategoryId</c>, <c>Name</c>, <c>CreatedAt</c>
+        /// </returns>
+        /// <remarks>
+        /// **Yêu cầu quyền**: Phải đăng nhập với role = Admin  
+        /// 
+        /// **Response codes**:
+        /// - **200**: Tạo thành công
+        /// - **400**: Tên bị trùng hoặc input không hợp lệ
+        /// - **500**: Lỗi server
+        /// </remarks>
         [Authorize(Roles = "Admin")] // Chỉ Admin có quyền tạo ExtraCategory
         [HttpPost]
         public async Task<IActionResult> CreateExtraCategory([FromBody] CreateExtraCategoryRequest request)
@@ -55,6 +89,24 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Xóa một ExtraCategory theo <c>id</c> (chỉ Admin)
+        /// </summary>
+        /// <param name="id">Id của ExtraCategory cần xóa</param>
+        /// <returns>Trả về thông báo xóa thành công</returns>
+        /// <remarks>
+        /// **Yêu cầu quyền**: Phải đăng nhập role = Admin  
+        /// 
+        /// **Logic**:
+        /// - Không thể xóa nếu bên trong ExtraCategory còn <c>Extras</c>.
+        /// - Ném <see cref="ApplicationException"/> nếu còn Extras liên kết.
+        /// 
+        /// **Response codes**:
+        /// - **200**: Xóa thành công
+        /// - **400**: Còn Extras liên quan hoặc request không hợp lệ
+        /// - **404**: Không tìm thấy ExtraCategory
+        /// - **500**: Lỗi server
+        /// </remarks>
         [Authorize(Roles = "Admin")] // Chỉ Admin có quyền xóa
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteExtraCategory(Guid id)
