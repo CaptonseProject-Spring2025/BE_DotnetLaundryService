@@ -121,5 +121,35 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<List<AddressResponse>> GetUserAddressesAsync(HttpContext httpContext)
+        {
+            // Lấy UserId từ JWT token
+            var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user token.");
+            }
+
+            // Lấy danh sách địa chỉ của User từ database
+            var addresses = await _unitOfWork.Repository<Address>().GetAllAsync(a => a.Userid == userId);
+            if (!addresses.Any())
+            {
+                throw new KeyNotFoundException("No addresses found for this user.");
+            }
+
+            return addresses.Select(a => new AddressResponse
+            {
+                AddressId = a.Addressid,
+                DetailAddress = a.Detailaddress,
+                Latitude = a.Latitude ?? 0,
+                Longitude = a.Longitude ?? 0,
+                AddressLabel = a.Addresslabel,
+                ContactName = a.Contactname,
+                ContactPhone = a.Contactphone,
+                Description = a.Description,
+                DateCreated = a.Datecreated ?? DateTime.MinValue
+            }).ToList();
+        }
     }
 }

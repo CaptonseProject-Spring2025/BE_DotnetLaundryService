@@ -70,5 +70,27 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred.", Error = ex.Message });
             }
         }
+
+        [HttpGet("user")]
+        public async Task<IActionResult> GetUserAddresses()
+        {
+            try
+            {
+                var addresses = await _addressService.GetUserAddressesAsync(HttpContext);
+                return Ok(addresses);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred.", Error = ex.Message });
+            }
+        }
     }
 }
