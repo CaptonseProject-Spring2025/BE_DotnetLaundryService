@@ -18,6 +18,11 @@ namespace LaundryService.Api.Controllers
             _userService = userService;
         }
 
+        /// <summary>
+        /// Lấy thông tin chi tiết 1 user qua Id
+        /// </summary>
+        /// <param name="id">Guid của user</param>
+        /// <returns>Trả về UserDetailResponse nếu thành công</returns>
         [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(Guid id)

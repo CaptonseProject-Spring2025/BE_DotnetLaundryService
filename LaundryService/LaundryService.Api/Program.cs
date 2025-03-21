@@ -72,6 +72,9 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API Documentation for Laundry Service",
     });
 
+    var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+
     // Cấu hình bảo mật JWT trong Swagger
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
