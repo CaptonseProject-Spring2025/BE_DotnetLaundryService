@@ -18,6 +18,8 @@ namespace LaundryService.Domain.Interfaces
         /// </summary>
         Task<IList<T>> GetAllAsync();
 
+        Task<IList<T>> GetAllAsync(Expression<Func<T, bool>> predicate);
+
         /// <summary>
         /// Find one item of an entity by synchronous method
         /// </summary>
@@ -48,7 +50,7 @@ namespace LaundryService.Domain.Interfaces
         /// </summary>
         Task DeleteAsync(T entity, bool saveChanges = true);
 
-        /// <summary>
+        /// <summary>   
         /// Remove multiple items from an entity by asynchronous method
         /// </summary>
         Task DeleteRangeAsync(IEnumerable<T> entities, bool saveChanges = true);
@@ -64,6 +66,8 @@ namespace LaundryService.Domain.Interfaces
         Task UpdateRangeAsync(IEnumerable<T> entities, bool saveChanges = true);
 
         Task<T?> GetAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
+
+        Task<T?> GetAsync(Expression<Func<T, bool>> predicate);
 
         IQueryable<T> GetAll();
     }

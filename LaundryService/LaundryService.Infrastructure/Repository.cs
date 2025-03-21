@@ -27,6 +27,11 @@ namespace LaundryService.Infrastructure
             return await Entities.ToListAsync();
         }
 
+        public async Task<IList<T>> GetAllAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await Entities.Where(predicate).ToListAsync();
+        }
+
         /// <summary>
         /// Trả về một thực thể theo khóa chính
         /// </summary>
@@ -138,6 +143,11 @@ namespace LaundryService.Infrastructure
         public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         {
             return await Entities.FirstOrDefaultAsync(predicate, cancellationToken);
+        }
+
+        public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await Entities.FirstOrDefaultAsync(predicate);
         }
 
         /// <summary>
