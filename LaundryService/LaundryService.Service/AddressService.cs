@@ -45,7 +45,7 @@ namespace LaundryService.Service
 
             // Tính khoảng cách
             double distance = _mapboxService.CalculateDistance(request.Latitude, request.Longitude, fetchedLatitude, fetchedLongitude);
-            if (distance > 70)
+            if (distance > 1000)
                 throw new ArgumentException($"The location is too far from the entered address. Difference: {distance:F2} meters.");
 
             // Bắt đầu Transaction
