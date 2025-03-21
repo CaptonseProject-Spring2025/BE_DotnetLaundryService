@@ -17,6 +17,18 @@ namespace LaundryService.Api.Controllers
             _serviceService = serviceService;
         }
 
+        /// <summary>
+        /// Lấy toàn bộ danh sách danh mục (Service Category)
+        /// </summary>
+        /// <returns>
+        /// Danh sách các danh mục dạng đối tượng ẩn danh:  
+        /// {CategoryId, Name, Icon, CreatedAt}
+        /// </returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - **200**: Lấy thành công
+        /// - **500**: Lỗi server
+        /// </remarks>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -24,6 +36,21 @@ namespace LaundryService.Api.Controllers
             return Ok(categories);
         }
 
+        /// <summary>
+        /// Lấy chi tiết một danh mục (Category) cùng các SubCategory và Service bên trong
+        /// </summary>
+        /// <param name="id">ID (Guid) của Category cần lấy</param>
+        /// <returns>
+        /// Trả về <see cref="CategoryDetailResponse"/> bao gồm:
+        /// - <c>CategoryId</c>, <c>Name</c>, <c>Icon</c>
+        /// - <c>SubCategories</c>: Danh sách SubCategory (mỗi SubCategory gồm <c>ServiceDetails</c>)
+        /// </returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - **200**: Lấy thành công
+        /// - **404**: Không tìm thấy danh mục
+        /// - **500**: Lỗi server
+        /// </remarks>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -47,6 +74,26 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Tạo mới một danh mục (Category)
+        /// </summary>
+        /// <param name="request">
+        /// Thông tin tạo mới danh mục:
+        /// - <c>Name</c>: Tên danh mục (bắt buộc, không trùng)  
+        /// - <c>Icon</c>: File ảnh tải lên (tùy chọn, gửi qua <c>multipart/form-data</c>)
+        /// </param>
+        /// <returns>Trả về đối tượng ẩn danh gồm Message, CategoryId, Name, IconUrl, CreatedAt</returns>
+        /// <remarks>
+        /// **Yêu cầu quyền**: Phải đăng nhập **Role = Admin**.  
+        /// 
+        /// **Response codes**:
+        /// - **200**: Tạo thành công
+        /// - **400**: Tên danh mục trùng, hoặc dữ liệu không hợp lệ
+        /// - **500**: Lỗi server
+        /// 
+        /// **Lưu ý**:
+        /// - Nếu cần upload <c>Icon</c>, phải gửi request dạng `multipart/form-data`.
+        /// </remarks>
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateServiceCategory([FromForm] CreateServiceCategoryRequest request)
@@ -78,6 +125,27 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Cập nhật danh mục (Category) theo Id
+        /// </summary>
+        /// <param name="id">Id của danh mục cần cập nhật</param>
+        /// <param name="request">
+        /// Dữ liệu cập nhật:
+        /// - <c>Name</c>: (tùy chọn)  
+        /// - <c>Icon</c>: (tùy chọn, file upload nếu muốn thay icon cũ)
+        /// </param>
+        /// <returns>Trả về <see cref="Servicecategory"/> sau khi update</returns>
+        /// <remarks>
+        /// **Yêu cầu quyền**: Role = Admin.  
+        /// 
+        /// **Response codes**:
+        /// - **200**: Update thành công
+        /// - **400**: Thông tin không hợp lệ
+        /// - **404**: Không tìm thấy Category
+        /// - **500**: Lỗi server
+        /// 
+        /// **Lưu ý**: Nếu upload icon mới, request phải là `multipart/form-data`.
+        /// </remarks>
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateServiceCategoryRequest request)
@@ -91,6 +159,24 @@ namespace LaundryService.Api.Controllers
             return Ok(updatedCategory);
         }
 
+        /// <summary>
+        /// Xóa một danh mục (Category) theo <c>id</c>
+        /// </summary>
+        /// <param name="id">Id của danh mục cần xóa</param>
+        /// <returns>Trả về thông báo xóa thành công</returns>
+        /// <remarks>
+        /// **Yêu cầu quyền**: Role = Admin.  
+        /// 
+        /// **Lưu ý**:
+        /// - Nếu danh mục còn Sub-services liên kết thì không thể xóa (throws ApplicationException).
+        /// - Icon của danh mục cũng sẽ bị xóa khỏi lưu trữ.
+        /// 
+        /// **Response codes**:
+        /// - **200**: Xóa thành công
+        /// - **400**: Có sub-services liên quan hoặc request sai
+        /// - **404**: Không tìm thấy category
+        /// - **500**: Lỗi server
+        /// </remarks>
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
