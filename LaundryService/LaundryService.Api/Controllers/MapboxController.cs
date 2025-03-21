@@ -18,15 +18,41 @@ namespace LaundryService.Api.Controllers
         [HttpGet("geocoding")]
         public async Task<IActionResult> GetCoordinates([FromQuery] string address)
         {
-            var (latitude, longitude) = await _mapboxService.GetCoordinatesFromAddressAsync(address);
-            return Ok(new { Latitude = latitude, Longitude = longitude });
+            try
+            {
+                var (latitude, longitude) = await _mapboxService.GetCoordinatesFromAddressAsync(address);
+                return Ok(new { Latitude = latitude, Longitude = longitude });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (HttpRequestException)
+            {
+                return StatusCode(500, new { Message = "Failed to connect to Mapbox API." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
         }
 
         [HttpGet("calculate-distance")]
         public IActionResult CalculateDistance([FromQuery] decimal lat1, [FromQuery] decimal lon1, [FromQuery] decimal lat2, [FromQuery] decimal lon2)
         {
-            double distance = _mapboxService.CalculateDistance(lat1, lon1, lat2, lon2);
-            return Ok(new { Distance = distance });
+            try
+            {
+                double distance = _mapboxService.CalculateDistance(lat1, lon1, lat2, lon2);
+                return Ok(new { Distance = distance });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
         }
     }
 }
