@@ -151,5 +151,36 @@ namespace LaundryService.Service
                 DateCreated = a.Datecreated ?? DateTime.MinValue
             }).ToList();
         }
+
+        public async Task<AddressResponse> GetAddressByIdAsync(HttpContext httpContext, Guid addressId)
+        {
+            // Lấy UserId từ JWT token
+            var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Invalid or missing user token.");
+            }
+
+            // Tìm địa chỉ theo ID và kiểm tra quyền sở hữu
+            var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId && a.Userid == userId);
+            if (address == null)
+            {
+                throw new KeyNotFoundException("Address not found or does not belong to the user.");
+            }
+
+            // Trả về thông tin chi tiết của địa chỉ
+            return new AddressResponse
+            {
+                AddressId = address.Addressid,
+                DetailAddress = address.Detailaddress,
+                Latitude = address.Latitude ?? 0,
+                Longitude = address.Longitude ?? 0,
+                AddressLabel = address.Addresslabel,
+                ContactName = address.Contactname,
+                ContactPhone = address.Contactphone,
+                Description = address.Description,
+                DateCreated = address.Datecreated ?? DateTime.MinValue
+            };
+        }
     }
 }

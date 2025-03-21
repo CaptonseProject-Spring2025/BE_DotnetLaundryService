@@ -14,5 +14,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<AddressResponse> CreateAddressAsync(HttpContext httpContext, CreateAddressRequest request);
         Task<bool> DeleteAddressAsync(HttpContext httpContext, Guid addressId);
         Task<List<AddressResponse>> GetUserAddressesAsync(HttpContext httpContext);
+
+        Task<AddressResponse> GetAddressByIdAsync(HttpContext httpContext, Guid addressId);
     }
 }
