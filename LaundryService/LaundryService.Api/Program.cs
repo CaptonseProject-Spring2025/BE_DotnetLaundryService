@@ -58,6 +58,7 @@ builder.Services.AddScoped<IExtraService, ExtraService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IMapboxService, MapboxService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddControllers();
 
