@@ -12,5 +12,7 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IOrderService
     {
         Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request);
+
+        Task<CartResponse> GetCartAsync(HttpContext httpContext);
     }
 }

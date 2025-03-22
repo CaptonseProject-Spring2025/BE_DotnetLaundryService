@@ -4,6 +4,7 @@ using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -169,6 +170,68 @@ namespace LaundryService.Service
                 return false;
 
             return existingIds.SetEquals(newIds);
+        }
+
+        public async Task<CartResponse> GetCartAsync(HttpContext httpContext)
+        {
+            var userId = GetCurrentUserIdOrThrow(httpContext);
+
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Orderextras)
+                    .ThenInclude(oe => oe.Extra)
+                .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+
+            if (order == null) throw new KeyNotFoundException("No cart found.");
+
+            decimal total = 0;
+            var cartResponse = new CartResponse { OrderId = order.Orderid };
+
+            foreach (var item in order.Orderitems)
+            {
+                var service = item.Service;
+                var serviceId = item.Serviceid;
+                var servicePrice = service?.Price ?? 0;
+                var serviceName = service?.Name ?? "Unknown";
+
+                var extraResponses = new List<CartExtraResponse>();
+                decimal sumExtraPrices = 0;
+
+                foreach (var oe in item.Orderextras)
+                {
+                    var extraPrice = oe.Extra?.Price ?? 0;
+                    var extraName = oe.Extra?.Name ?? "Unknown Extra";
+
+                    extraResponses.Add(new CartExtraResponse
+                    {
+                        ExtraId = oe.Extraid,
+                        ExtraName = extraName,
+                        ExtraPrice = extraPrice
+                    });
+
+                    sumExtraPrices += extraPrice;
+                }
+
+                var subTotal = (servicePrice + sumExtraPrices) * item.Quantity;
+                total += subTotal;
+
+                cartResponse.Items.Add(new CartItemResponse
+                {
+                    OrderItemId = item.Orderitemid,
+                    ServiceId = serviceId,
+                    ServiceName = serviceName,
+                    ServicePrice = servicePrice,
+                    Quantity = item.Quantity,
+                    Extras = extraResponses,
+                    SubTotal = subTotal
+                });
+            }
+
+            cartResponse.EstimatedTotal = total;
+            return cartResponse;
         }
     }
 }
