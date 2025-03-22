@@ -170,6 +170,107 @@ namespace LaundryService.Service
 
             return existingIds.SetEquals(newIds);
         }
+
+        public async Task<CartResponse> GetCartAsync(HttpContext httpContext)
+        {
+            var userId = GetCurrentUserIdOrThrow(httpContext);
+
+            // Lấy Order INCART
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+
+            if (order == null)
+            {
+                // Tùy logic: ném lỗi hoặc trả về Cart trống
+                throw new KeyNotFoundException("No cart found for current user.");
+            }
+
+            // Lấy tất cả OrderItem + OrderExtra của order
+            // Muốn Eager Load, ta có thể dùng Include:
+            //    .Include(o => o.Orderitems).ThenInclude(oi => oi.Orderextras)
+            //    .ThenInclude(oe => oe.Extra)
+            // … Hoặc truy vấn rời như dưới
+
+            // Lấy OrderItem
+            var orderItems = _unitOfWork.Repository<Orderitem>()
+                .GetAll()
+                .Where(oi => oi.Orderid == order.Orderid)
+                .ToList();
+
+            // Xây CartResponse
+            var cartResponse = new CartResponse
+            {
+                OrderId = order.Orderid
+            };
+
+            decimal total = 0;
+
+            foreach (var item in orderItems)
+            {
+                // Lấy ServiceDetail (để lấy Price, Name)
+                var service = _unitOfWork.Repository<Servicedetail>()
+                    .GetAll()
+                    .FirstOrDefault(s => s.Serviceid == item.Serviceid);
+
+                var serviceId = service.Serviceid;
+                var servicePrice = service?.Price ?? 0;
+                var serviceName = service?.Name ?? "Unknown";
+
+                // Lấy các Extras
+                var orderExtras = _unitOfWork.Repository<Orderextra>()
+                    .GetAll()
+                    .Where(oe => oe.Orderitemid == item.Orderitemid)
+                    .ToList();
+
+                // Map sang CartExtraResponse
+                var extraResponses = new List<CartExtraResponse>();
+                decimal sumExtraPrices = 0;
+                foreach (var oe in orderExtras)
+                {
+                    // Lấy entity Extra (nếu cần Name, Price)
+                    var extraEntity = _unitOfWork.Repository<Extra>()
+                        .GetAll()
+                        .FirstOrDefault(e => e.Extraid == oe.Extraid);
+
+                    var extraPrice = extraEntity?.Price ?? 0;
+                    var extraName = extraEntity?.Name ?? "Unknown Extra";
+
+                    extraResponses.Add(new CartExtraResponse
+                    {
+                        ExtraId = oe.Extraid,
+                        ExtraName = extraName,
+                        ExtraPrice = extraPrice
+                    });
+
+                    sumExtraPrices += extraPrice;
+                }
+
+                // Tính SubTotal = (servicePrice + sumExtraPrices) * quantity
+                var subTotal = (servicePrice + sumExtraPrices) * item.Quantity;
+
+                // Cộng vào total giỏ
+                total += subTotal;
+
+                // Tạo CartItemResponse
+                var cartItem = new CartItemResponse
+                {
+                    OrderItemId = item.Orderitemid,
+                    ServiceId = serviceId,
+                    ServiceName = serviceName,
+                    ServicePrice = servicePrice,
+                    Quantity = item.Quantity,
+                    Extras = extraResponses,
+                    SubTotal = subTotal
+                };
+
+                cartResponse.Items.Add(cartItem);
+            }
+
+            cartResponse.EstimatedTotal = total;
+            return cartResponse;
+        }
+
     }
 }
 
