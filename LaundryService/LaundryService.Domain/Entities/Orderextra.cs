@@ -11,7 +11,7 @@ public partial class Orderextra
 
     public Guid Extraid { get; set; }
 
-    public decimal Extraprice { get; set; }
+    public decimal? Extraprice { get; set; }
 
     public DateTime? Createdat { get; set; }
 

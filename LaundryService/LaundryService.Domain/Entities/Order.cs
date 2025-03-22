@@ -11,11 +11,11 @@ public partial class Order
 
     public string? Pickuplabel { get; set; }
 
-    public string Pickupname { get; set; } = null!;
+    public string? Pickupname { get; set; } = null!;
 
-    public string Pickupphone { get; set; } = null!;
+    public string? Pickupphone { get; set; } = null!;
 
-    public string Pickupaddressdetail { get; set; } = null!;
+    public string? Pickupaddressdetail { get; set; } = null!;
 
     public string? Pickupdescription { get; set; }
 
@@ -25,11 +25,11 @@ public partial class Order
 
     public string? Deliverylabel { get; set; }
 
-    public string Deliveryname { get; set; } = null!;
+    public string? Deliveryname { get; set; } = null!;
 
-    public string Deliveryphone { get; set; } = null!;
+    public string? Deliveryphone { get; set; } = null!;
 
-    public string Deliveryaddressdetail { get; set; } = null!;
+    public string? Deliveryaddressdetail { get; set; } = null!;
 
     public string? Deliverydescription { get; set; }
 
@@ -37,9 +37,9 @@ public partial class Order
 
     public decimal? Deliverylongitude { get; set; }
 
-    public DateTime Pickuptime { get; set; }
+    public DateTime? Pickuptime { get; set; }
 
-    public DateTime Deliverytime { get; set; }
+    public DateTime? Deliverytime { get; set; }
 
     public decimal? Shippingfee { get; set; }
 
