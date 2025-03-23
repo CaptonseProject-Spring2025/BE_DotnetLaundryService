@@ -142,27 +142,10 @@ namespace LaundryService.Api.Controllers
         ///     - <c>Pickuptime</c>, <c>Deliverytime</c>: Thời gian user mong muốn lấy/trả đồ (tùy chọn)  
         ///     - <c>Shippingfee</c>, <c>Shippingdiscount</c>, <c>Applicablefee</c>, <c>Discount</c>, <c>Total</c>: Các chi phí liên quan, tổng tạm tính  
         ///     - <c>Note</c>: Ghi chú (tùy chọn)  
-        ///     - <c>Createdat</c>: Thời gian cập nhật status (tùy chọn, mặc định = Now)
+        ///     - <c>Createdat</c>: Thời gian cập nhật status (tùy chọn, mặc định = UtcNow)
         /// </param>
-        /// <returns>
-        ///     Trả về object ẩn danh có dạng: <c>{ Message = "Đặt hàng thành công! Trạng thái: PENDING" }</c>
-        /// </returns>
         /// <remarks>
         /// **Yêu cầu**: Đã đăng nhập (có JWT).  
-        ///
-        /// **Logic tổng quát**:
-        /// 1. Lấy <c>userId</c> từ token, kiểm tra hợp lệ.  
-        /// 2. Tìm Order có <c>Currentstatus = "INCART"</c> của user. Nếu không thấy => <c>KeyNotFoundException</c>.  
-        /// 3. Tìm <c>PickupAddress</c> và <c>DeliveryAddress</c> theo <c>request.PickupAddressId</c>, <c>request.DeliveryAddressId</c>.  
-        ///     - Nếu không thuộc user => <c>KeyNotFoundException</c>.  
-        /// 4. Gán các thông tin địa chỉ lấy/trả đồ (địa chỉ chi tiết, tên liên hệ, phone, lat/long...) vào Order.  
-        /// 5. Lấy danh sách OrderItem, cập nhật giá gốc (<c>Baseprice</c>) của mỗi item từ DB (ServiceDetail).  
-        /// 6. Tính giá Extras trong <c>Orderextra</c>, lưu <c>Extraprice</c> vào DB. Cộng dồn ra <c>basePriceSum</c>.  
-        /// 7. Tính <c>finalTotal</c> = basePriceSum + shippingFee + shippingDiscount + applicableFee + discount.  
-        ///     - So sánh <c>finalTotal</c> với <c>request.Total</c>. Nếu khác => <c>ApplicationException</c>.  
-        /// 8. Cập nhật <c>order.Totalprice = finalTotal</c>, chuyển <c>order.Currentstatus = "PENDING"</c>.  
-        /// 9. Thêm bản ghi <c>OrderStatusHistory</c> với status "PENDING".  
-        /// 10. Lưu DB, commit transaction => trả về message thành công.  
         ///
         /// **Response codes**:
         /// - **200**: Đặt hàng thành công, chuyển trạng thái => "PENDING"
