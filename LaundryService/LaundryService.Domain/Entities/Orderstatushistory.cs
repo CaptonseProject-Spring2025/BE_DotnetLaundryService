@@ -9,8 +9,6 @@ public partial class Orderstatushistory
 
     public Guid Orderid { get; set; }
 
-    public DateTime? Assignedat { get; set; }
-
     public string? Status { get; set; }
 
     public string? Statusdescription { get; set; }

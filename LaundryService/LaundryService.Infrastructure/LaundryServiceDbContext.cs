@@ -565,10 +565,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Statushistoryid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("statushistoryid");
-            entity.Property(e => e.Assignedat)
-                .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("assignedat");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
