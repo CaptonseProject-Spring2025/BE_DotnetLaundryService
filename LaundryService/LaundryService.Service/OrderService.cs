@@ -243,10 +243,16 @@ namespace LaundryService.Service
 
             try
             {
-                // 1) Lấy order INCART của user
+                // 1) Tìm Order INCART (Eager load Orderitems + Extras + Service)
                 var order = _unitOfWork.Repository<Order>()
                     .GetAll()
+                    .Include(o => o.Orderitems)
+                        .ThenInclude(oi => oi.Orderextras)
+                        .ThenInclude(oe => oe.Extra)
+                    .Include(o => o.Orderitems)
+                        .ThenInclude(oi => oi.Service)
                     .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+
                 if (order == null)
                 {
                     throw new KeyNotFoundException("No 'INCART' order found to place.");
@@ -291,53 +297,35 @@ namespace LaundryService.Service
                 order.Pickuptime = request.Pickuptime;
                 order.Deliverytime = request.Deliverytime;
 
-                // 5) Lấy danh sách OrderItem + OrderExtra => cập nhật giá
-                var orderItems = _unitOfWork.Repository<Orderitem>()
-                    .GetAll()
-                    .Where(oi => oi.Orderid == order.Orderid)
-                    .ToList();
-
+                // 5) Cập nhật giá cho các OrderItem và OrderExtra
                 decimal basePriceSum = 0m;
 
-                foreach (var item in orderItems)
+                foreach (var item in order.Orderitems)
                 {
-                    // Tìm serviceDetail để lấy giá hiện tại
-                    var serviceDetail = _unitOfWork.Repository<Servicedetail>()
-                        .GetAll()
-                        .FirstOrDefault(s => s.Serviceid == item.Serviceid);
+                    // Lấy giá hiện tại của service
+                    var servicePrice = item.Service?.Price ?? 0;
+                    item.Baseprice = servicePrice; // Gán baseprice
 
-                    var servicePrice = serviceDetail?.Price ?? 0;
-                    // Gán vào Baseprice
-                    item.Baseprice = servicePrice;
-
-                    // Lấy extras
-                    var extras = _unitOfWork.Repository<Orderextra>()
-                        .GetAll()
-                        .Where(e => e.Orderitemid == item.Orderitemid)
-                        .ToList();
-
-                    decimal sumExtrasPrice = 0m;
-                    foreach (var ex in extras)
+                    // Tính tổng extras
+                    decimal sumExtraPrices = 0;
+                    foreach (var oe in item.Orderextras)
                     {
-                        // Tìm entity Extra
-                        var extraEntity = _unitOfWork.Repository<Extra>()
-                            .GetAll()
-                            .FirstOrDefault(x => x.Extraid == ex.Extraid);
+                        var extraPrice = oe.Extra?.Price ?? 0;
+                        oe.Extraprice = extraPrice;
+                        sumExtraPrices += extraPrice;
 
-                        var extraPrice = extraEntity?.Price ?? 0;
-                        ex.Extraprice = extraPrice;
-                        sumExtrasPrice += extraPrice;
-
-                        // Update DB thay đổi Extraprice
-                        await _unitOfWork.Repository<Orderextra>().UpdateAsync(ex, saveChanges: false);
+                        // Đánh dấu EntityState.Modified, 
+                        // hoặc dùng UpdateAsync(oe, saveChanges:false).
+                        _unitOfWork.DbContext.Entry(oe).State = EntityState.Modified;
                     }
 
-                    // Tính subTotal item
-                    var subTotal = (servicePrice + sumExtrasPrice) * item.Quantity;
+                    // SubTotal cho item
+                    var subTotal = (servicePrice + sumExtraPrices) * item.Quantity;
                     basePriceSum += subTotal;
 
-                    // Update DB thay đổi Baseprice
-                    await _unitOfWork.Repository<Orderitem>().UpdateAsync(item, saveChanges: false);
+                    // Đánh dấu EntityState.Modified, 
+                    // hoặc dùng UpdateAsync(item, saveChanges:false).
+                    _unitOfWork.DbContext.Entry(item).State = EntityState.Modified;
                 }
 
                 // 6) Tính tổng theo công thức
@@ -367,8 +355,6 @@ namespace LaundryService.Service
                 order.Applicablefee = applicableFee;
                 order.Discount = discount;
                 order.Totalprice = finalTotal;
-
-                // Chuyển status
                 order.Currentstatus = "PENDING";
 
                 // Update Order
