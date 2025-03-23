@@ -47,6 +47,8 @@ public partial class Order
 
     public decimal? Applicablefee { get; set; }
 
+    public decimal? Otherprice { get; set; }
+
     public decimal? Totalprice { get; set; }
 
     public decimal? Discount { get; set; }

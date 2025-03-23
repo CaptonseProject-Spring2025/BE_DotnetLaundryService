@@ -356,6 +356,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Applicablefee)
                 .HasPrecision(10)
                 .HasColumnName("applicablefee");
+            entity.Property(e => e.Otherprice)
+                .HasPrecision(10)
+                .HasColumnName("otherprice");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnType("timestamp without time zone")
