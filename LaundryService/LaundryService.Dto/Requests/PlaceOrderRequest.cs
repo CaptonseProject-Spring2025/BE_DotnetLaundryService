@@ -41,8 +41,5 @@ namespace LaundryService.Dto.Requests
 
         // Note (không bắt buộc)
         public string? Note { get; set; }
-
-        // Thời gian tạo (nếu client không gửi, server sẽ dùng DateTime.Now)
-        public DateTime? Createdat { get; set; }
     }
 }

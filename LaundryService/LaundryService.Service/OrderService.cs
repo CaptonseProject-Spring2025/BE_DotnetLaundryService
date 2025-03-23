@@ -356,6 +356,7 @@ namespace LaundryService.Service
                 order.Discount = discount;
                 order.Totalprice = finalTotal;
                 order.Currentstatus = "PENDING";
+                order.Createdat = DateTime.UtcNow; //thay đổi ngày tạo thành ngày place order
 
                 // Update Order
                 await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
@@ -368,7 +369,7 @@ namespace LaundryService.Service
                     Statusdescription = "Đặt hàng thành công, chờ xác nhận",
                     Notes = request.Note,
                     Updatedby = userId,
-                    Createdat = request.Createdat ?? DateTime.UtcNow
+                    Createdat = DateTime.UtcNow
                 };
                 await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(newStatusHistory, saveChanges: false);
 
@@ -386,68 +387,66 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext)
+        {
+            var userId = GetCurrentUserIdOrThrow(httpContext);
+
+            // Lấy các order (ngoại trừ INCART), sắp xếp theo CreatedAt desc
+            // Eager load: Orderitems -> Service -> Subservice -> Category 
+            var orders = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Where(o => o.Userid == userId && o.Currentstatus != "INCART")
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                        .ThenInclude(s => s.Subservice)
+                            .ThenInclude(sb => sb.Category)
+                .OrderByDescending(o => o.Createdat)
+                .ToList();
+
+            var result = new List<UserOrderResponse>();
+
+            foreach (var order in orders)
+            {
+                // "OrderName": lấy danh mục (category) của từng service -> gộp bằng dấu phẩy
+                //   Mỗi OrderItem -> Service -> Subservice -> Category -> Name
+                //   Lọc null + distinct => ghép lại
+                var categoryNames = order.Orderitems
+                    .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+
+                // Gộp thành 1 chuỗi, vd: "Giặt giày, Giặt sấy"
+                var orderName = string.Join(", ", categoryNames);
+
+                // Số lượng service = số dòng orderItem
+                var serviceCount = order.Orderitems.Count;
+
+                var item = new UserOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    OrderName = orderName,
+                    ServiceCount = serviceCount,
+                    TotalPrice = order.Totalprice,
+                    OrderedDate = ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderStatus = order.Currentstatus
+                };
+
+                result.Add(item);
+            }
+
+            return result;
+        }
+
+        // Hàm convert DateTime UTC sang giờ Việt Nam (UTC+7)
+        private DateTime ConvertToVnTime(DateTime utcDateTime)
+        {
+            // Cách 1: utcDateTime.AddHours(7)
+            // Cách 2: Sử dụng TimeZoneInfo 
+            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, timeZone);
+        }
+
     }
 }
-
-        /// <summary>
-        /// Build OrderResponse để trả về client sau khi thêm sản phẩm thành công.
-        /// </summary>
-        //private async Task<OrderResponse> BuildOrderResponse(Guid orderId)
-        //{
-        //    var order = await _unitOfWork.Repository<Order>()
-        //        .GetAsync(o => o.Orderid == orderId, includeProperties: "Orderitems,Orderitems.Orderextras");
-
-        //    if (order == null)
-        //        throw new KeyNotFoundException("Order not found after creation.");
-
-        //    var response = new OrderResponse
-        //    {
-        //        OrderId = order.Orderid,
-        //        CurrentStatus = order.Currentstatus,
-        //        CreatedAt = order.Createdat
-        //    };
-
-        //    // Lấy danh sách serviceDetailId -> serviceName
-        //    var serviceDetailMap = _unitOfWork.Repository<Servicedetail>()
-        //        .GetAll()
-        //        .ToDictionary(s => s.Serviceid, s => s.Name);
-
-        //    // Lấy danh sách extraId -> extraName
-        //    var extraMap = _unitOfWork.Repository<Extra>()
-        //        .GetAll()
-        //        .ToDictionary(e => e.Extraid, e => e.Name);
-
-        //    foreach (var item in order.Orderitems)
-        //    {
-        //        var itemResp = new OrderItemResponse
-        //        {
-        //            OrderItemId = item.Orderitemid,
-        //            ServiceId = item.Serviceid,
-        //            ServiceName = serviceDetailMap.ContainsKey(item.Serviceid)
-        //                           ? serviceDetailMap[item.Serviceid]
-        //                           : "Unknown Service",
-        //            Quantity = item.Quantity ?? 1,
-        //            BasePrice = item.Baseprice
-        //        };
-
-        //        // Lấy ra các orderExtras
-        //        if (item.Orderextras != null && item.Orderextras.Count > 0)
-        //        {
-        //            foreach (var oe in item.Orderextras)
-        //            {
-        //                var oeResp = new OrderExtraResponse
-        //                {
-        //                    OrderExtraId = oe.Orderextraid,
-        //                    ExtraId = oe.Extraid,
-        //                    ExtraName = extraMap.ContainsKey(oe.Extraid) ? extraMap[oe.Extraid] : "Unknown Extra",
-        //                    ExtraPrice = oe.Extraprice
-        //                };
-        //                itemResp.Extras.Add(oeResp);
-        //            }
-        //        }
-
-        //        response.Items.Add(itemResp);
-        //    }
-
-        //    return response;
-        //}

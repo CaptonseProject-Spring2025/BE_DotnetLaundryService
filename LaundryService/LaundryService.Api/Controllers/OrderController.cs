@@ -186,5 +186,25 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        [Authorize]
+        [HttpGet("user-orders")]
+        public async Task<IActionResult> GetUserOrders()
+        {
+            try
+            {
+                var orders = await _orderService.GetUserOrdersAsync(HttpContext);
+                return Ok(orders);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
     }
 }
