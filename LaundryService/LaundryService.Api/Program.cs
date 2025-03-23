@@ -1,4 +1,6 @@
-﻿using LaundryService.Api.Extensions;
+﻿using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using LaundryService.Api.Extensions;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Infrastructure;
@@ -12,6 +14,11 @@ using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromFile("notification-firebase-adminsdk.json")
+});
 
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
