@@ -182,8 +182,8 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                await _orderService.PlaceOrderAsync(HttpContext, request);
-                return Ok(new { Message = "Đặt hàng thành công! Trạng thái: PENDING" });
+                var orderId = await _orderService.PlaceOrderAsync(HttpContext, request);
+                return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
             }
             catch (KeyNotFoundException ex)
             {

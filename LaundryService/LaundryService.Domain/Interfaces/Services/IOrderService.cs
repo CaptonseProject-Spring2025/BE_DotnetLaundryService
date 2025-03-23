@@ -15,6 +15,6 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<CartResponse> GetCartAsync(HttpContext httpContext);
 
-        Task PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
+        Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
     }
 }

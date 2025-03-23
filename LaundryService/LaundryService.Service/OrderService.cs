@@ -234,7 +234,7 @@ namespace LaundryService.Service
             return cartResponse;
         }
 
-        public async Task PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
+        public async Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
         {
             var userId = GetCurrentUserIdOrThrow(httpContext);
 
@@ -389,6 +389,9 @@ namespace LaundryService.Service
                 // 9) Lưu các thay đổi & commit
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
+
+                // Trả về OrderId
+                return order.Orderid;
             }
             catch
             {
