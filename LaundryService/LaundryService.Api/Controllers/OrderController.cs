@@ -131,5 +131,77 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Xác nhận đặt hàng, chuyển Order từ trạng thái "INCART" sang "PENDING".
+        /// </summary>
+        /// <param name="request">
+        ///     <see cref="PlaceOrderRequest"/> gồm:
+        ///     - <c>PickupAddressId</c>: Guid địa chỉ lấy đồ (của user)  
+        ///     - <c>DeliveryAddressId</c>: Guid địa chỉ trả đồ (của user)  
+        ///     - <c>Pickuptime</c>, <c>Deliverytime</c>: Thời gian user mong muốn lấy/trả đồ (tùy chọn)  
+        ///     - <c>Shippingfee</c>, <c>Shippingdiscount</c>, <c>Applicablefee</c>, <c>Discount</c>, <c>Total</c>: Các chi phí liên quan, tổng tạm tính  
+        ///     - <c>Note</c>: Ghi chú (tùy chọn)  
+        ///     - <c>Createdat</c>: Thời gian cập nhật status (tùy chọn, mặc định = Now)
+        /// </param>
+        /// <returns>
+        ///     Trả về object ẩn danh có dạng: <c>{ Message = "Đặt hàng thành công! Trạng thái: PENDING" }</c>
+        /// </returns>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (có JWT).  
+        ///
+        /// **Logic tổng quát**:
+        /// 1. Lấy <c>userId</c> từ token, kiểm tra hợp lệ.  
+        /// 2. Tìm Order có <c>Currentstatus = "INCART"</c> của user. Nếu không thấy => <c>KeyNotFoundException</c>.  
+        /// 3. Tìm <c>PickupAddress</c> và <c>DeliveryAddress</c> theo <c>request.PickupAddressId</c>, <c>request.DeliveryAddressId</c>.  
+        ///     - Nếu không thuộc user => <c>KeyNotFoundException</c>.  
+        /// 4. Gán các thông tin địa chỉ lấy/trả đồ (địa chỉ chi tiết, tên liên hệ, phone, lat/long...) vào Order.  
+        /// 5. Lấy danh sách OrderItem, cập nhật giá gốc (<c>Baseprice</c>) của mỗi item từ DB (ServiceDetail).  
+        /// 6. Tính giá Extras trong <c>Orderextra</c>, lưu <c>Extraprice</c> vào DB. Cộng dồn ra <c>basePriceSum</c>.  
+        /// 7. Tính <c>finalTotal</c> = basePriceSum + shippingFee + shippingDiscount + applicableFee + discount.  
+        ///     - So sánh <c>finalTotal</c> với <c>request.Total</c>. Nếu khác => <c>ApplicationException</c>.  
+        /// 8. Cập nhật <c>order.Totalprice = finalTotal</c>, chuyển <c>order.Currentstatus = "PENDING"</c>.  
+        /// 9. Thêm bản ghi <c>OrderStatusHistory</c> với status "PENDING".  
+        /// 10. Lưu DB, commit transaction => trả về message thành công.  
+        ///
+        /// **Response codes**:
+        /// - **200**: Đặt hàng thành công, chuyển trạng thái => "PENDING"
+        /// - **400**: Lỗi logic (tổng tiền không khớp, v.v.)
+        /// - **401**: Chưa đăng nhập hoặc token không hợp lệ
+        /// - **404**: Không tìm thấy order INCART hoặc không tìm thấy địa chỉ
+        /// - **500**: Lỗi server
+        /// </remarks>
+        [Authorize]
+        [HttpPost("place-order")]
+        public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                await _orderService.PlaceOrderAsync(HttpContext, request);
+                return Ok(new { Message = "Đặt hàng thành công! Trạng thái: PENDING" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Lỗi logic (tổng tiền không khớp, v.v.)
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
     }
 }

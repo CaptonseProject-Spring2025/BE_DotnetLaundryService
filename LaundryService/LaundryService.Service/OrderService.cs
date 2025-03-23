@@ -66,7 +66,7 @@ namespace LaundryService.Service
                     {
                         Userid = userId,
                         Currentstatus = "INCART",
-                        Createdat = DateTime.Now
+                        Createdat = DateTime.UtcNow
                     };
                     await _unitOfWork.Repository<Order>().InsertAsync(order);
                     await _unitOfWork.SaveChangesAsync();
@@ -232,6 +232,170 @@ namespace LaundryService.Service
 
             cartResponse.EstimatedTotal = total;
             return cartResponse;
+        }
+
+        public async Task PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
+        {
+            var userId = GetCurrentUserIdOrThrow(httpContext);
+
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // 1) Lấy order INCART của user
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+                if (order == null)
+                {
+                    throw new KeyNotFoundException("No 'INCART' order found to place.");
+                }
+
+                // 2) Lấy thông tin Address pickup & delivery
+                //    (với AddressId được gửi trong request)
+                var pickupAddress = _unitOfWork.Repository<Address>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Addressid == request.PickupAddressId && a.Userid == userId);
+                if (pickupAddress == null)
+                {
+                    throw new KeyNotFoundException("Pickup address not found for current user.");
+                }
+
+                var deliveryAddress = _unitOfWork.Repository<Address>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Addressid == request.DeliveryAddressId && a.Userid == userId);
+                if (deliveryAddress == null)
+                {
+                    throw new KeyNotFoundException("Delivery address not found for current user.");
+                }
+
+                // 3) Gán các thông tin Pickup/Delivery vào Order
+                order.Pickuplabel = pickupAddress.Addresslabel;
+                order.Pickupname = pickupAddress.Contactname;
+                order.Pickupphone = pickupAddress.Contactphone;
+                order.Pickupaddressdetail = pickupAddress.Detailaddress;
+                order.Pickupdescription = pickupAddress.Description;
+                order.Pickuplatitude = pickupAddress.Latitude;
+                order.Pickuplongitude = pickupAddress.Longitude;
+
+                order.Deliverylabel = deliveryAddress.Addresslabel;
+                order.Deliveryname = deliveryAddress.Contactname;
+                order.Deliveryphone = deliveryAddress.Contactphone;
+                order.Deliveryaddressdetail = deliveryAddress.Detailaddress;
+                order.Deliverydescription = deliveryAddress.Description;
+                order.Deliverylatitude = deliveryAddress.Latitude;
+                order.Deliverylongitude = deliveryAddress.Longitude;
+
+                // 4) Gán thời gian pickup/delivery
+                order.Pickuptime = request.Pickuptime;
+                order.Deliverytime = request.Deliverytime;
+
+                // 5) Lấy danh sách OrderItem + OrderExtra => cập nhật giá
+                var orderItems = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Where(oi => oi.Orderid == order.Orderid)
+                    .ToList();
+
+                decimal basePriceSum = 0m;
+
+                foreach (var item in orderItems)
+                {
+                    // Tìm serviceDetail để lấy giá hiện tại
+                    var serviceDetail = _unitOfWork.Repository<Servicedetail>()
+                        .GetAll()
+                        .FirstOrDefault(s => s.Serviceid == item.Serviceid);
+
+                    var servicePrice = serviceDetail?.Price ?? 0;
+                    // Gán vào Baseprice
+                    item.Baseprice = servicePrice;
+
+                    // Lấy extras
+                    var extras = _unitOfWork.Repository<Orderextra>()
+                        .GetAll()
+                        .Where(e => e.Orderitemid == item.Orderitemid)
+                        .ToList();
+
+                    decimal sumExtrasPrice = 0m;
+                    foreach (var ex in extras)
+                    {
+                        // Tìm entity Extra
+                        var extraEntity = _unitOfWork.Repository<Extra>()
+                            .GetAll()
+                            .FirstOrDefault(x => x.Extraid == ex.Extraid);
+
+                        var extraPrice = extraEntity?.Price ?? 0;
+                        ex.Extraprice = extraPrice;
+                        sumExtrasPrice += extraPrice;
+
+                        // Update DB thay đổi Extraprice
+                        await _unitOfWork.Repository<Orderextra>().UpdateAsync(ex, saveChanges: false);
+                    }
+
+                    // Tính subTotal item
+                    var subTotal = (servicePrice + sumExtrasPrice) * item.Quantity;
+                    basePriceSum += subTotal;
+
+                    // Update DB thay đổi Baseprice
+                    await _unitOfWork.Repository<Orderitem>().UpdateAsync(item, saveChanges: false);
+                }
+
+                // 6) Tính tổng theo công thức
+                //    total = basePriceSum + shippingFee + shippingDiscount + applicableFee + discount
+                decimal shippingDiscount = request.Shippingdiscount ?? 0;
+                decimal applicableFee = request.Applicablefee ?? 0;
+                decimal discount = request.Discount ?? 0;
+
+                decimal finalTotal = basePriceSum
+                                    + request.Shippingfee
+                                    + shippingDiscount
+                                    + applicableFee
+                                    + discount;
+
+                // So sánh finalTotal với request.Total
+                //   do decimal so sánh, có thể bạn cần Round / tolerance
+                //   ở đây mình so sánh chính xác
+                if (finalTotal != request.Total)
+                {
+                    throw new ApplicationException(
+                        $"Total mismatch. Server computed: {finalTotal}, client sent: {request.Total}.");
+                }
+
+                // 7) Gán các trường còn lại vào Order
+                order.Shippingfee = request.Shippingfee;
+                order.Shippingdiscount = shippingDiscount;
+                order.Applicablefee = applicableFee;
+                order.Discount = discount;
+                order.Totalprice = finalTotal;
+
+                // Chuyển status
+                order.Currentstatus = "PENDING";
+
+                // Update Order
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                // 8) Tạo OrderStatusHistory: "PENDING"
+                var newStatusHistory = new Orderstatushistory
+                {
+                    Orderid = order.Orderid,
+                    Status = "PENDING",
+                    Statusdescription = "Đặt hàng thành công, chờ xác nhận",
+                    Notes = request.Note,
+                    Updatedby = userId,
+                    Createdat = request.Createdat ?? DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(newStatusHistory, saveChanges: false);
+
+                // 9) Lưu các thay đổi & commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                // Nếu có lỗi => rollback
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
         }
     }
 }
