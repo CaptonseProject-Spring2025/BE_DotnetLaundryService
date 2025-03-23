@@ -98,7 +98,7 @@ namespace LaundryService.Service
 
             // Cập nhật refresh token vào database
             user.Refreshtoken = hashedRefreshToken;
-            user.Refreshtokenexpirytime = DateTime.Now.AddDays(7);
+            user.Refreshtokenexpirytime = DateTime.UtcNow.AddDays(7);
 
             await _unitOfWork.Repository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
@@ -145,7 +145,7 @@ namespace LaundryService.Service
 
             // Cập nhật Refresh Token trong DB
             user.Refreshtoken = newHashedRefreshToken;
-            user.Refreshtokenexpirytime = DateTime.Now.AddDays(7);
+            user.Refreshtokenexpirytime = DateTime.UtcNow.AddDays(7);
 
             await _unitOfWork.Repository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();

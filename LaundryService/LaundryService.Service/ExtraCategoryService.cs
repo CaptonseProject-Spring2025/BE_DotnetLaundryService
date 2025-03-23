@@ -61,7 +61,7 @@ namespace LaundryService.Service
             var newCategory = new Extracategory
             {
                 Name = request.Name,
-                Createdat = DateTime.Now
+                Createdat = DateTime.UtcNow
             };
 
             // Thêm vào database

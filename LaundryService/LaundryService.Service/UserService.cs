@@ -106,7 +106,7 @@ namespace LaundryService.Service
             }
 
             // Cập nhật thời gian chỉnh sửa
-            user.Datemodified = DateTime.Now;
+            user.Datemodified = DateTime.UtcNow;
 
             // Lưu vào database
             await _unitOfWork.Repository<User>().UpdateAsync(user);
@@ -248,7 +248,7 @@ namespace LaundryService.Service
                 Phonenumber = request.PhoneNumber,
                 Rewardpoints = request.RewardPoints ?? 0, // nếu null thì set 0
                 Status = "Active",
-                Datecreated = DateTime.Now
+                Datecreated = DateTime.UtcNow
             };
 
             // 6. Lưu vào DB

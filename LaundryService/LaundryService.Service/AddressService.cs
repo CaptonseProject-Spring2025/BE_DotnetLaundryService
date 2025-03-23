@@ -62,7 +62,7 @@ namespace LaundryService.Service
                     Contactname = request.ContactName,
                     Contactphone = request.ContactPhone,
                     Description = request.Description,
-                    Datecreated = DateTime.Now
+                    Datecreated = DateTime.UtcNow
                 };
 
                 await _unitOfWork.Repository<Address>().InsertAsync(address);
