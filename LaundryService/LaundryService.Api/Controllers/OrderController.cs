@@ -1,4 +1,5 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
@@ -187,8 +188,37 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy danh sách các đơn hàng đã đặt của người dùng hiện tại.
+        /// (Chỉ lấy các đơn có trạng thái khác "INCART")
+        /// </summary>
+        /// <returns>
+        /// Danh sách <see cref="UserOrderResponse"/> gồm:
+        /// - <c>OrderId</c>: Mã đơn hàng  
+        /// - <c>OrderName</c>: Tên ngắn gọn mô tả đơn hàng (từ các category dịch vụ)  
+        /// - <c>ServiceCount</c>: Tổng số dịch vụ trong đơn  
+        /// - <c>TotalPrice</c>: Tổng tiền  
+        /// - <c>OrderedDate</c>: Ngày đặt hàng (theo giờ Việt Nam)  
+        /// - <c>OrderStatus</c>: Trạng thái đơn hàng hiện tại
+        /// </returns>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (có JWT).  
+        ///
+        /// **Logic xử lý**:
+        /// 1) Lấy `userId` từ token.
+        /// 2) Truy vấn danh sách đơn hàng của user có `Currentstatus` khác `"INCART"`.
+        /// 3) Eager load các quan hệ: `OrderItems → Service → SubService → Category`.
+        /// 4) Tạo danh sách `UserOrderResponse`, gộp tên danh mục (category) làm `OrderName`.
+        /// 5) Trả kết quả theo thứ tự mới nhất (`CreatedAt desc`).
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Trả về danh sách đơn thành công.
+        /// - <c>401</c>: Token không hợp lệ.
+        /// - <c>500</c>: Lỗi hệ thống.
+        /// </remarks>
         [Authorize]
         [HttpGet("user-orders")]
+        //[ProducesResponseType(typeof(List<UserOrderResponse>), 200)]
         public async Task<IActionResult> GetUserOrders()
         {
             try
@@ -206,6 +236,35 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy danh sách tất cả đơn hàng trong hệ thống (phân trang).
+        /// Dành cho Admin hoặc Staff.
+        /// </summary>
+        /// <param name="status">Lọc theo trạng thái đơn hàng (PENDING, CONFIRMED, DONE...). Nếu bỏ trống thì lấy tất cả.</param>
+        /// <param name="page">Trang hiện tại (bắt đầu từ 1).</param>
+        /// <param name="pageSize">Số lượng bản ghi mỗi trang.</param>
+        /// <returns>
+        /// Kết quả phân trang <see cref="PaginationResult{UserOrderResponse}"/> gồm:
+        /// - <c>Data</c>: Danh sách đơn hàng  
+        /// - <c>TotalRecords</c>: Tổng số đơn hàng  
+        /// - <c>CurrentPage</c>, <c>PageSize</c>
+        /// </returns>
+        /// <remarks>
+        /// **Yêu cầu**: JWT token hợp lệ, role: `Admin` hoặc `Staff`.  
+        ///
+        /// **Logic xử lý**:
+        /// 1) Lấy danh sách đơn hàng có `Currentstatus` khác `"INCART"`.
+        /// 2) Nếu `status` được truyền vào => lọc theo trạng thái.
+        /// 3) Eager load `OrderItems → Service → SubService → Category`.
+        /// 4) Phân trang với `Skip/Take`.
+        /// 5) Gộp tên danh mục thành `OrderName`, đếm số dịch vụ trong đơn.
+        /// 6) Trả danh sách theo thứ tự mới nhất (`CreatedAt desc`).
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Lấy danh sách thành công.
+        /// - <c>401</c>: Token không hợp lệ hoặc không có quyền.
+        /// - <c>500</c>: Lỗi hệ thống.
+        /// </remarks>
         [Authorize(Roles = "Admin,Staff")]
         [HttpGet("all-orders")]
         public async Task<IActionResult> GetAllOrders([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
