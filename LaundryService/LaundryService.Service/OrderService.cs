@@ -4,6 +4,7 @@ using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
+using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -18,29 +19,18 @@ namespace LaundryService.Service
     public class OrderService : IOrderService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUtil _util;
 
-        public OrderService(IUnitOfWork unitOfWork)
+        public OrderService(IUnitOfWork unitOfWork, IUtil util)
         {
             _unitOfWork = unitOfWork;
-        }
-
-        /// <summary>
-        /// Lấy userId từ JWT token. Ném exception nếu không hợp lệ.
-        /// </summary>
-        private Guid GetCurrentUserIdOrThrow(HttpContext httpContext)
-        {
-            var userIdClaim = httpContext?.User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(userIdClaim, out var userId) && userId != Guid.Empty)
-            {
-                return userId;
-            }
-            throw new UnauthorizedAccessException("Invalid token: Cannot retrieve userId.");
+            _util = util;
         }
 
         public async Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request)
         {
             // 1) Lấy userId từ token
-            var userId = GetCurrentUserIdOrThrow(httpContext);
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             // 2) Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
@@ -175,7 +165,7 @@ namespace LaundryService.Service
 
         public async Task<CartResponse> GetCartAsync(HttpContext httpContext)
         {
-            var userId = GetCurrentUserIdOrThrow(httpContext);
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             var order = _unitOfWork.Repository<Order>()
                 .GetAll()
@@ -237,7 +227,7 @@ namespace LaundryService.Service
 
         public async Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
         {
-            var userId = GetCurrentUserIdOrThrow(httpContext);
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             // Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
@@ -391,7 +381,7 @@ namespace LaundryService.Service
 
         public async Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext)
         {
-            var userId = GetCurrentUserIdOrThrow(httpContext);
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             // Lấy các order (ngoại trừ INCART), sắp xếp theo CreatedAt desc
             // Eager load: Orderitems -> Service -> Subservice -> Category 
@@ -430,7 +420,7 @@ namespace LaundryService.Service
                     OrderName = orderName,
                     ServiceCount = serviceCount,
                     TotalPrice = order.Totalprice,
-                    OrderedDate = ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
                     OrderStatus = order.Currentstatus
                 };
 
@@ -494,7 +484,7 @@ namespace LaundryService.Service
                     OrderName = string.Join(", ", categoryNames),
                     ServiceCount = order.Orderitems.Count,
                     TotalPrice = order.Totalprice,
-                    OrderedDate = ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
                     OrderStatus = order.Currentstatus
                 });
             }
@@ -508,15 +498,6 @@ namespace LaundryService.Service
             );
 
             return paginationResult;
-        }
-
-        // Hàm convert DateTime UTC sang giờ Việt Nam (UTC+7)
-        private DateTime ConvertToVnTime(DateTime utcDateTime)
-        {
-            // Cách 1: utcDateTime.AddHours(7)
-            // Cách 2: Sử dụng TimeZoneInfo 
-            var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-            return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, timeZone);
         }
     }
 }

@@ -52,6 +52,7 @@ builder.Services.AddDbContext<LaundryServiceDbContext>(options =>
 builder.Services.AddScoped<Func<LaundryServiceDbContext>>(provider => () => provider.GetRequiredService<LaundryServiceDbContext>());
 builder.Services.AddScoped<DbFactory>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IUtil, Util>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();

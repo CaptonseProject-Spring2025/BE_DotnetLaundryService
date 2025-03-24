@@ -18,12 +18,14 @@ namespace LaundryService.Service
     public class UserService : IUserService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUtil _util;
         private readonly IFileStorageService _fileStorageService;
 
-        public UserService(IUnitOfWork unitOfWork, IFileStorageService fileStorageService)
+        public UserService(IUnitOfWork unitOfWork, IFileStorageService fileStorageService, IUtil util)
         {
             _unitOfWork = unitOfWork;
             _fileStorageService = fileStorageService;
+            _util = util;
         }
 
         public async Task<UserDetailResponse> GetUserByIdAsync(Guid userId)
@@ -159,19 +161,9 @@ namespace LaundryService.Service
             return false;
         }
 
-        public Guid GetCurrentUserIdOrThrow(HttpContext httpContext)
-        {
-            var userIdClaim = httpContext?.User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(userIdClaim, out var userId) && userId != Guid.Empty)
-            {
-                return userId;
-            }
-            throw new UnauthorizedAccessException("Invalid token");
-        }
-
         public async Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize)
         {
-            var currentUserId = GetCurrentUserIdOrThrow(httpContext);
+            var currentUserId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             var usersQuery = _unitOfWork.Repository<User>().GetAll().Where(u => u.Userid != currentUserId);
 

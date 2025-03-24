@@ -97,9 +97,7 @@ namespace LaundryService.Api.Controllers
         /// 
         /// **Logic**:
         /// 1) Lấy userId từ token.  
-        /// 2) Tìm Order có `Currentstatus == "INCART"` cho user này.  
-        /// 3) Nếu không có => ném `KeyNotFoundException`.  
-        /// 4) Tính tổng tạm tính: `(servicePrice + sumExtraPrices) * quantity`, cộng dồn cho các item.  
+        /// 2) Tìm Order có `Currentstatus == "INCART"` cho user này. 
         /// 
         /// **Response codes**:
         /// - **200**: Trả về giỏ hàng
@@ -207,9 +205,7 @@ namespace LaundryService.Api.Controllers
         /// **Logic xử lý**:
         /// 1) Lấy `userId` từ token.
         /// 2) Truy vấn danh sách đơn hàng của user có `Currentstatus` khác `"INCART"`.
-        /// 3) Eager load các quan hệ: `OrderItems → Service → SubService → Category`.
-        /// 4) Tạo danh sách `UserOrderResponse`, gộp tên danh mục (category) làm `OrderName`.
-        /// 5) Trả kết quả theo thứ tự mới nhất (`CreatedAt desc`).
+        /// 3) Trả kết quả theo thứ tự mới nhất (`CreatedAt desc`).
         ///
         /// **Response codes**:
         /// - <c>200</c>: Trả về danh sách đơn thành công.
@@ -255,10 +251,7 @@ namespace LaundryService.Api.Controllers
         /// **Logic xử lý**:
         /// 1) Lấy danh sách đơn hàng có `Currentstatus` khác `"INCART"`.
         /// 2) Nếu `status` được truyền vào => lọc theo trạng thái.
-        /// 3) Eager load `OrderItems → Service → SubService → Category`.
-        /// 4) Phân trang với `Skip/Take`.
-        /// 5) Gộp tên danh mục thành `OrderName`, đếm số dịch vụ trong đơn.
-        /// 6) Trả danh sách theo thứ tự mới nhất (`CreatedAt desc`).
+        /// 3) Trả danh sách theo thứ tự mới nhất (`CreatedAt desc`).
         ///
         /// **Response codes**:
         /// - <c>200</c>: Lấy danh sách thành công.
