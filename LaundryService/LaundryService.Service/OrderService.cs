@@ -624,5 +624,69 @@ namespace LaundryService.Service
 
             return response;
         }
+
+        public async Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, Guid orderId)
+        {
+            // 1) Kiểm tra Order có tồn tại hay không
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (order == null || order.Currentstatus == "INCART")
+                throw new KeyNotFoundException("Order not found.");
+
+            // (Nếu bạn cần giới hạn user chỉ được xem order của chính họ,
+            //  kiểm tra order.Userid == currentUserId, v.v.)
+
+            // 2) Truy vấn Orderstatushistory theo OrderId, 
+            //    Eager load UpdatedbyNavigation (là user) + Orderphotos
+            //    sắp xếp CreatedAt desc => bản mới nhất trước
+            var histories = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(sh => sh.Orderid == orderId)
+                .Include(sh => sh.UpdatedbyNavigation) // Lấy thông tin user
+                .Include(sh => sh.Orderphotos)         // Để biết có media ảnh không
+                .OrderBy(sh => sh.Createdat)
+                .ToList();
+
+            // 3) Map sang DTO
+            var result = new List<OrderStatusHistoryItemResponse>();
+
+            foreach (var h in histories)
+            {
+                // Kiểm tra user Updatedby
+                UpdatedByUser? updatedBy = null;
+                if (h.UpdatedbyNavigation != null)
+                {
+                    updatedBy = new UpdatedByUser
+                    {
+                        UserId = h.UpdatedbyNavigation.Userid,
+                        FullName = h.UpdatedbyNavigation.Fullname,
+                        PhoneNumber = h.UpdatedbyNavigation.Phonenumber
+                    };
+                }
+
+                // Kiểm tra media
+                var containMedia = (h.Orderphotos != null && h.Orderphotos.Any())
+                    ? true
+                    : false;
+
+                // Tạo item
+                var item = new OrderStatusHistoryItemResponse
+                {
+                    StatusHistoryId = h.Statushistoryid,
+                    Status = h.Status,
+                    StatusDescription = h.Statusdescription,
+                    Notes = h.Notes,
+                    UpdatedBy = updatedBy,
+                    CreatedAt = h.Createdat,
+                    ContainMedia = containMedia
+                };
+
+                result.Add(item);
+            }
+
+            return result;
+        }
     }
 }

@@ -324,5 +324,52 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy lịch sử cập nhật trạng thái của một đơn hàng.
+        /// </summary>
+        /// <param name="orderId">ID của đơn hàng cần lấy lịch sử.</param>
+        /// <returns>
+        /// Danh sách các bản ghi trạng thái dạng <see cref="OrderStatusHistoryItemResponse"/> gồm:
+        /// - <c>StatusHistoryId</c>: Mã bản ghi trạng thái  
+        /// - <c>Status</c>: Mã trạng thái (PENDING, CONFIRMED, etc.)  
+        /// - <c>StatusDescription</c>: Mô tả trạng thái  
+        /// - <c>Notes</c>: Ghi chú kèm theo (nếu có)  
+        /// - <c>UpdatedBy</c>: Thông tin người cập nhật trạng thái  
+        ///     - <c>UserId</c>, <c>FullName</c>, <c>PhoneNumber</c>
+        /// - <c>CreatedAt</c>: Thời gian cập nhật  
+        /// - <c>ContainMedia</c>: Có ảnh đính kèm trong trạng thái đó hay không
+        /// </returns>
+        /// <remarks>
+        /// **Yêu cầu**: 
+        /// 1) Đã đăng nhập (JWT).  
+        /// 2) không chấp nhận đơn `"INCART"`
+        /// 
+        /// **Response codes**:
+        /// - <c>200</c>: Lấy lịch sử thành công.
+        /// - <c>404</c>: Không tìm thấy đơn hàng.
+        /// - <c>401</c>: Token không hợp lệ hoặc không có quyền.
+        /// - <c>500</c>: Lỗi hệ thống.
+        /// </remarks>
+        [HttpGet("history/{orderId}")]
+        public async Task<IActionResult> GetOrderStatusHistory(Guid orderId)
+        {
+            try
+            {
+                var histories = await _orderService.GetOrderStatusHistoryAsync(HttpContext, orderId);
+                return Ok(histories);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
     }
 }
