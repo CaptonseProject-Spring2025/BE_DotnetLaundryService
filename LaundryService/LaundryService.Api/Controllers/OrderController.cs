@@ -206,5 +206,23 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,Staff")]
+        [HttpGet("all-orders")]
+        public async Task<IActionResult> GetAllOrders([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _orderService.GetAllOrdersAsync(HttpContext, status, page, pageSize);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
     }
 }

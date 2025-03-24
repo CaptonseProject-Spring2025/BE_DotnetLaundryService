@@ -1,6 +1,7 @@
 ﻿using LaundryService.Domain.Entities;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
@@ -439,6 +440,76 @@ namespace LaundryService.Service
             return result;
         }
 
+        public async Task<PaginationResult<UserOrderResponse>> GetAllOrdersAsync(HttpContext httpContext, string? status, int page, int pageSize)
+        {
+            // Giả sử ta chỉ cho Admin/Staff truy cập, 
+            // check logic, ném exception hoặc check Roles ở Controller
+            // (Ở đây có thể check role, hoặc tin tưởng Controller đã [Authorize(Roles="...")])
+
+            // 1) Lấy query Orders (ngoại trừ INCART), 
+            //    Nếu có status => lọc
+            var ordersQuery = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Where(o => o.Currentstatus != "INCART");
+
+            if (!string.IsNullOrEmpty(status))
+            {
+                // Lọc theo status
+                ordersQuery = ordersQuery.Where(o => o.Currentstatus == status);
+            }
+
+            // 2) Eager load: Orderitems -> Service -> Subservice -> Category
+            // Rồi sắp xếp "sớm nhất" (CreatedAt ascending)
+            var query = ordersQuery
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                        .ThenInclude(s => s.Subservice)
+                            .ThenInclude(sb => sb.Category)
+                .OrderByDescending(o => o.Createdat);
+
+            // 3) Phân trang => Tính totalRecords
+            var totalRecords = query.Count(); // Đếm tổng
+            
+            // Skip & Take
+            var orders = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList(); // load về danh sách
+
+            // 4) Duyệt từng order, map sang UserOrderResponse
+            var resultList = new List<UserOrderResponse>();
+
+            foreach (var order in orders)
+            {
+                // Gom tên category
+                var categoryNames = order.Orderitems
+                    .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+
+                resultList.Add(new UserOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    OrderName = string.Join(", ", categoryNames),
+                    ServiceCount = order.Orderitems.Count,
+                    TotalPrice = order.Totalprice,
+                    OrderedDate = ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderStatus = order.Currentstatus
+                });
+            }
+
+            // 5) Đóng gói kiểu PaginationResult
+            var paginationResult = new PaginationResult<UserOrderResponse>(
+                data: resultList,
+                totalRecords: totalRecords,
+                currentPage: page,
+                pageSize: pageSize
+            );
+
+            return paginationResult;
+        }
+
         // Hàm convert DateTime UTC sang giờ Việt Nam (UTC+7)
         private DateTime ConvertToVnTime(DateTime utcDateTime)
         {
@@ -447,6 +518,5 @@ namespace LaundryService.Service
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, timeZone);
         }
-
     }
 }

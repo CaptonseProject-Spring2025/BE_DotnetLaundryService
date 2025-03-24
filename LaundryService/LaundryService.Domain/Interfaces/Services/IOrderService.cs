@@ -1,4 +1,5 @@
-﻿using LaundryService.Dto.Requests;
+﻿using LaundryService.Dto.Pagination;
+using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -18,5 +19,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
 
         Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext);
+
+        Task<PaginationResult<UserOrderResponse>> GetAllOrdersAsync(HttpContext httpContext, string? status, int page, int pageSize);
     }
 }
