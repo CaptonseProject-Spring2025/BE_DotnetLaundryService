@@ -276,5 +276,53 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Lấy chi tiết một đơn hàng theo <c>orderId</c> (bao gồm địa chỉ, dịch vụ, extras, trạng thái...).
+        /// </summary>
+        /// <param name="orderId">ID của đơn hàng cần lấy chi tiết.</param>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (JWT).  
+        /// **Logic xử lý**:
+        /// 
+        /// 1) Tìm đơn hàng theo `orderId`, bao gồm:
+        ///     - OrderItems → Service  
+        ///     - OrderExtras → Extra  
+        ///     - OrderStatusHistories
+        /// 
+        /// 2) Nếu đơn không tồn tại hoặc đang là `"INCART"` thì trả về lỗi 404.  
+        /// 3) Nếu người dùng không phải chủ đơn thì trả về lỗi 401.  
+        /// 4) Trích xuất thông tin Pickup/Delivery, dịch vụ, extras, trạng thái đơn hàng.
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Trả về chi tiết đơn thành công.
+        /// - <c>401</c>: Token không hợp lệ hoặc không có quyền xem đơn.
+        /// - <c>404</c>: Không tìm thấy đơn hàng.
+        /// - <c>500</c>: Lỗi hệ thống.
+        /// </remarks>
+        [Authorize]
+        [HttpGet("{orderId}")]
+        [ProducesResponseType(typeof(OrderDetailCustomResponse), 200)]
+        public async Task<IActionResult> GetOrderDetailCustom(Guid orderId)
+        {
+            try
+            {
+                var result = await _orderService.GetOrderDetailCustomAsync(HttpContext, orderId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
     }
 }

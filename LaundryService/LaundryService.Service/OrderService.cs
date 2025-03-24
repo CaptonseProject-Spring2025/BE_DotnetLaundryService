@@ -499,5 +499,130 @@ namespace LaundryService.Service
 
             return paginationResult;
         }
+
+        public async Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, Guid orderId)
+        {
+            // 1) Eager load
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Orderextras)
+                        .ThenInclude(oe => oe.Extra)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Include(o => o.Orderstatushistories)
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (order == null || order.Currentstatus == "INCART")
+                throw new KeyNotFoundException("Order not found.");
+
+            // (Tuỳ logic: nếu user role => check order.Userid == currentUserId,
+            // Admin/Staff => có thể xem tất cả, v.v. 
+            // Ở đây giả sử cho user xem đơn của họ.)
+            var currentUserId = _util.GetCurrentUserIdOrThrow(httpContext);
+            // if (order.Userid != currentUserId) throw new UnauthorizedAccessException("Not your order.");
+
+            // 2) Map Order => response
+            var response = new OrderDetailCustomResponse
+            {
+                OrderId = order.Orderid,
+                UserId = order.Userid,
+                PickupLabel = order.Pickuplabel,
+                PickupName = order.Pickupname,
+                PickupPhone = order.Pickupphone,
+                PickupAddressDetail = order.Pickupaddressdetail,
+                PickupDescription = order.Pickupdescription,
+                PickupLatitude = order.Pickuplatitude,
+                PickupLongitude = order.Pickuplongitude,
+
+                DeliveryLabel = order.Deliverylabel,
+                DeliveryName = order.Deliveryname,
+                DeliveryPhone = order.Deliveryphone,
+                DeliveryAddressDetail = order.Deliveryaddressdetail,
+                DeliveryDescription = order.Deliverydescription,
+                DeliveryLatitude = order.Deliverylatitude,
+                DeliveryLongitude = order.Deliverylongitude,
+
+                PickupTime = order.Pickuptime,
+                DeliveryTime = order.Deliverytime,
+                CreatedAt = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+            };
+
+            // 3) Lấy notes từ OrderStatusHistory => status = "PENDING" (nếu có)
+            var pendingRow = order.Orderstatushistories
+                .FirstOrDefault(sh => sh.Status == "PENDING");
+            if (pendingRow != null)
+            {
+                response.Notes = pendingRow.Notes;
+            }
+
+            // 4) Map OrderSummary
+            //    Tính subTotal cho mỗi item, sum => estimatedTotal
+            decimal estimatedTotal = 0;
+            var orderSummary = new OrderSummaryResponse
+            {
+                ShippingFee = order.Shippingfee,
+                ShippingDiscount = order.Shippingdiscount,
+                ApplicableFee = order.Applicablefee,
+                Discount = order.Discount,
+                TotalPrice = order.Totalprice
+            };
+
+            foreach (var item in order.Orderitems)
+            {
+                var serviceName = item.Service?.Name ?? "Unknown";
+                var servicePrice = item.Service?.Price ?? 0;
+
+                decimal sumExtras = 0;
+                var extraList = new List<ExtraSummary>();
+
+                foreach (var oe in item.Orderextras)
+                {
+                    var extraName = oe.Extra?.Name ?? "Unknown Extra";
+                    var extraPrice = oe.Extra?.Price ?? 0;
+                    sumExtras += extraPrice;
+
+                    extraList.Add(new ExtraSummary
+                    {
+                        ExtraName = extraName,
+                        ExtraPrice = extraPrice
+                    });
+                }
+
+                var subTotal = (servicePrice + sumExtras) * item.Quantity;
+                estimatedTotal += subTotal;
+
+                orderSummary.Items.Add(new OrderItemSummary
+                {
+                    ServiceName = serviceName,
+                    ServicePrice = servicePrice,
+                    Quantity = item.Quantity,
+                    Extras = extraList,
+                    SubTotal = subTotal
+                });
+            }
+            orderSummary.EstimatedTotal = estimatedTotal;
+            response.OrderSummary = orderSummary;
+
+            // 5) CurrentOrderStatus
+            //    Tìm row trong OrderStatusHistory => `Status = order.Currentstatus`
+            //    Lấy statusDescription, createdAt => lastUpdate
+            var currentStatus = order.Currentstatus;
+            var rowCurrentStatus = order.Orderstatushistories
+                .Where(sh => sh.Status == currentStatus)
+                .OrderByDescending(sh => sh.Createdat) // Nếu có nhiều row, lấy row mới nhất
+                .FirstOrDefault();
+
+            var cos = new CurrentOrderStatusResponse
+            {
+                CurrentStatus = currentStatus,
+                StatusDescription = rowCurrentStatus?.Statusdescription,
+                LastUpdate = _util.ConvertToVnTime(rowCurrentStatus.Createdat.Value)
+            };
+
+            response.CurrentOrderStatus = cos;
+
+            return response;
+        }
     }
 }
