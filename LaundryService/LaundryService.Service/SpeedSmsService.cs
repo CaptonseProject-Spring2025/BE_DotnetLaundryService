@@ -12,14 +12,14 @@ namespace LaundryService.Service
 {
     public class SpeedSmsService : ISpeedSmsService
     {
-        private const string RootUrl = "https://api.speedsms.vn/index.php";
+        private readonly string _rootUrl;
         private readonly string _accessToken;
         private readonly string _senderToken;
         private readonly IMemoryCache _memoryCache;
 
         public SpeedSmsService(IConfiguration configuration, IMemoryCache memoryCache)
         {
-            // Directly fetch values from configuration
+            _rootUrl = configuration["SpeedSMS:RootUrl"];
             _accessToken = configuration["SpeedSMS:AccessToken"];
             _senderToken = configuration["SpeedSMS:SenderToken"];
             _memoryCache = memoryCache;
@@ -93,7 +93,7 @@ namespace LaundryService.Service
                 builder += $"], \"content\": \"{Uri.EscapeDataString(content)}\", \"type\":{type}, \"sender\": \"{sender}\"}}";
 
                 string json = builder;
-                return await Task.FromResult(client.UploadString($"{RootUrl}/sms/send", json));
+                return await Task.FromResult(client.UploadString($"{_rootUrl}/sms/send", json));
             }
             catch (Exception ex)
             {
