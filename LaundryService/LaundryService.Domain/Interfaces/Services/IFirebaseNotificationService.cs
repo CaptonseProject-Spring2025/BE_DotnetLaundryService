@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LaundryService.Domain.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IFirebaseNotificationService
     {
-        Task SendFirebaseNotificationAsync(string token, string title, string message, Dictionary<string, string>? data = null);
+        Task SendOrderNotificationAsync(string userId, NotificationType type, Dictionary<string, string>? data = null);
     }
 }
