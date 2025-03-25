@@ -9,6 +9,7 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IFirebaseStorageService
     {
         Task SaveTokenAsync(string userId, string fcmToken);
+        Task<string?> GetUserFcmTokenAsync(string userId);
 
     }
 }

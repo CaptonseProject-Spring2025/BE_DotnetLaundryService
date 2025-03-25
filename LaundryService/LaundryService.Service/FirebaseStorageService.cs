@@ -40,5 +40,24 @@ namespace LaundryService.Service
                 Console.WriteLine($"Error saving fcntoken: {ex.Message}");
             }
         }
+
+        public async Task<string?> GetUserFcmTokenAsync(string userId)
+        {
+            try
+            {
+                var tokensCollection = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
+                var snapshot = await tokensCollection.Limit(1).GetSnapshotAsync();
+
+                if (!snapshot.Documents.Any()) return null;
+
+                var tokenData = snapshot.Documents.First().ToDictionary();
+                return tokenData.ContainsKey("Token") ? tokenData["Token"].ToString() : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching FCM token: {ex.Message}");
+                return null;
+            }
+        }
     }
 }
