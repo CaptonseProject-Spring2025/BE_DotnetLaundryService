@@ -59,5 +59,30 @@ namespace LaundryService.Service
                 return null;
             }
         }
+
+        public async Task<bool> DeleteTokenAsync(string userId, string fcmToken)
+        {
+            try
+            {
+                CollectionReference tokensRef = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
+                QuerySnapshot snapshot = await tokensRef.GetSnapshotAsync();
+
+                foreach (DocumentSnapshot doc in snapshot.Documents)
+                {
+                    if (doc.Exists && doc.ContainsField("Token") && doc.GetValue<string>("Token") == fcmToken)
+                    {
+                        await doc.Reference.DeleteAsync();
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting token: {ex.Message}");
+                return false;
+            }
+        }
     }
 }

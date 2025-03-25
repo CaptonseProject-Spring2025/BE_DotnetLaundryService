@@ -33,5 +33,15 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, $"Lỗi khi lưu fcmtoken: {ex.Message}");
             }
         }
+
+        [HttpDelete("{userId}/{token}")]
+        public async Task<IActionResult> DeleteToken([FromRoute] string userId, [FromRoute] string token)
+        {
+            bool result = await _firebaseStorageService.DeleteTokenAsync(userId, token);
+            if (result)
+                return Ok("Token đã được xóa thành công!");
+            else
+                return BadRequest("Không tìm thấy token để xóa.");
+        }
     }
 }
