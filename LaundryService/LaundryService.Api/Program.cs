@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 FirebaseApp.Create(new AppOptions
 {
-    Credential = GoogleCredential.FromFile("notification-firebase-adminsdk.json")
+    Credential = GoogleCredential.FromFile("notification-laundry-firebase-adminsdk.json")
 });
 
 builder.Host.UseSerilog((context, configuration) =>

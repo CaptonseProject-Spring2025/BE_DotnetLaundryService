@@ -14,8 +14,8 @@ namespace LaundryService.Service
 
         public FirebaseStorageService()
         {
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-firebase-adminsdk.json");
-            _firestore = FirestoreDb.Create("notification-8a9a5");
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-laundry-firebase-adminsdk.json");
+            _firestore = FirestoreDb.Create("notification-laundry-f73e8");
         }
 
         public async Task SaveTokenAsync(string userId, string fcmToken)
