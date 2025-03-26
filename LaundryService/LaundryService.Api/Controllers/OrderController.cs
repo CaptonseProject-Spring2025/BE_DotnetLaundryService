@@ -20,16 +20,18 @@ namespace LaundryService.Api.Controllers
     {
         private readonly IOrderService _orderService;
         private readonly IFirebaseNotificationService _firebaseNotificationService;
+        private readonly INotificationService _notificationService;
         private readonly IUtil _util;
 
         public OrderController(
             IOrderService orderService,
             IFirebaseNotificationService firebaseNotificationService,
-            IUtil util,
-            ILogger<OrderController> logger)
+            INotificationService notificationService,
+            IUtil util)
         {
             _orderService = orderService;
             _firebaseNotificationService = firebaseNotificationService;
+            _notificationService = notificationService;
             _util = util;
         }
 
@@ -176,6 +178,15 @@ namespace LaundryService.Api.Controllers
             {
                 var userId = _util.GetCurrentUserIdOrThrow(HttpContext);
                 var orderId = await _orderService.PlaceOrderAsync(HttpContext, request);
+
+                try
+                {
+                    await _notificationService.CreateOrderPlacedNotificationAsync(userId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
 
                 _ = Task.Run(async () =>
                 {
