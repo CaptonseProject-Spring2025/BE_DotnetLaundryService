@@ -14,8 +14,8 @@ namespace LaundryService.Service
 
         public FirebaseStorageService()
         {
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-firebase-adminsdk.json");
-            _firestore = FirestoreDb.Create("notification-8a9a5");
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-laundry-firebase-adminsdk.json");
+            _firestore = FirestoreDb.Create("notification-laundry-f73e8");
         }
 
         public async Task SaveTokenAsync(string userId, string fcmToken)
@@ -38,6 +38,50 @@ namespace LaundryService.Service
             catch (Exception ex)
             {
                 Console.WriteLine($"Error saving fcntoken: {ex.Message}");
+            }
+        }
+
+        public async Task<string?> GetUserFcmTokenAsync(string userId)
+        {
+            try
+            {
+                var tokensCollection = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
+                var snapshot = await tokensCollection.Limit(1).GetSnapshotAsync();
+
+                if (!snapshot.Documents.Any()) return null;
+
+                var tokenData = snapshot.Documents.First().ToDictionary();
+                return tokenData.ContainsKey("Token") ? tokenData["Token"].ToString() : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching FCM token: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteTokenAsync(string userId, string fcmToken)
+        {
+            try
+            {
+                CollectionReference tokensRef = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
+                QuerySnapshot snapshot = await tokensRef.GetSnapshotAsync();
+
+                foreach (DocumentSnapshot doc in snapshot.Documents)
+                {
+                    if (doc.Exists && doc.ContainsField("Token") && doc.GetValue<string>("Token") == fcmToken)
+                    {
+                        await doc.Reference.DeleteAsync();
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting token: {ex.Message}");
+                return false;
             }
         }
     }

@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 FirebaseApp.Create(new AppOptions
 {
-    Credential = GoogleCredential.FromFile("notification-firebase-adminsdk.json")
+    Credential = GoogleCredential.FromFile("notification-laundry-firebase-adminsdk.json")
 });
 
 builder.Host.UseSerilog((context, configuration) =>
@@ -67,7 +67,9 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IMapboxService, MapboxService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationService>();
 builder.Services.AddScoped<IFirebaseStorageService, FirebaseStorageService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddControllers();
 

@@ -1,4 +1,6 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using LaundryService.Domain.Enums;
+using LaundryService.Domain.Interfaces;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
@@ -17,10 +19,20 @@ namespace LaundryService.Api.Controllers
     public class OrderController : BaseApiController
     {
         private readonly IOrderService _orderService;
+        private readonly IFirebaseNotificationService _firebaseNotificationService;
+        private readonly INotificationService _notificationService;
+        private readonly IUtil _util;
 
-        public OrderController(IOrderService orderService)
+        public OrderController(
+            IOrderService orderService,
+            IFirebaseNotificationService firebaseNotificationService,
+            INotificationService notificationService,
+            IUtil util)
         {
             _orderService = orderService;
+            _firebaseNotificationService = firebaseNotificationService;
+            _notificationService = notificationService;
+            _util = util;
         }
 
         /// <summary>
@@ -164,7 +176,32 @@ namespace LaundryService.Api.Controllers
 
             try
             {
+                var userId = _util.GetCurrentUserIdOrThrow(HttpContext);
                 var orderId = await _orderService.PlaceOrderAsync(HttpContext, request);
+
+                try
+                {
+                    await _notificationService.CreateOrderPlacedNotificationAsync(userId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(userId.ToString(), NotificationType.OrderPlaced);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log lỗi nhưng không làm ảnh hưởng đến API response
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
+
                 return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
             }
             catch (KeyNotFoundException ex)
