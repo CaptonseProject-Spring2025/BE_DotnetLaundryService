@@ -8,12 +8,19 @@ namespace LaundryService.Domain.Enums
 {
     public enum OrderStatusEnum
     {
-        InCart,
-        Pending,
-        Paid,
-        Confirmed, //confirmed là chưa trả tiền
-        OnDelivery,
-        Finished,
-        Cancelled
+        INCART,
+        PENDING,
+        CONFIRMED,
+        SCHEDULED_PICKUP,
+        PICKINGUP,
+        PICKEDUP,
+        CHECKED,
+        WASHING,
+        WASHED,
+        QUALITY_CHECKED,
+        SCHEDULED_DELIVERY,
+        DELIVERING,
+        DELIVERED,
+        CANCELLED
     }
 }
