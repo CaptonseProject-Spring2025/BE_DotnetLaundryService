@@ -26,7 +26,7 @@ jobs:
 
     # Bước 3: Restore dependencies
     - name: Restore dependencies
-      run: dotnet restore BE_DotnetLaundryService/LaundryService/LaundryService.sln
+      run: dotnet restore LaundryService/LaundryService.sln
 
     # Bước 4: Build ứng dụng
     - name: Build application
