@@ -38,7 +38,7 @@ jobs:
 
     # Bước 6: Publish ứng dụng
     - name: Publish application
-      run: dotnet publish BE_DotnetLaundryService/LaundryService/LaundryService.Api/LaundryService.Api.csproj --configuration Release --output ./publish
+      run: dotnet publish LaundryService/LaundryService.Api/LaundryService.Api.csproj --configuration Release --output ./publish
 
     # Bước 7: Deploy lên Azure App Service
     - name: Deploy to Azure Web App
