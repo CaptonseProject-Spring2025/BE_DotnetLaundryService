@@ -2,6 +2,7 @@
 using Google.Apis.Auth.OAuth2;
 using LaundryService.Api.Extensions;
 using LaundryService.Api.Hub;
+using LaundryService.Api.Services;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Infrastructure;
@@ -64,6 +65,8 @@ builder.Services.AddScoped<IServiceDetailService, ServiceDetailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IExtraCategoryService, ExtraCategoryService>();
 builder.Services.AddScoped<IExtraService, ExtraService>();
+builder.Services.AddScoped<IExcelService, ExcelsService>();
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IMapboxService, MapboxService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
