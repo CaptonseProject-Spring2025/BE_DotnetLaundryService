@@ -30,7 +30,7 @@ jobs:
 
     # Bước 4: Build ứng dụng
     - name: Build application
-      run: dotnet build BE_DotnetLaundryService/LaundryService/LaundryService.sln --configuration Release --no-restore
+      run: dotnet build LaundryService/LaundryService.sln --configuration Release --no-restore
 
     # Bước 5: Chạy unit tests (nếu có)
     - name: Run tests
