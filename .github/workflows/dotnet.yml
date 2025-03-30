@@ -6,8 +6,8 @@ on:
       - main # Kích hoạt workflow khi có thay đổi trên nhánh main
 
 env:
-  AZURE_WEBAPP_NAME : 
-  AZURE_WEBAPP_PACKAGE_PATH: 
+  AZURE_WEBAPP_NAME : LaundryServiceAPI
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish" 
 
 jobs:
   build-and-deploy:
@@ -22,7 +22,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '7.0.x' # Thay đổi phiên bản .NET Core nếu cần
+        dotnet-version: '8.0.x' # Thay đổi phiên bản .NET Core nếu cần
 
     # Bước 3: Restore dependencies
     - name: Restore dependencies
