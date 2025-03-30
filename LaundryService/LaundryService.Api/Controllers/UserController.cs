@@ -206,7 +206,7 @@ namespace LaundryService.Api.Controllers
         /// - **401**: Chưa đăng nhập hoặc không phải Admin
         /// - **500**: Lỗi server
         /// </remarks>
-        [Authorize(Roles = "Admin")]
+        // [Authorize(Roles = "Admin")]
         [HttpGet]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.Unauthorized)]

@@ -1,6 +1,7 @@
 ﻿using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using LaundryService.Api.Extensions;
+using LaundryService.Api.Hub;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Infrastructure;
@@ -71,6 +72,13 @@ builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationSer
 builder.Services.AddScoped<IFirebaseStorageService, FirebaseStorageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+builder.Services.AddSignalR(options =>
+{
+    // options.EnableDetailedErrors = true; // Bật chế độ lỗi chi tiết cho SignalR
+});
+
+
+
 builder.Services.AddControllers();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -113,6 +121,8 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+// Đăng ký IHttpContextAccessor
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddMemoryCache();
 
@@ -134,6 +144,9 @@ builder.Services.AddCors(options =>
                    .AllowAnyMethod();
         });
 });
+
+
+
 
 var app = builder.Build();
 
@@ -157,6 +170,7 @@ app.UseAuthorization();
 
 app.UseCors("AllowAll");
 
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -165,5 +179,7 @@ app.UseSwaggerUI(c =>
 });
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub"); // Đăng ký SignalR Hub
+
 
 app.Run();
