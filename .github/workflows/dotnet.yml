@@ -34,7 +34,7 @@ jobs:
 
     # Bước 5: Chạy unit tests (nếu có)
     - name: Run tests
-      run: dotnet test BE_DotnetLaundryService/LaundryService/LaundryService.sln --no-build --verbosity normal
+      run: dotnet test LaundryService/LaundryService.sln --no-build --verbosity normal
 
     # Bước 6: Publish ứng dụng
     - name: Publish application
