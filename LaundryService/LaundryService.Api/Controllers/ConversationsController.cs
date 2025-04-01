@@ -47,21 +47,21 @@ namespace LaundryService.Api.Controllers
     [HttpGet("messages/{conversationId}")]
     public async Task<ActionResult> GetMessagesByConversationId(Guid conversationId)
     {
-       // Lấy danh sách tin nhắn của cuộc trò chuyện và bao gồm thông tin người dùng
-  var messages = await _unitOfWork.Repository<Message>()
-      .GetAll()
-      .Where(m => m.Conversationid == conversationId)
-      .Include(m => m.User) // Eager load User để lấy thông tin người dùng (Fullname, Avatar)
-      .OrderBy(m => m.Creationdate) // Sắp xếp theo thời gian gửi
-      .Select(m => new
-      {
-        m.Userid,
-        m.Message1,   // Nội dung tin nhắn
-        m.Creationdate,  // Thời gian gửi
-        m.User.Fullname,  // Fullname của người gửi
-        m.User.Avatar    // Avatar của người gửi
-      })
-      .ToListAsync(); // Sử dụng ToListAsync để lấy dữ liệu từ cơ sở dữ liệu
+      // Lấy danh sách tin nhắn của cuộc trò chuyện và bao gồm thông tin người dùng
+      var messages = await _unitOfWork.Repository<Message>()
+          .GetAll()
+          .Where(m => m.Conversationid == conversationId)
+          .Include(m => m.User) // Eager load User để lấy thông tin người dùng (Fullname, Avatar)
+          .OrderBy(m => m.Creationdate) // Sắp xếp theo thời gian gửi
+          .Select(m => new
+          {
+            m.Userid,
+            m.Message1,   // Nội dung tin nhắn
+            m.Creationdate,  // Thời gian gửi
+            m.User.Fullname,  // Fullname của người gửi
+            m.User.Avatar    // Avatar của người gửi
+          })
+          .ToListAsync(); // Sử dụng ToListAsync để lấy dữ liệu từ cơ sở dữ liệu
 
       if (messages == null || messages.Count == 0)
       {
@@ -72,7 +72,7 @@ namespace LaundryService.Api.Controllers
     }
 
 
-    
+
 
     //Tạo mới 1 cuộc trò chuyện mới
     [HttpPost("")]
