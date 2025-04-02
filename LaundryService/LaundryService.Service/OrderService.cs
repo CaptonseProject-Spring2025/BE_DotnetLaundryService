@@ -500,6 +500,74 @@ namespace LaundryService.Service
             return paginationResult;
         }
 
+        public async Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize)
+        {
+            // Chỉ load các order có status = "PENDING"
+            // và KHÔNG có OrderAssignmentHistory nào có status = "processing"
+
+            // 1) Tạo query
+            var query = _unitOfWork.Repository<Order>()
+                .GetAll()
+                // status = "PENDING"
+                .Where(o => o.Currentstatus == "PENDING")
+                // Bỏ qua order nào có trong Orderassignmenthistory với status="processing"
+                .Where(o => !o.Orderassignmenthistories.Any(ah => ah.Status == "processing"))
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                        .ThenInclude(s => s.Subservice)
+                            .ThenInclude(sb => sb.Category)
+                .OrderByDescending(o => o.Createdat); // sắp xếp tuỳ yêu cầu, ở đây mới nhất trước
+
+            // 2) Đếm tổng
+            var totalRecords = query.Count();
+
+            // 3) Skip & Take
+            var orders = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // 4) Map Order -> UserOrderResponse
+            var resultList = new List<UserOrderResponse>();
+
+            foreach (var order in orders)
+            {
+                // Lấy tên category
+                var categoryNames = order.Orderitems
+                    .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+
+                var orderName = string.Join(", ", categoryNames);
+                var serviceCount = order.Orderitems.Count;
+
+                var userOrderResponse = new UserOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    OrderName = orderName,
+                    ServiceCount = serviceCount,
+                    TotalPrice = order.Totalprice,
+                    // Sử dụng hàm convert sang VN time, 
+                    // hoặc tuỳ code base => .AddHours(7)
+                    OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderStatus = order.Currentstatus
+                };
+
+                resultList.Add(userOrderResponse);
+            }
+
+            // 5) Đóng gói pagination
+            var paginationResult = new PaginationResult<UserOrderResponse>(
+                data: resultList,
+                totalRecords: totalRecords,
+                currentPage: page,
+                pageSize: pageSize
+            );
+
+            return paginationResult;
+        }
+
         public async Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, Guid orderId)
         {
             // 1) Eager load
