@@ -688,5 +688,98 @@ namespace LaundryService.Service
 
             return result;
         }
+
+        public async Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize)
+        {
+            // 1) Query order với status = "INCART"
+            var query = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Where(o => o.Currentstatus == "INCART")
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Orderextras)
+                    .ThenInclude(oe => oe.Extra)
+                .Include(o => o.User)
+                .OrderBy(o => o.Createdat);
+
+            // 3) Tính tổng số bản ghi
+            var totalRecords = query.Count();
+
+            // 4) Lấy dữ liệu trang
+            var orders = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // 5) Map sang InCartOrderAdminResponse
+            var resultList = new List<InCartOrderAdminResponse>();
+
+            foreach (var order in orders)
+            {
+                decimal estimatedTotal = 0;
+                var itemList = new List<InCartOrderItemResponse>();
+
+                foreach (var oi in order.Orderitems)
+                {
+                    var serviceName = oi.Service?.Name ?? "Unknown";
+                    var servicePrice = oi.Service?.Price ?? 0;
+
+                    decimal sumExtras = 0;
+                    var extrasResponse = new List<InCartExtraResponse>();
+
+                    foreach (var oe in oi.Orderextras)
+                    {
+                        var extraPrice = oe.Extra?.Price ?? 0;
+                        extrasResponse.Add(new InCartExtraResponse
+                        {
+                            ExtraId = oe.Extraid,
+                            ExtraName = oe.Extra?.Name ?? "Unknown Extra",
+                            ExtraPrice = extraPrice
+                        });
+                        sumExtras += extraPrice;
+                    }
+
+                    var subTotal = (servicePrice + sumExtras) * oi.Quantity;
+                    estimatedTotal += subTotal;
+
+                    itemList.Add(new InCartOrderItemResponse
+                    {
+                        OrderItemId = oi.Orderitemid,
+                        ServiceId = oi.Serviceid,
+                        ServiceName = serviceName,
+                        ServicePrice = servicePrice,
+                        Quantity = oi.Quantity,
+                        Extras = extrasResponse,
+                        SubTotal = subTotal
+                    });
+                }
+
+                var inCartResp = new InCartOrderAdminResponse
+                {
+                    OrderId = order.Orderid,
+                    Items = itemList,
+                    EstimatedTotal = estimatedTotal,
+                    UserInfo = new AdminUserInfo
+                    {
+                        UserId = order.Userid,
+                        FullName = order.User?.Fullname,
+                        PhoneNumber = order.User?.Phonenumber
+                    }
+                };
+
+                resultList.Add(inCartResp);
+            }
+
+            // 6) Tạo PaginationResult
+            var paginationResult = new PaginationResult<InCartOrderAdminResponse>(
+                data: resultList,
+                totalRecords: totalRecords,
+                currentPage: page,
+                pageSize: pageSize
+            );
+
+            return paginationResult;
+        }
     }
 }
