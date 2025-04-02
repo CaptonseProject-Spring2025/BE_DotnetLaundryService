@@ -511,7 +511,7 @@ namespace LaundryService.Service
                 // status = "PENDING"
                 .Where(o => o.Currentstatus == "PENDING")
                 // Bỏ qua order nào có trong Orderassignmenthistory với status="processing"
-                .Where(o => !o.Orderassignmenthistories.Any(ah => ah.Status == "processing"))
+                .Where(o => !o.Orderassignmenthistories.Any(ah => ah.Status == "PROCESSING"))
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Service)
                         .ThenInclude(s => s.Subservice)
@@ -850,5 +850,59 @@ namespace LaundryService.Service
 
             return paginationResult;
         }
+
+        public async Task ProcessOrderAsync(HttpContext httpContext, Guid orderId)
+        {
+            // 1) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // 2) Lấy order theo orderId
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .Include(o => o.Orderassignmenthistories) // Lấy luôn assignment
+                    .FirstOrDefault(o => o.Orderid == orderId);
+
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                // 3) Kiểm tra status order PENDING
+                if (order.Currentstatus != "PENDING")
+                    throw new ApplicationException("Có lỗi xảy ra! Đơn hàng không ở trạng thái PENDING.");
+
+                // 4) Kiểm tra xem trong Orderassignmenthistory
+                //    có row status="processing" => Lỗi
+                bool isProcessing = order.Orderassignmenthistories
+                    .Any(ah => ah.Status == "PROCESSING");
+
+                if (isProcessing)
+                    throw new ApplicationException("Có lỗi xảy ra! Lỗi này thường do đơn hàng đang được xử lý bởi một người khác.");
+
+                // 5) Lấy userId từ JWT
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+                // 6) Tạo Orderassignmenthistory
+                var newAssignment = new Orderassignmenthistory
+                {
+                    Orderid = orderId,
+                    Assignedto = userId,  // staff/driver ID
+                    Assignedat = DateTime.UtcNow,
+                    Status = "PROCESSING"
+                };
+
+                await _unitOfWork.Repository<Orderassignmenthistory>().InsertAsync(newAssignment, saveChanges: false);
+
+                // 7) Lưu & commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
     }
 }
