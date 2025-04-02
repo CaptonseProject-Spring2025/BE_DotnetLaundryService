@@ -59,5 +59,33 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
+
+        [HttpPost("confirm-order")]
+        public async Task<IActionResult> ConfirmOrder([FromQuery] Guid orderId, [FromQuery] string? notes)
+        {
+            try
+            {
+                // Gọi service
+                await _orderService.ConfirmOrderAsync(HttpContext, orderId, notes ?? "");
+                return Ok(new { Message = "Đơn hàng đã được xác nhận (CONFIRMED) thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Lỗi logic
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
     }
 }

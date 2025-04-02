@@ -31,5 +31,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize);
 
         Task ProcessOrderAsync(HttpContext httpContext, Guid orderId);
+
+        Task ConfirmOrderAsync(HttpContext httpContext, Guid orderId, string notes);
     }
 }
