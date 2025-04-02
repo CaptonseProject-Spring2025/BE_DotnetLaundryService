@@ -52,6 +52,7 @@ namespace LaundryService.Dto.Responses
         public decimal? ShippingDiscount { get; set; }
         public decimal? ApplicableFee { get; set; }
         public decimal? Discount { get; set; }
+        public decimal? Otherprice { get; set; }
         public decimal? TotalPrice { get; set; }
     }
 

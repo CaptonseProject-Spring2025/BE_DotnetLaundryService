@@ -565,6 +565,7 @@ namespace LaundryService.Service
                 ShippingDiscount = order.Shippingdiscount,
                 ApplicableFee = order.Applicablefee,
                 Discount = order.Discount,
+                Otherprice = order.Otherprice,
                 TotalPrice = order.Totalprice
             };
 
