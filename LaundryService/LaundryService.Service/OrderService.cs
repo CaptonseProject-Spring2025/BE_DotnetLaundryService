@@ -748,7 +748,7 @@ namespace LaundryService.Service
                     StatusDescription = h.Statusdescription,
                     Notes = h.Notes,
                     UpdatedBy = updatedBy,
-                    CreatedAt = h.Createdat,
+                    CreatedAt = _util.ConvertToVnTime((DateTime)h.Createdat),
                     ContainMedia = containMedia
                 };
 
