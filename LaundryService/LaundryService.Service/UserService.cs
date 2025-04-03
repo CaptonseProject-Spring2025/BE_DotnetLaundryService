@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 using LaundryService.Dto.Pagination;
 using LaundryService.Infrastructure;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace LaundryService.Service
 {
@@ -50,8 +51,8 @@ namespace LaundryService.Service
                 Dob = user.Dob,
                 Gender = user.Gender,
                 RewardPoints = user.Rewardpoints,
-                DateCreated = _util.ConvertToVnTime((DateTime)user.Datecreated),
-                DateModified = _util.ConvertToVnTime((DateTime)user.Datemodified)
+                DateCreated = user.Datecreated != null ? _util.ConvertToVnTime(user.Datecreated.Value) : null,
+                DateModified = user.Datemodified != null ? _util.ConvertToVnTime(user.Datemodified.Value) : null
             };
         }
 
@@ -127,8 +128,8 @@ namespace LaundryService.Service
                 Dob = user.Dob,
                 Gender = user.Gender,
                 RewardPoints = user.Rewardpoints,
-                DateCreated = _util.ConvertToVnTime((DateTime)user.Datecreated),
-                DateModified = _util.ConvertToVnTime((DateTime)user.Datemodified)
+                DateCreated = user.Datecreated != null ? _util.ConvertToVnTime(user.Datecreated.Value) : null,
+                DateModified = user.Datemodified != null ? _util.ConvertToVnTime(user.Datemodified.Value) : null
             };
         }
 
@@ -187,10 +188,10 @@ namespace LaundryService.Service
                     Dob = u.Dob,
                     Gender = u.Gender,
                     RewardPoints = u.Rewardpoints,
-                    DateCreated = _util.ConvertToVnTime((DateTime)u.Datecreated),
-                    DateModified = _util.ConvertToVnTime((DateTime)u.Datemodified)
+                    DateCreated = u.Datecreated != null ? _util.ConvertToVnTime(u.Datecreated.Value) : null,
+                    DateModified = u.Datemodified != null ? _util.ConvertToVnTime(u.Datemodified.Value) : null
                 })
-                .ToPagedListAsync(page, pageSize);
+            .ToPagedListAsync(page, pageSize);
 
             return paginatedUsers;
         }
@@ -260,7 +261,8 @@ namespace LaundryService.Service
                 Dob = newUser.Dob,
                 Gender = newUser.Gender,
                 RewardPoints = newUser.Rewardpoints,
-                DateCreated = _util.ConvertToVnTime((DateTime)newUser.Datecreated)
+                DateCreated = newUser.Datecreated != null ? _util.ConvertToVnTime(newUser.Datecreated.Value) : null,
+                DateModified = newUser.Datemodified != null ? _util.ConvertToVnTime(newUser.Datemodified.Value) : null
             };
 
             return response;
