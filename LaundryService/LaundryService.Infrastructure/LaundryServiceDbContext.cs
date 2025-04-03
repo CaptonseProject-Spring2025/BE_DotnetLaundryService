@@ -431,7 +431,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("completedat");
             entity.Property(e => e.Declinereason).HasColumnName("declinereason");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Role).HasColumnName("role");
             entity.Property(e => e.Status)
                 .HasDefaultValueSql("'Assigned'::text")
                 .HasColumnName("status");

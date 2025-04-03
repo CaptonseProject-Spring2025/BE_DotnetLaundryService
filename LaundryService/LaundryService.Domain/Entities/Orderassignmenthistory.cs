@@ -11,8 +11,6 @@ public partial class Orderassignmenthistory
 
     public Guid Assignedto { get; set; }
 
-    public string? Role { get; set; }
-
     public DateTime? Assignedat { get; set; }
 
     public string? Status { get; set; }
