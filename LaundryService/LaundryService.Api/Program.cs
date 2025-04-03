@@ -7,6 +7,7 @@ using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Infrastructure;
 using LaundryService.Service;
+using LaundryService.Service.BackgroundServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -66,7 +67,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IExtraCategoryService, ExtraCategoryService>();
 builder.Services.AddScoped<IExtraService, ExtraService>();
 builder.Services.AddScoped<IExcelService, ExcelsService>();
-
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IMapboxService, MapboxService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
@@ -75,7 +75,7 @@ builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationSer
 builder.Services.AddScoped<IFirebaseStorageService, FirebaseStorageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashBoardServices, DashBoardService>();
-
+builder.Services.AddHostedService<AssignmentAutoFailService>();
 
 builder.Services.AddSignalR(options =>
 {
