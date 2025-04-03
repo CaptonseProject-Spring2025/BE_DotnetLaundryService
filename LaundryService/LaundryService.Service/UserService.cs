@@ -50,8 +50,8 @@ namespace LaundryService.Service
                 Dob = user.Dob,
                 Gender = user.Gender,
                 RewardPoints = user.Rewardpoints,
-                DateCreated = user.Datecreated,
-                DateModified = user.Datemodified
+                DateCreated = _util.ConvertToVnTime((DateTime)user.Datecreated),
+                DateModified = _util.ConvertToVnTime((DateTime)user.Datemodified)
             };
         }
 
@@ -127,8 +127,8 @@ namespace LaundryService.Service
                 Dob = user.Dob,
                 Gender = user.Gender,
                 RewardPoints = user.Rewardpoints,
-                DateCreated = user.Datecreated,
-                DateModified = user.Datemodified
+                DateCreated = _util.ConvertToVnTime((DateTime)user.Datecreated),
+                DateModified = _util.ConvertToVnTime((DateTime)user.Datemodified)
             };
         }
 
@@ -187,8 +187,8 @@ namespace LaundryService.Service
                     Dob = u.Dob,
                     Gender = u.Gender,
                     RewardPoints = u.Rewardpoints,
-                    DateCreated = u.Datecreated,
-                    DateModified = u.Datemodified
+                    DateCreated = _util.ConvertToVnTime((DateTime)u.Datecreated),
+                    DateModified = _util.ConvertToVnTime((DateTime)u.Datemodified)
                 })
                 .ToPagedListAsync(page, pageSize);
 
@@ -260,8 +260,7 @@ namespace LaundryService.Service
                 Dob = newUser.Dob,
                 Gender = newUser.Gender,
                 RewardPoints = newUser.Rewardpoints,
-                DateCreated = newUser.Datecreated,
-                DateModified = newUser.Datemodified
+                DateCreated = _util.ConvertToVnTime((DateTime)newUser.Datecreated)
             };
 
             return response;

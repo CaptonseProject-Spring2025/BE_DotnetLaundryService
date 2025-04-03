@@ -28,7 +28,7 @@ namespace LaundryService.Dto.Requests
 
 
         [Required(ErrorMessage = "Role is required")]
-        [RegularExpression(@"^(Admin|Customer|Staff|Driver)$", ErrorMessage = "Role must be 'Admin', 'Customer', 'Driver' or 'Staff'")]
+        [RegularExpression(@"^(Admin|Customer|CustomerStaff|Staff|Driver)$", ErrorMessage = "Role must be 'Admin', 'Customer', 'Driver', 'CustomerStaff' or 'Staff'")]
         public string Role { get; set; }
 
 
