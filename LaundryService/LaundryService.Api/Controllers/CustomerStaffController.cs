@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace LaundryService.Api.Controllers
 {
     [ApiController]
-    [Route("api/staff")]
-    [Authorize(Roles = "Staff")]
-    public class StaffController : BaseApiController
+    [Route("api/customer-staff")]
+    [Authorize(Roles = "CustomerStaff")]
+    public class CustomerStaffController : BaseApiController
     {
         private readonly IOrderService _orderService;
 
-        public StaffController(IOrderService orderService)
+        public CustomerStaffController(IOrderService orderService)
         {
             _orderService = orderService;
         }

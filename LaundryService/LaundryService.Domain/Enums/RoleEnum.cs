@@ -10,6 +10,7 @@ namespace LaundryService.Domain.Enums
     {
         Customer,
         Staff,
+        CustomerStaff,
         Shipper,
         Admin
     }
