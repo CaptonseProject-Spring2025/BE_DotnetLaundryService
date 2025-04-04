@@ -20,12 +20,6 @@ namespace LaundryService.Api.Controllers
     [HttpPost("get-ai-response")]
     public async Task<IActionResult> GetAIResponse([FromBody] string query)
     {
-      // URL của OpenAI API
-      var apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-
-      // API key
-      var apiKey = "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";
-
       // Tạo HttpClient để gọi API
       using var client = new HttpClient();
 
