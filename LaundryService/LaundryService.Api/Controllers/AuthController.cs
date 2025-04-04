@@ -1,5 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +48,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server.
         /// </remarks>
         [HttpPost("register")]
+        [ProducesResponseType(typeof(LoginResponse), 200)]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request, [FromQuery] string otpToken)
         {
             if (!ModelState.IsValid)
@@ -87,6 +89,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server.
         /// </remarks>
         [HttpPost("login")]
+        [ProducesResponseType(typeof(LoginResponse), 200)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             if (!ModelState.IsValid)

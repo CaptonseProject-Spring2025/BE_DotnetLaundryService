@@ -1,5 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server
         /// </remarks>
         [HttpPost]
+        [ProducesResponseType(typeof(AddressResponse), 200)]
         public async Task<IActionResult> CreateAddress([FromBody] CreateAddressRequest request)
         {
             if (!ModelState.IsValid)
@@ -128,6 +130,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server
         /// </remarks>
         [HttpGet("user")]
+        [ProducesResponseType(typeof(List<AddressResponse>), 200)]
         public async Task<IActionResult> GetUserAddresses()
         {
             try
@@ -165,6 +168,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server
         /// </remarks>
         [HttpGet("{addressId}")]
+        [ProducesResponseType(typeof(AddressResponse), 200)]
         public async Task<IActionResult> GetAddressById(Guid addressId)
         {
             try

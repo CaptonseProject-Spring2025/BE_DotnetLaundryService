@@ -1,5 +1,7 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using LaundryService.Domain.Entities;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +54,7 @@ namespace LaundryService.Api.Controllers
         /// - **500**: Lỗi server
         /// </remarks>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(CategoryDetailResponse), 200)]
         public async Task<IActionResult> GetById(Guid id)
         {
             try

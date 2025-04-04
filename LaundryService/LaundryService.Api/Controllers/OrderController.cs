@@ -119,6 +119,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize]
         [HttpGet("cart")]
+        [ProducesResponseType(typeof(CartResponse), 200)]
         public async Task<IActionResult> GetCart()
         {
             try
@@ -167,6 +168,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize]
         [HttpPost("place-order")]
+        [ProducesResponseType(typeof(Guid), 200)]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
         {
             if (!ModelState.IsValid)
@@ -251,7 +253,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize]
         [HttpGet("user-orders")]
-        //[ProducesResponseType(typeof(List<UserOrderResponse>), 200)]
+        [ProducesResponseType(typeof(List<UserOrderResponse>), 200)]
         public async Task<IActionResult> GetUserOrders()
         {
             try
@@ -297,6 +299,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize(Roles = "Admin,Staff")]
         [HttpGet("all-orders")]
+        [ProducesResponseType(typeof(PaginationResult<UserOrderResponse>), 200)]
         public async Task<IActionResult> GetAllOrders([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -388,6 +391,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống.
         /// </remarks>
         [HttpGet("history/{orderId}")]
+        [ProducesResponseType(typeof(OrderStatusHistoryItemResponse), 200)]
         public async Task<IActionResult> GetOrderStatusHistory(Guid orderId)
         {
             try
