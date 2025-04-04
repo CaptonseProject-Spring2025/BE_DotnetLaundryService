@@ -13,7 +13,7 @@ public partial class Orderassignmenthistory
 
     public DateTime? Assignedat { get; set; }
 
-    public string? Status { get; set; }
+    public string? Status { get; set; } //PROCESSING, FAIL, SUCCESS
 
     public string? Declinereason { get; set; }
 

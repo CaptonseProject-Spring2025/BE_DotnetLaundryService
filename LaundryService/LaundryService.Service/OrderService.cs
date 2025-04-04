@@ -851,7 +851,7 @@ namespace LaundryService.Service
             return paginationResult;
         }
 
-        public async Task ProcessOrderAsync(HttpContext httpContext, Guid orderId)
+        public async Task<Guid> ProcessOrderAsync(HttpContext httpContext, Guid orderId)
         {
             // 1) Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
@@ -896,6 +896,9 @@ namespace LaundryService.Service
                 // 7) Lưu & commit
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
+
+                // 8) Sau khi commit thành công, return Assignmentid
+                return newAssignment.Assignmentid;
             }
             catch
             {

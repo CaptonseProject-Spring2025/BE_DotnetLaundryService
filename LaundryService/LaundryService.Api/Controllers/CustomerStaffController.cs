@@ -86,8 +86,14 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.ProcessOrderAsync(HttpContext, orderId);
-                return Ok(new { Message = "Đơn hàng đã được nhận xử lý (processing) thành công." });
+                // Gọi service -> nhận về assignmentId
+                var assignmentId = await _orderService.ProcessOrderAsync(HttpContext, orderId);
+
+                return Ok(new
+                {
+                    Message = "Đơn hàng đã được nhận xử lý (processing) thành công.",
+                    AssignmentId = assignmentId
+                });
             }
             catch (KeyNotFoundException ex)
             {
