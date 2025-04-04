@@ -1045,5 +1045,51 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task CancelProcessingAsync(HttpContext httpContext, Guid assignmentId, string note)
+        {
+            // 1) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // 2) Tìm Orderassignmenthistory bằng assignmentId
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Assignmentid == assignmentId);
+
+                if (assignment == null)
+                    throw new KeyNotFoundException("Không tìm thấy assignmentId này.");
+
+                // 3) Kiểm tra thời gian
+                if (!assignment.Assignedat.HasValue)
+                {
+                    throw new ApplicationException("Assignment chưa có AssignedAt nên không thể hủy xử lý.");
+                }
+
+                var elapsed = DateTime.UtcNow - assignment.Assignedat.Value;
+                if (elapsed > TimeSpan.FromMinutes(30))
+                {
+                    // Quá 30p => báo lỗi
+                    throw new ApplicationException("Quá thời gian xử lý đơn hàng. Không thể hủy.");
+                }
+
+                // 4) Cập nhật assignment => staff thoát xử lý
+                assignment.Status = "SUCCESS";  // Hoặc "DONE", tùy logic
+                assignment.Declinereason = note; // Lưu ghi chú/note
+                assignment.Completedat = DateTime.UtcNow;
+
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                // 5) Lưu & commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
     }
 }

@@ -241,5 +241,38 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [HttpPost("cancel-processing")]
+        public async Task<IActionResult> CancelProcessing([FromQuery] Guid assignmentId, [FromQuery] string note)
+        {
+            // 1) Kiểm tra param
+            if (assignmentId == Guid.Empty || string.IsNullOrWhiteSpace(note))
+            {
+                return BadRequest(new { Message = "assignmentId & note đều bắt buộc." });
+            }
+
+            try
+            {
+                await _orderService.CancelProcessingAsync(HttpContext, assignmentId, note);
+                return Ok(new { Message = "Staff đã hủy xử lý đơn hàng thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Quá 30p, hoặc logic sai
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
+
     }
 }
