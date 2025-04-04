@@ -27,130 +27,116 @@ namespace LaundryService.Service
             _util = util;
         }
 
-        public async Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request)
+        /// <summary>
+        /// Hàm private thêm sản phẩm vào giỏ hàng mà không cần transaction.
+        /// </summary>
+        private async Task AddToCartNoTransactionAsync(Guid userId, AddToCartRequest request)
         {
-            // 1) Lấy userId từ token
-            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+            // 1) Kiểm tra ServiceDetail
+            var serviceDetail = await _unitOfWork
+                .Repository<Servicedetail>()
+                .GetAsync(s => s.Serviceid == request.ServiceDetailId);
 
-            // 2) Bắt đầu transaction
-            await _unitOfWork.BeginTransaction();
+            if (serviceDetail == null)
+                throw new KeyNotFoundException("Service detail not found.");
 
-            try
+            // 2) Tìm Order INCART
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+
+            if (order == null)
             {
-                // 3) Tìm ServiceDetail
-                var serviceDetail = await _unitOfWork
-                    .Repository<Servicedetail>()
-                    .GetAsync(s => s.Serviceid == request.ServiceDetailId);
-
-                if (serviceDetail == null)
-                    throw new KeyNotFoundException("Service detail not found.");
-
-                // 4) Tìm Order INCART
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
-
-                if (order == null)
+                // Chưa có => tạo mới
+                order = new Order
                 {
-                    // Chưa có => tạo mới
-                    order = new Order
-                    {
-                        Userid = userId,
-                        Currentstatus = "INCART",
-                        Createdat = DateTime.UtcNow
-                    };
-                    await _unitOfWork.Repository<Order>().InsertAsync(order);
-                    await _unitOfWork.SaveChangesAsync();
-                }
+                    Userid = userId,
+                    Currentstatus = "INCART",
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Order>().InsertAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+            }
 
-                // 5) Kiểm tra xem ExtraIds có hợp lệ không
-                var validExtras = new List<Extra>();
-                if (request.ExtraIds != null && request.ExtraIds.Count > 0)
-                {
-                    validExtras = _unitOfWork.Repository<Extra>()
-                        .GetAll()
-                        .Where(e => request.ExtraIds.Contains(e.Extraid))
-                        .ToList();
-
-                    var invalidIds = request.ExtraIds.Except(validExtras.Select(x => x.Extraid)).ToList();
-                    if (invalidIds.Any())
-                    {
-                        throw new ApplicationException($"Some extras not found in database: {string.Join(", ", invalidIds)}");
-                    }
-                }
-
-                // 6) Tìm xem có OrderItem nào trùng ServiceDetail và trùng EXACT Extras
-                //    (Sẽ load kèm OrderExtras để so sánh)
-                //    Chỉ load những OrderItem có ServiceID == serviceDetail.Serviceid
-                //    Rồi so sánh ExtraIds
-                var orderItemsSameService = _unitOfWork.Repository<Orderitem>()
+            // 3) Kiểm tra ExtraIds
+            var validExtras = new List<Extra>();
+            if (request.ExtraIds != null && request.ExtraIds.Count > 0)
+            {
+                validExtras = _unitOfWork.Repository<Extra>()
                     .GetAll()
-                    .Where(oi => oi.Orderid == order.Orderid && oi.Serviceid == serviceDetail.Serviceid)
+                    .Where(e => request.ExtraIds.Contains(e.Extraid))
                     .ToList();
 
-                Orderitem? matchedItem = null;
-
-                foreach (var oi in orderItemsSameService)
+                var invalidIds = request.ExtraIds.Except(validExtras.Select(x => x.Extraid)).ToList();
+                if (invalidIds.Any())
                 {
-                    // Lấy list OrderExtra gắn với OrderItem này
-                    var oiExtras = _unitOfWork.Repository<Orderextra>()
-                        .GetAll()
-                        .Where(e => e.Orderitemid == oi.Orderitemid)
-                        .ToList();
-
-                    // So sánh
-                    if (ExtrasAreTheSame(oiExtras, request.ExtraIds ?? new List<Guid>()))
-                    {
-                        matchedItem = oi;
-                        break;
-                    }
+                    throw new ApplicationException($"Some extras not found: {string.Join(", ", invalidIds)}");
                 }
-
-                if (matchedItem != null)
-                {
-                    // 7) Nếu có matchedItem => tăng Quantity
-                    matchedItem.Quantity += request.Quantity;
-                    await _unitOfWork.Repository<Orderitem>().UpdateAsync(matchedItem, saveChanges: false);
-                }
-                else
-                {
-                    // 8) Nếu không có => tạo OrderItem mới
-                    var newOrderItem = new Orderitem
-                    {
-                        Orderid = order.Orderid,
-                        Serviceid = serviceDetail.Serviceid,
-                        Quantity = request.Quantity
-                    };
-                    await _unitOfWork.Repository<Orderitem>().InsertAsync(newOrderItem, saveChanges: false);
-                    await _unitOfWork.SaveChangesAsync();
-
-                    // 9) Thêm OrderExtra (nếu có)
-                    if (validExtras.Any())
-                    {
-                        var newOrderExtras = validExtras.Select(ext => new Orderextra
-                        {
-                            Orderitemid = newOrderItem.Orderitemid,
-                            Extraid = ext.Extraid
-                        }).ToList();
-
-                        await _unitOfWork.Repository<Orderextra>().InsertRangeAsync(newOrderExtras, saveChanges: false);
-                    }
-                }
-
-                // 10) Lưu changes & commit
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
             }
-            catch
+
+            // 4) Tìm xem đã có OrderItem trùng ServiceDetail & EXACT extras chưa
+            //    (Sẽ load kèm OrderExtras để so sánh)
+            //    Chỉ load những OrderItem có ServiceID == serviceDetail.Serviceid
+            //    Rồi so sánh ExtraIds
+            var orderItemsSameService = _unitOfWork.Repository<Orderitem>()
+                .GetAll()
+                .Where(oi => oi.Orderid == order.Orderid && oi.Serviceid == serviceDetail.Serviceid)
+                .ToList();
+
+            Orderitem matchedItem = null;
+            foreach (var oi in orderItemsSameService)
             {
-                // rollback
-                await _unitOfWork.RollbackTransaction();
-                throw;
+                // Lấy list OrderExtra gắn với OrderItem này
+                var oiExtras = _unitOfWork.Repository<Orderextra>()
+                    .GetAll()
+                    .Where(e => e.Orderitemid == oi.Orderitemid)
+                    .ToList();
+
+                // So sánh
+                if (ExtrasAreTheSame(oiExtras, request.ExtraIds ?? new List<Guid>()))
+                {
+                    matchedItem = oi;
+                    break;
+                }
             }
+
+            // 5) Nếu matchedItem != null => tăng Quantity
+            if (matchedItem != null)
+            {
+                matchedItem.Quantity += request.Quantity;
+                await _unitOfWork.Repository<Orderitem>().UpdateAsync(matchedItem, saveChanges: false);
+            }
+            else
+            {
+                // Ngược lại => tạo OrderItem mới
+                var newOrderItem = new Orderitem
+                {
+                    Orderid = order.Orderid,
+                    Serviceid = serviceDetail.Serviceid,
+                    Quantity = request.Quantity
+                };
+                await _unitOfWork.Repository<Orderitem>().InsertAsync(newOrderItem, saveChanges: false);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Nếu có Extras => Insert OrderExtra
+                if (validExtras.Any())
+                {
+                    var newOrderExtras = validExtras.Select(ext => new Orderextra
+                    {
+                        Orderitemid = newOrderItem.Orderitemid,
+                        Extraid = ext.Extraid
+                    }).ToList();
+
+                    await _unitOfWork.Repository<Orderextra>().InsertRangeAsync(newOrderExtras, saveChanges: false);
+                }
+            }
+
+            // 6) Lưu thay đổi
+            await _unitOfWork.SaveChangesAsync();
         }
 
         /// <summary>
-        /// So sánh xem 2 tập ExtraId có giống hệt nhau không.
+        /// Hàm private so sánh xem 2 tập ExtraId có giống hệt nhau không.
         /// </summary>
         private bool ExtrasAreTheSame(ICollection<Orderextra> existingExtras, List<Guid> newExtraIds)
         {
@@ -161,6 +147,114 @@ namespace LaundryService.Service
                 return false;
 
             return existingIds.SetEquals(newIds);
+        }
+
+
+        //============================
+
+
+        public async Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                await AddToCartNoTransactionAsync(userId, request);
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task<CartResponse> UpdateCartItemAsync(HttpContext httpContext, UpdateCartItemRequest request)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 1) Tìm OrderItem -> Include(Order) để lấy ra order
+                var orderItem = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Include(oi => oi.Order)
+                    .FirstOrDefault(oi => oi.Orderitemid == request.OrderItemId);
+
+                if (orderItem == null)
+                    throw new KeyNotFoundException("Order item not found.");
+
+                // Kiểm tra có đúng user & đúng trạng thái
+                if (orderItem.Order == null || orderItem.Order.Userid != userId)
+                    throw new UnauthorizedAccessException("This item does not belong to the current user.");
+
+                if (orderItem.Order.Currentstatus != "INCART")
+                    throw new ApplicationException("Cannot edit items in a non-InCart order.");
+
+                var order = orderItem.Order;
+
+                // 2) Xóa OrderExtra liên quan đến item này
+                var orderExtras = _unitOfWork.Repository<Orderextra>()
+                    .GetAll()
+                    .Where(e => e.Orderitemid == orderItem.Orderitemid)
+                    .ToList();
+                if (orderExtras.Any())
+                {
+                    await _unitOfWork.Repository<Orderextra>().DeleteRangeAsync(orderExtras, saveChanges: false);
+                }
+
+                // 3) Xóa chính OrderItem này
+                await _unitOfWork.Repository<Orderitem>().DeleteAsync(orderItem, saveChanges: false);
+                await _unitOfWork.SaveChangesAsync();
+
+                // 4) Nếu Quantity = 0 => không thêm item mới nữa
+                //    Kiểm tra xem order còn item nào không?
+                if (request.Quantity == 0)
+                {
+                    var remainingItems = _unitOfWork.Repository<Orderitem>()
+                        .GetAll()
+                        .Where(oi => oi.Orderid == order.Orderid)
+                        .Count();
+
+                    if (remainingItems == 0)
+                    {
+                        // Xóa luôn order
+                        await _unitOfWork.Repository<Order>().DeleteAsync(order, saveChanges: false);
+                    }
+                }
+                else
+                {
+                    // 5) Nếu Quantity > 0 => Thêm lại item mới
+                    var addRequest = new AddToCartRequest
+                    {
+                        ServiceDetailId = orderItem.Serviceid,
+                        Quantity = request.Quantity,
+                        ExtraIds = request.ExtraIds
+                    };
+                    // Hàm AddToCartNoTransactionAsync ta có thể dùng chung logic cũ
+                    await AddToCartNoTransactionAsync(userId, addRequest);
+                }
+
+                // Lưu & commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // 6) Sau khi cập nhật, trả về CartResponse
+                //    Nếu order đã bị xóa, GetCartAsync sẽ ném NotFound => ta bắt & quăng "No cart found."
+                var cart = await GetCartAsync(httpContext); // Gọi hàm đã có
+                if (cart == null || cart.Items.Count == 0)
+                {
+                    throw new KeyNotFoundException("No cart found.");
+                }
+                return cart;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
         }
 
         public async Task<CartResponse> GetCartAsync(HttpContext httpContext)
