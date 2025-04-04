@@ -1,4 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Pagination;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +20,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách các đơn hàng đang chờ xử lý (status = "PENDING") dành cho nhân viên (Staff).
+        /// Lấy danh sách các đơn hàng đang chờ xử lý (status = "PENDING") dành cho CustomerStaff.
         /// </summary>
         /// <param name="page">Trang hiện tại (mặc định = 1).</param>
         /// <param name="pageSize">Số lượng bản ghi mỗi trang (mặc định = 10).</param>
@@ -27,10 +29,10 @@ namespace LaundryService.Api.Controllers
         ///
         /// **Logic xử lý**:
         /// 1. Chỉ lấy các đơn có trạng thái `"PENDING"`
-        /// 2. Bỏ qua các đơn đang được staff khác xử lý
+        /// 2. Bỏ qua các đơn đang được CustomerStaff khác xử lý
         ///
         /// **Yêu cầu**:
-        /// - Đã đăng nhập với vai trò `Staff`
+        /// - Đã đăng nhập với vai trò `CustomerStaff`
         ///
         /// **Response codes**:
         /// - <c>200</c>: Thành công
@@ -70,7 +72,7 @@ namespace LaundryService.Api.Controllers
         ///     - `Status = "PROCESSING"`
         ///
         /// **Yêu cầu**:
-        /// - Đã đăng nhập với vai trò `Staff`
+        /// - Đã đăng nhập với vai trò `CustomerStaff`
         ///
         /// **Response codes**:
         /// - <c>200</c>: Nhận xử lý thành công
@@ -125,7 +127,7 @@ namespace LaundryService.Api.Controllers
         /// 4. Thêm một dòng vào `OrderStatusHistory` với `Status = "CONFIRMED"` và ghi chú (nếu có)
         ///
         /// **Yêu cầu**:
-        /// - Đăng nhập với role `Staff`
+        /// - Đăng nhập với role `CustomerStaff`
         ///
         /// **Response codes**:
         /// - <c>200</c>: Xác nhận thành công
@@ -159,6 +161,45 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách các đơn hàng đang trong giỏ (trạng thái "INCART") – dành cho CustomerStaff.
+        /// </summary>
+        /// <param name="page">Trang hiện tại (bắt đầu từ 1, mặc định = 1).</param>
+        /// <param name="pageSize">Số bản ghi mỗi trang (mặc định = 10).</param>
+        /// <remarks>
+        /// **Yêu cầu**:  
+        /// - Đã đăng nhập bằng JWT  
+        /// - Có role là <c>CustomerStaff</c>  
+        ///
+        /// **Mục đích**:  
+        /// Hỗ trợ quản trị viên theo dõi những đơn chưa được đặt (người dùng chỉ thêm vào giỏ nhưng chưa xác nhận đặt).
+        ///
+        /// **Logic xử lý**:
+        /// 1) Truy vấn tất cả `Order` có `CurrentStatus == "INCART"`.
+        /// 2) Trả về danh sách phân trang với thông tin:
+        ///     - Người tạo đơn (UserId, FullName, PhoneNumber)
+        ///     - Danh sách các món trong giỏ (dịch vụ, extras, số lượng, giá tạm tính)
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Lấy danh sách thành công.
+        /// - <c>401</c>: Không có quyền truy cập.
+        /// - <c>500</c>: Lỗi hệ thống.
+        /// </remarks>
+        [HttpGet("all-cart")]
+        [ProducesResponseType(typeof(PaginationResult<InCartOrderAdminResponse>), 200)]
+        public async Task<IActionResult> GetInCartPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _orderService.GetInCartOrdersPagedAsync(HttpContext, page, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
     }

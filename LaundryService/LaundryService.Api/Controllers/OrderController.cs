@@ -408,45 +408,5 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
-
-        /// <summary>
-        /// Lấy danh sách các đơn hàng đang trong giỏ (trạng thái "INCART") – dành cho Admin.
-        /// </summary>
-        /// <param name="page">Trang hiện tại (bắt đầu từ 1, mặc định = 1).</param>
-        /// <param name="pageSize">Số bản ghi mỗi trang (mặc định = 10).</param>
-        /// <remarks>
-        /// **Yêu cầu**:  
-        /// - Đã đăng nhập bằng JWT  
-        /// - Có role là <c>Admin</c>  
-        ///
-        /// **Mục đích**:  
-        /// Hỗ trợ quản trị viên theo dõi những đơn chưa được đặt (người dùng chỉ thêm vào giỏ nhưng chưa xác nhận đặt).
-        ///
-        /// **Logic xử lý**:
-        /// 1) Truy vấn tất cả `Order` có `CurrentStatus == "INCART"`.
-        /// 2) Trả về danh sách phân trang với thông tin:
-        ///     - Người tạo đơn (UserId, FullName, PhoneNumber)
-        ///     - Danh sách các món trong giỏ (dịch vụ, extras, số lượng, giá tạm tính)
-        ///
-        /// **Response codes**:
-        /// - <c>200</c>: Lấy danh sách thành công.
-        /// - <c>401</c>: Không có quyền truy cập.
-        /// - <c>500</c>: Lỗi hệ thống.
-        /// </remarks>
-        [Authorize(Roles = "Admin")]
-        [HttpGet("all-cart")]
-        [ProducesResponseType(typeof(PaginationResult<InCartOrderAdminResponse>), 200)]
-        public async Task<IActionResult> GetInCartPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
-        {
-            try
-            {
-                var result = await _orderService.GetInCartOrdersPagedAsync(HttpContext, page, pageSize);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An unexpected error occurred." });
-            }
-        }
     }
 }
