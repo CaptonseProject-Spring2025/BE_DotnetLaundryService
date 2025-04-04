@@ -412,5 +412,81 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Cập nhật một mục trong giỏ hàng (cart), bao gồm số lượng và danh sách extras.
+        /// </summary>
+        /// <param name="request">
+        ///     <see cref="UpdateCartItemRequest"/> gồm:
+        ///     - <c>OrderItemId</c>: ID của mục giỏ hàng cần cập nhật (bắt buộc)  
+        ///     - <c>Quantity</c>: Số lượng mới (bắt buộc). Nếu bằng 0 thì sẽ xóa mục này.  
+        ///     - <c>ExtraIds</c>: Danh sách ID của các Extra (có thể rỗng)
+        /// </param>
+        /// <returns>
+        ///     Trả về <see cref="CartResponse"/> sau khi cập nhật:
+        ///     - <c>OrderId</c>, <c>Items</c>, <c>EstimatedTotal</c>
+        /// </returns>
+        /// <remarks>
+        /// **Mục đích**:  
+        /// Cho phép user cập nhật lại số lượng hoặc extras cho một dịch vụ đã thêm vào giỏ hàng.
+        ///
+        /// **Logic xử lý**:
+        /// 1. Tìm `OrderItem` theo `OrderItemId`, đảm bảo:
+        ///     - thuộc quyền sở hữu của user hiện tại  
+        ///     - đơn hàng phải ở trạng thái `"INCART"`
+        /// 2. Xóa tất cả các `OrderExtra` liên quan đến item này (nếu có).
+        /// 3. Xóa luôn `OrderItem` cũ.
+        /// 4. Nếu `Quantity == 0`:
+        ///     - Không thêm lại item mới.
+        ///     - Kiểm tra nếu đơn hàng `"INCART"` không còn `OrderItem` nào:
+        ///         - Xóa luôn Order này.
+        /// 5. Nếu `Quantity > 0`:
+        ///     - Nếu đã có `OrderItem` cùng `ServiceDetail` và cùng `ExtraIds` ⇒ tăng số lượng.
+        ///     - Nếu chưa có ⇒ thêm `OrderItem` mới.
+        /// 6. Sau khi xử lý xong, gọi `GetCartAsync()` để trả về `CartResponse`.
+        ///     - Nếu cart không còn (đã xóa hết) thì trả về lỗi `404: No cart found.`
+        ///
+        /// **Yêu cầu**:  
+        /// - Đăng nhập bằng JWT  
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Cập nhật giỏ hàng thành công, trả về cart mới
+        /// - <c>400</c>: Lỗi logic hoặc dữ liệu đầu vào không hợp lệ
+        /// - <c>401</c>: Không có quyền truy cập
+        /// - <c>404</c>: Không tìm thấy OrderItem hoặc giỏ hàng không còn
+        /// - <c>500</c>: Lỗi hệ thống
+        /// </remarks>
+        [Authorize]
+        [HttpPut("cart")]
+        [ProducesResponseType(typeof(CartResponse), 200)]
+        public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var updatedCart = await _orderService.UpdateCartItemAsync(HttpContext, request);
+                return Ok(updatedCart);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Nếu orderItem không tồn tại, hoặc giỏ hàng không còn => NotFound
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log nếu cần
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

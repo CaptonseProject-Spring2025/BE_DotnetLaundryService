@@ -246,7 +246,7 @@ namespace LaundryService.Service
                 var cart = await GetCartAsync(httpContext); // Gọi hàm đã có
                 if (cart == null || cart.Items.Count == 0)
                 {
-                    throw new KeyNotFoundException("No cart found.");
+                    throw new KeyNotFoundException("Delete item successfully! No cart found.");
                 }
                 return cart;
             }
