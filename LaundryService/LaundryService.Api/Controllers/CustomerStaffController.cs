@@ -39,6 +39,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpGet("pending-orders")]
+        [ProducesResponseType(typeof(PaginationResult<UserOrderResponse>), 200)]
         public async Task<IActionResult> GetPendingOrders(int page = 1, int pageSize = 10)
         {
             try
@@ -82,6 +83,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpPost("process-order/{orderId}")]
+        [ProducesResponseType(typeof(Guid), 200)]
         public async Task<IActionResult> ProcessOrder(Guid orderId)
         {
             try
@@ -143,6 +145,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpPost("confirm-order")]
+        [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> ConfirmOrder([FromQuery] Guid orderId, [FromQuery] string? notes)
         {
             try
@@ -209,7 +212,39 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Staff xác nhận hủy đơn hàng đang xử lý – trường hợp đã liên hệ với khách và được xác nhận hủy.
+        /// </summary>
+        /// <param name="assignmentId">Mã phân công xử lý đơn (bắt buộc).</param>
+        /// <param name="notes">Ghi chú lý do hủy đơn (bắt buộc).</param>
+        /// <returns>Thông báo hủy đơn thành công.</returns>
+        /// <remarks>
+        /// **Mục đích**:  
+        /// Cho phép nhân viên gọi khách và xác nhận khách muốn **hủy đơn hàng**, sau đó cập nhật hệ thống.
+        ///
+        /// **Logic xử lý**:
+        /// 1. Tìm `OrderAssignmentHistory` theo `assignmentId`.
+        /// 2. Kiểm tra thời gian: nếu đã quá 30 phút kể từ `AssignedAt` => không cho phép hủy.
+        /// 3. Nếu hợp lệ:
+        ///     - Cập nhật `Order`:
+        ///         - `CurrentStatus = "CANCELLED"`
+        ///     - Thêm record vào `OrderStatusHistory`:  
+        ///         - `Status = "CANCELLED"`  
+        ///         - `StatusDescription = "Đơn hàng đã hủy."`  
+        ///         - `Notes = ghi chú từ nhân viên`
+        ///
+        /// **Yêu cầu**:
+        /// - Đăng nhập với role: `CustomerStaff`
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Hủy đơn thành công
+        /// - <c>400</c>: Quá thời gian hoặc logic sai
+        /// - <c>404</c>: Không tìm thấy assignment
+        /// - <c>401</c>: Không có quyền
+        /// - <c>500</c>: Lỗi hệ thống
+        /// </remarks>
         [HttpPost("cancel-order")]
+        [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> CancelOrder([FromQuery] Guid assignmentId, [FromQuery] string notes)
         {
             // Chú ý: assignmentId & notes là bắt buộc -> check or model validation
@@ -241,7 +276,32 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Staff hủy xử lý đơn hàng – khi không thể tiếp tục xử lý (ví dụ: không liên hệ được khách hàng...).
+        /// </summary>
+        /// <param name="assignmentId">Mã phân công xử lý đơn (bắt buộc).</param>
+        /// <param name="note">Lý do hủy xử lý (bắt buộc).</param>
+        /// <returns>Thông báo hủy xử lý thành công.</returns>
+        /// <remarks>
+        /// **Mục đích**:  
+        /// Khi nhân viên bấm "xử lý đơn" nhưng sau đó không thể tiếp tục (không gọi được khách, lý do cá nhân,...), họ có thể **thoát khỏi việc xử lý đơn**.
+        ///
+        /// **Logic xử lý**:
+        /// 1. Tìm `OrderAssignmentHistory` bằng `assignmentId`.
+        /// 2. Kiểm tra thời gian: nếu `DateTime.UtcNow - AssignedAt > 30 phút` => **không cho hủy**, trả lỗi.
+        ///
+        /// **Yêu cầu**:
+        /// - Đăng nhập với role: `CustomerStaff`
+        ///
+        /// **Response codes**:
+        /// - <c>200</c>: Hủy xử lý thành công
+        /// - <c>400</c>: Quá 30 phút hoặc thiếu thông tin
+        /// - <c>404</c>: Không tìm thấy assignment
+        /// - <c>401</c>: Không có quyền
+        /// - <c>500</c>: Lỗi hệ thống
+        /// </remarks>
         [HttpPost("cancel-processing")]
+        [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> CancelProcessing([FromQuery] Guid assignmentId, [FromQuery] string note)
         {
             // 1) Kiểm tra param
