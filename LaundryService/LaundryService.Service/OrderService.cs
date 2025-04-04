@@ -971,5 +971,79 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes)
+        {
+            // 1) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // 2) Tìm OrderAssignmentHistory bằng assignmentId
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .Include(a => a.Order) // Eager load để ta truy cập Order, OrderID
+                    .FirstOrDefault(a => a.Assignmentid == assignmentId);
+
+                if (assignment == null)
+                    throw new KeyNotFoundException("Không tìm thấy assignmentId này.");
+
+                // 3) Kiểm tra thời gian, so sánh (UTCNow - Assignedat) <= 30p ?
+                if (!assignment.Assignedat.HasValue)
+                {
+                    // Không có AssignedAt => logic sai
+                    throw new ApplicationException("Assignment chưa có thông tin AssignedAt.");
+                }
+
+                var elapsed = DateTime.UtcNow - assignment.Assignedat.Value;
+                if (elapsed > TimeSpan.FromMinutes(30))
+                {
+                    // Quá 30p => báo lỗi
+                    throw new ApplicationException("Quá thời gian xử lý đơn hàng. Không thể hủy.");
+                }
+
+                // 4) Cập nhật assignment
+                //    Status = SUCCESS (coi như staff kết thúc assignment),
+                //    Completedat = utcnow
+                assignment.Status = "SUCCESS";
+                assignment.Completedat = DateTime.UtcNow;
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                // 5) Tạo row mới trong OrderStatusHistory => CANCELLED
+                //    => "Đơn hàng đã hủy."
+                //    => notes
+                //    => updatedBy = userId
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var orderId = assignment.Orderid; // Từ assignment
+
+                var cancelStatusHistory = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "CANCELLED",
+                    Statusdescription = "Đơn hàng đã hủy.",
+                    Notes = notes,
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(cancelStatusHistory, saveChanges: false);
+
+                // Set Order.Currentstatus="CANCELLED" để đồng bộ)
+                var order = assignment.Order; // do ta Include(a => a.Order)
+                if (order != null)
+                {
+                    order.Currentstatus = "CANCELLED";
+                    await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                }
+
+                // 6) Lưu và commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
     }
 }

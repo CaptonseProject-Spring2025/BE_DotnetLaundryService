@@ -33,5 +33,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> ProcessOrderAsync(HttpContext httpContext, Guid orderId);
 
         Task ConfirmOrderAsync(HttpContext httpContext, Guid orderId, string notes);
+
+        Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes);
     }
 }

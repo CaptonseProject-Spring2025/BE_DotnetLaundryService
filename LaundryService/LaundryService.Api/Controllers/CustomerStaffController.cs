@@ -50,7 +50,7 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 // log ex
-                return StatusCode(500, new { Message = "An unexpected error occurred." });
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
 
@@ -205,8 +205,41 @@ namespace LaundryService.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "An unexpected error occurred." });
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
+
+        [HttpPost("cancel-order")]
+        public async Task<IActionResult> CancelOrder([FromQuery] Guid assignmentId, [FromQuery] string notes)
+        {
+            // Chú ý: assignmentId & notes là bắt buộc -> check or model validation
+            if (assignmentId == Guid.Empty || string.IsNullOrWhiteSpace(notes))
+            {
+                return BadRequest(new { Message = "assignmentId & notes đều bắt buộc." });
+            }
+
+            try
+            {
+                await _orderService.CancelOrderAsync(HttpContext, assignmentId, notes);
+                return Ok(new { Message = "Đơn hàng đã được hủy thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
+
     }
 }
