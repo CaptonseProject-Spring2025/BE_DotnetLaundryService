@@ -1,4 +1,5 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using LaundryService.Domain.Enums;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
@@ -13,10 +14,14 @@ namespace LaundryService.Api.Controllers
     public class CustomerStaffController : BaseApiController
     {
         private readonly IOrderService _orderService;
+        private readonly IFirebaseNotificationService _firebaseNotificationService;
+        private readonly INotificationService _notificationService;
 
-        public CustomerStaffController(IOrderService orderService)
+        public CustomerStaffController(IOrderService orderService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService)
         {
             _orderService = orderService;
+            _firebaseNotificationService = firebaseNotificationService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -152,6 +157,36 @@ namespace LaundryService.Api.Controllers
             {
                 // Gọi service
                 await _orderService.ConfirmOrderAsync(HttpContext, orderId, notes ?? "");
+
+                // Lấy customerId để gửi notification
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                // Lưu notification vào DB
+                try
+                {
+                    await _notificationService.CreateOrderConfirmedNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                // Gửi noti
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.OrderConfirmed
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo OrderConfirmed: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Đơn hàng đã được xác nhận (CONFIRMED) thành công." });
             }
             catch (KeyNotFoundException ex)

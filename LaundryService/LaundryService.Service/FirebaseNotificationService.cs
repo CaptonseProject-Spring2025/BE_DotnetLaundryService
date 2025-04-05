@@ -42,7 +42,7 @@ namespace LaundryService.Service
             return type switch
             {
                 NotificationType.OrderPlaced => ("Thông báo đặt hàng", "Bạn đã đặt hàng thành công. Vui lòng chờ nhân viên liên hệ."),
-                NotificationType.OrderStatusUpdated => ("Cập nhật đơn hàng", $"Đơn hàng của bạn hiện tại: {status}."),
+                NotificationType.OrderConfirmed => ("Xác nhận đơn hàng", "Đơn hàng của bạn đã được xác nhận thành công."),
                 _ => ("Thông báo", "Bạn có một thông báo mới.")
             };
         }
