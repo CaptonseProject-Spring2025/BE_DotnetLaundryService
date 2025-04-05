@@ -14,5 +14,6 @@ namespace LaundryService.Domain.Interfaces.Services
         Task DeleteNotificationAsync(Guid notificationId);
         Task MarkAsReadAsync(Guid notificationId);
         Task CreateOrderPlacedNotificationAsync(Guid userId, Guid orderId);
+        Task CreateOrderConfirmedNotificationAsync(Guid userId, Guid orderId);
     }
 }

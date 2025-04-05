@@ -9,7 +9,7 @@ namespace LaundryService.Domain.Enums
     public enum NotificationType
     {
         OrderPlaced,
-        OrderStatusUpdated
+        OrderConfirmed
     }
 
 }
