@@ -17,25 +17,44 @@ namespace LaundryService.Service
 
         public async Task SendOrderNotificationAsync(string userId, NotificationType type, Dictionary<string, string>? data = null)
         {
-            var token = await _firebaseStorageService.GetUserFcmTokenAsync(userId);
-            if (string.IsNullOrEmpty(token))
+            var tokens = await _firebaseStorageService.GetUserFcmTokensAsync(userId);
+            if (tokens == null || tokens.Count == 0)
                 return;
 
             var (title, message) = GetNotificationContent(type, data?["status"]);
 
-            var messageObj = new Message()
+            foreach (var token in tokens)
             {
-                Token = token,
-                Notification = new Notification
+                var messageObj = new Message()
                 {
-                    Title = title,
-                    Body = message
-                },
-                Data = data ?? new Dictionary<string, string>()
-            };
+                    Token = token,
+                    Notification = new Notification
+                    {
+                        Title = title,
+                        Body = message
+                    },
+                    Data = data ?? new Dictionary<string, string>()
+                };
 
-            await FirebaseMessaging.DefaultInstance.SendAsync(messageObj);
+                try
+                {
+                    await FirebaseMessaging.DefaultInstance.SendAsync(messageObj);
+                }
+                catch (FirebaseMessagingException ex)
+                {
+                    Console.WriteLine($"Failed to send message to token {token}: {ex.Message}");
+
+                    // Optional: remove invalid tokens
+                    if (ex.MessagingErrorCode == MessagingErrorCode.InvalidArgument ||
+                        ex.MessagingErrorCode == MessagingErrorCode.Unregistered)
+                    {
+                        await _firebaseStorageService.DeleteTokenAsync(userId, token);
+                        Console.WriteLine($"Deleted invalid token: {token}");
+                    }
+                }
+            }
         }
+
 
         private (string Title, string Message) GetNotificationContent(NotificationType type, string? status = null)
         {

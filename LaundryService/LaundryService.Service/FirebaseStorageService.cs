@@ -41,24 +41,32 @@ namespace LaundryService.Service
             }
         }
 
-        public async Task<string?> GetUserFcmTokenAsync(string userId)
+        public async Task<List<string>> GetUserFcmTokensAsync(string userId)
         {
             try
             {
                 var tokensCollection = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
-                var snapshot = await tokensCollection.Limit(1).GetSnapshotAsync();
+                var snapshot = await tokensCollection.GetSnapshotAsync();
 
-                if (!snapshot.Documents.Any()) return null;
+                var tokens = new List<string>();
+                foreach (var doc in snapshot.Documents)
+                {
+                    var tokenData = doc.ToDictionary();
+                    if (tokenData.ContainsKey("Token"))
+                    {
+                        tokens.Add(tokenData["Token"].ToString());
+                    }
+                }
 
-                var tokenData = snapshot.Documents.First().ToDictionary();
-                return tokenData.ContainsKey("Token") ? tokenData["Token"].ToString() : null;
+                return tokens;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching FCM token: {ex.Message}");
-                return null;
+                Console.WriteLine($"Error fetching FCM tokens: {ex.Message}");
+                return new List<string>();
             }
         }
+
 
         public async Task<bool> DeleteTokenAsync(string userId, string fcmToken)
         {
