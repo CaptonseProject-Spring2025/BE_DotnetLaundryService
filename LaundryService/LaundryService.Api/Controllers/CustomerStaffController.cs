@@ -291,6 +291,36 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.CancelOrderAsync(HttpContext, assignmentId, notes);
+
+                // Lấy customerId để gửi notification
+                var customerId = await _orderService.GetCustomerIdByAssignmentAsync(assignmentId);
+
+                // Lưu notification vào DB
+                try
+                {
+                    await _notificationService.CreateOrderCanceledNotificationAsync(customerId, assignmentId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                // Gửi noti
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.OrderCanceled
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo OrderCanceled: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Đơn hàng đã được hủy thành công." });
             }
             catch (KeyNotFoundException ex)

@@ -41,5 +41,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<CartResponse> UpdateCartItemAsync(HttpContext httpContext, UpdateCartItemRequest request);
 
         Task<Guid> GetCustomerIdByOrderAsync(Guid orderId);
+
+        Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
     }
 }
