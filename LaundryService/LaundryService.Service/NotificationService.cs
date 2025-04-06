@@ -121,5 +121,24 @@ namespace LaundryService.Service
             await _unitOfWork.Repository<Notification>().InsertAsync(notification);
             await _unitOfWork.SaveChangesAsync();
         }
+
+        public async Task CreateOrderCanceledNotificationAsync(Guid userId, Guid orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Hủy đơn hàng",
+                Message = "Đơn hàng của bạn đã được hủy thành công.",
+                Notificationtype = "OrderCanclled",
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

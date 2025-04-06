@@ -1197,5 +1197,26 @@ namespace LaundryService.Service
             return order.Userid; //  Trường chứa customer ID
         }
 
+        public async Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId)
+        {
+            var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .FirstOrDefault(a => a.Assignmentid == assignmentId);
+
+            if (assignment == null)
+                throw new KeyNotFoundException("Không tìm thấy thông tin phân công đơn hàng.");
+
+            // Truy ngược lên Order để lấy UserId
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == assignment.Orderid);
+
+            if (order == null)
+                throw new KeyNotFoundException("Không tìm thấy đơn hàng tương ứng với phân công.");
+
+            return order.Userid;
+        }
+
+
     }
 }
