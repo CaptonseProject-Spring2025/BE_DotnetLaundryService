@@ -1229,6 +1229,236 @@ namespace LaundryService.Service
             return assignment.Orderid; // Chính là mã đơn như 250407GC1PHG
         }
 
+        public async Task StartOrderPickupAsync(HttpContext httpContext, string orderId)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == "ASSIGNED_PICKUP");
+
+                if (assignment == null)
+                    throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_PICKUP.");
+
+                assignment.Status = "PICKING_UP";
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                order.Currentstatus = "PICKING_UP";
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var history = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "PICKING_UP",
+                    Statusdescription = "Tài xế đang tiến hành đi nhận hàng",
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == "PICKING_UP");
+
+                if (assignment == null)
+                    throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKING_UP.");
+
+                assignment.Status = "PICKED_UP";
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                order.Currentstatus = "PICKED_UP";
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var history = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "PICKED_UP",
+                    Statusdescription = "Tài xế đã nhận hàng thành công",
+                    Notes = notes,
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == "PICKED_UP");
+
+                if (assignment == null)
+                    throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKED_UP.");
+
+                assignment.Status = "RECEIVED";
+                assignment.Completedat = DateTime.UtcNow;
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                order.Currentstatus = "CHECKING";
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var history = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "RECEIVED",
+                    Statusdescription = "Tài xế đã nhận hàng về tới nơi",
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == "ASSIGNED_DELIVERY");
+
+                if (assignment == null)
+                    throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_DELIVERY.");
+
+                assignment.Status = "DELIVERING";
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                order.Currentstatus = "DELIVERING";
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var history = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "DELIVERING",
+                    Statusdescription = "Tài xế đang giao hàng",
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == "DELIVERING");
+
+                if (assignment == null)
+                    throw new ApplicationException("Không tìm thấy assignment với trạng thái DELIVERING.");
+
+                assignment.Status = "DELIVERED";
+                assignment.Completedat = DateTime.UtcNow;
+                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                order.Currentstatus = "DELIVERED";
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+                var history = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = "DELIVERED",
+                    Statusdescription = "Tài xế đã giao hàng thành công",
+                    Notes = notes,
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
 
     }
 }

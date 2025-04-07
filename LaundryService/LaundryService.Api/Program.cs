@@ -75,7 +75,9 @@ builder.Services.AddScoped<IFirebaseNotificationService, FirebaseNotificationSer
 builder.Services.AddScoped<IFirebaseStorageService, FirebaseStorageService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashBoardServices, DashBoardService>();
+builder.Services.AddScoped<IOrderAssignmentHistoryService, OrderAssignmentHistoryService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
+
 
 builder.Services.AddSignalR(options =>
 {
