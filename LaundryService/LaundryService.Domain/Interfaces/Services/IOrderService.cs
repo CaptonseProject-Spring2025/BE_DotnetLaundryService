@@ -43,5 +43,10 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
+
+        /// <summary>
+        /// Lấy danh sách các đơn hàng đã xác nhận (CONFIRMED), nhóm theo khu vực dựa trên tọa độ pickup và sắp xếp theo ngày tạo.
+        /// </summary>
+        Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync();
     }
 }

@@ -7,6 +7,7 @@ using LaundryService.Dto.Responses;
 using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,11 +21,15 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
+        private readonly IConfiguration _configuration;
+        private readonly IMapboxService _mapboxService;
 
-        public OrderService(IUnitOfWork unitOfWork, IUtil util)
+        public OrderService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, IMapboxService mapboxService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
+            _configuration = configuration;
+            _mapboxService = mapboxService;
         }
 
         /// <summary>
@@ -1218,6 +1223,123 @@ namespace LaundryService.Service
             return order.Userid;
         }
 
+        public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
+        {
+            // B1: Lấy danh sách Orders có status = "CONFIRMED"
+            var orders = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Where(o => o.Currentstatus == "CONFIRMED")
+                .Include(o => o.User) // để lấy UserInfo
+                .OrderBy(o => o.Createdat) // sắp xếp theo CreatedAt
+                .ToList();
 
+            // B2: Đọc config "Areas" từ appsettings
+            //     "Areas": {
+            //        "Area1": [ "1", "3", "4", "Tân Bình", ... ],
+            //        "Area2": [ ... ],
+            //        "Area3": [ ... ]
+            //     }
+            var area1 = _configuration.GetSection("Areas:Area1").Get<string[]>() ?? Array.Empty<string>();
+            var area2 = _configuration.GetSection("Areas:Area2").Get<string[]>() ?? Array.Empty<string>();
+            var area3 = _configuration.GetSection("Areas:Area3").Get<string[]>() ?? Array.Empty<string>();
+
+            // B3: Lấy toạ độ "AddressDetail" từ appsettings để tính distance
+            //    "AddressDetail": {
+            //      "Address": "...",
+            //      "Latitude": 10.809939,
+            //      "Longitude": 106.664737
+            //    }
+            var addressSection = _configuration.GetSection("AddressDetail");
+            decimal refLat = addressSection.GetValue<decimal>("Latitude");
+            decimal refLon = addressSection.GetValue<decimal>("Longitude");
+
+            // Tạo dictionary { "Area1": new List<ConfirmedOrderInfo>(), "Area2":..., "Area3":...}
+            var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>()
+            {
+                { "Area1", new List<ConfirmedOrderInfo>() },
+                { "Area2", new List<ConfirmedOrderInfo>() },
+                { "Area3", new List<ConfirmedOrderInfo>() },
+                // Trường hợp quận không nằm trong 3 area => tuỳ bạn, có thể cho "Outside" hay "Unknown"
+            };
+
+            // B4: Duyệt qua Orders -> gọi mapboxService để lấy district
+            foreach (var order in orders)
+            {
+                var pickupLat = order.Pickuplatitude ?? 0;
+                var pickupLon = order.Pickuplongitude ?? 0;
+
+                // Gọi mapboxService để lấy tên quận
+                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(pickupLat, pickupLon);
+                district = district?.Trim() ?? ""; // để phòng null
+
+                // Xác định area
+                var areaName = "Unknown";
+                // Kiểm tra district có nằm trong "Area1" ?
+                if (area1.Contains(district, StringComparer.OrdinalIgnoreCase))
+                    areaName = "Area1";
+                else if (area2.Contains(district, StringComparer.OrdinalIgnoreCase))
+                    areaName = "Area2";
+                else if (area3.Contains(district, StringComparer.OrdinalIgnoreCase))
+                    areaName = "Area3";
+
+                // Tính distance so với lat/lon trong appsettings
+                double distance = _mapboxService.CalculateDistance(pickupLat, pickupLon, refLat, refLon);
+
+                // Tạo object ConfirmedOrderInfo
+                var orderInfo = new ConfirmedOrderInfo
+                {
+                    OrderId = order.Orderid,
+                    UserInfo = new UserInfoDto
+                    {
+                        UserId = order.Userid,
+                        FullName = order.User?.Fullname,
+                        PhoneNumber = order.User?.Phonenumber
+                    },
+                    PickupName = order.Pickupname,
+                    PickupPhone = order.Pickupphone,
+                    Distance = distance,
+                    PickupAddressDetail = order.Pickupaddressdetail,
+                    PickupDescription = order.Pickupdescription,
+                    PickupLatitude = pickupLat,
+                    PickupLongitude = pickupLon,
+                    PickupTime = order.Pickuptime,
+                    CreatedAt = order.Createdat ?? DateTime.UtcNow,
+                    TotalPrice = order.Totalprice
+                };
+
+                // Thêm vào list tương ứng
+                if (!areaDict.ContainsKey(areaName))
+                {
+                    areaDict[areaName] = new List<ConfirmedOrderInfo>();
+                }
+                areaDict[areaName].Add(orderInfo);
+            }
+
+            // B5: Tạo list kết quả -> group theo Area
+            // Mỗi key trong areaDict -> 1 AreaOrdersResponse
+            // Sắp xếp trong cùng 1 khu vực theo CreatedAt
+            var result = new List<AreaOrdersResponse>();
+            foreach (var kv in areaDict)
+            {
+                // Sắp xếp kv.Value (danh sách ConfirmedOrderInfo) theo CreatedAt
+                var sortedOrders = kv.Value
+                    .OrderBy(o => o.CreatedAt)
+                    .ToList();
+
+                // Bỏ qua group rỗng? Tùy: 
+                // - Nếu muốn hiển thị group rỗng => vẫn add
+                // - Nếu không => check if (sortedOrders.Any()) ...
+                if (sortedOrders.Any())
+                {
+                    result.Add(new AreaOrdersResponse
+                    {
+                        Area = kv.Key,
+                        Orders = sortedOrders
+                    });
+                }
+            }
+
+            return result;
+        }
     }
 }
