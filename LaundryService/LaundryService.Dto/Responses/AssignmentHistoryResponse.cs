@@ -12,6 +12,7 @@ namespace LaundryService.Dto.Responses
         public string OrderId { get; set; } = null!;
         public string? Fullname { get; set; }
         public string? Phonenumber { get; set; }
+        public string? Note { get; set; }
         public DateTime? AssignedAt { get; set; }
         public string? Status { get; set; }
         public string? Address { get; set; }
