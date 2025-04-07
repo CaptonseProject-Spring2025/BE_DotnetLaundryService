@@ -43,11 +43,21 @@ namespace LaundryService.Service
             var users = await _unitOfWork.Repository<User>()
                 .GetAllAsync(u => userIds.Contains(u.Userid));
 
+            // 4. Lấy note từ Orderstatushistory với status = "PENDING"
+            var pendingNotes = await _unitOfWork.Repository<Orderstatushistory>()
+                .GetAllAsync(h => orderIds.Contains(h.Orderid) && h.Status == "PENDING");
+
+            var notesDict = pendingNotes
+                .GroupBy(h => h.Orderid)
+                .ToDictionary(g => g.Key, g => g.FirstOrDefault()?.Notes);
+
+
             // 4. Join các dữ liệu lại
             var responses = assignments.Select(a =>
             {
                 var order = orders.FirstOrDefault(o => o.Orderid == a.Orderid);
                 var user = users.FirstOrDefault(u => u.Userid == order?.Userid);
+                var pendingNote = notesDict.ContainsKey(a.Orderid) ? notesDict[a.Orderid] : null;
 
                 return new AssignmentHistoryResponse
                 {
@@ -55,6 +65,7 @@ namespace LaundryService.Service
                     OrderId = a.Orderid,
                     Fullname = user?.Fullname,
                     Phonenumber = user?.Phonenumber,
+                    Note = pendingNote,
                     AssignedAt = a.Assignedat,
                     Status = a.Status,
                     Address = GetRelevantAddress(a.Status, order)
