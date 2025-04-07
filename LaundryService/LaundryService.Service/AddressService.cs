@@ -3,7 +3,9 @@ using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
+using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
@@ -19,11 +21,13 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapboxService _mapboxService;
+        private readonly IUtil _util;
 
-        public AddressService(IUnitOfWork unitOfWork, IMapboxService mapboxService)
+        public AddressService(IUnitOfWork unitOfWork, IMapboxService mapboxService, IUtil util)
         {
             _unitOfWork = unitOfWork;
             _mapboxService = mapboxService;
+            _util = util;
         }
 
         public async Task<AddressResponse> CreateAddressAsync(HttpContext httpContext, CreateAddressRequest request)
@@ -182,5 +186,56 @@ namespace LaundryService.Service
                 DateCreated = address.Datecreated ?? DateTime.MinValue
             };
         }
+
+        public async Task<AddressInfoResponse> GetPickupAddressFromAssignmentAsync(HttpContext httpContext, Guid assignmentId)
+        {
+            var currentUserId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .Include(a => a.Order)
+                .FirstOrDefault(a => a.Assignmentid == assignmentId);
+
+            if (assignment == null)
+                throw new KeyNotFoundException("Assignment not found.");
+
+            if (assignment.Assignedto != currentUserId)
+                throw new UnauthorizedAccessException("You are not assigned to this order.");
+
+            var order = assignment.Order;
+
+            return new AddressInfoResponse
+            {
+                AddressDetail = order.Pickupaddressdetail,
+                Latitude = order.Pickuplatitude,
+                Longitude = order.Pickuplongitude
+            };
+        }
+
+        public async Task<AddressInfoResponse> GetDeliveryAddressFromAssignmentAsync(HttpContext httpContext, Guid assignmentId)
+        {
+            var currentUserId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            var assignment = await _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .Include(a => a.Order)
+                .FirstOrDefaultAsync(a => a.Assignmentid == assignmentId);
+
+            if (assignment == null)
+                throw new KeyNotFoundException("Assignment not found.");
+
+            if (assignment.Assignedto != currentUserId)
+                throw new UnauthorizedAccessException("You are not assigned to this order.");
+
+            var order = assignment.Order;
+
+            return new AddressInfoResponse
+            {
+                AddressDetail = order.Deliveryaddressdetail,
+                Latitude = order.Deliverylatitude,
+                Longitude = order.Deliverylongitude
+            };
+        }
+
     }
 }

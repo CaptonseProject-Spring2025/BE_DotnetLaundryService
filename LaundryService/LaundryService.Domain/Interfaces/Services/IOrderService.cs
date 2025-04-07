@@ -48,5 +48,17 @@ namespace LaundryService.Domain.Interfaces.Services
         /// Lấy danh sách các đơn hàng đã xác nhận (CONFIRMED), nhóm theo khu vực dựa trên tọa độ pickup và sắp xếp theo ngày tạo.
         /// </summary>
         Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync();
+        
+        Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
+
+        Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
+
+        Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes);
+
+        Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId);
+
+        Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId);
+
+        Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes);
     }
 }
