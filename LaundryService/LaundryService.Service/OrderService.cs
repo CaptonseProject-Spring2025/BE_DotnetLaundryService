@@ -1,4 +1,5 @@
 ﻿using LaundryService.Domain.Entities;
+using LaundryService.Domain.Enums;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
@@ -1582,5 +1583,85 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task AssignPickupToDriverAsync(HttpContext httpContext, AssignPickupRequest request)
+        {
+            // 1) Lấy userId admin từ token (người gọi API)
+            var adminUserId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Validate request
+            if (request.DriverId == Guid.Empty)
+                throw new ArgumentException("DriverId is required.");
+            if (request.OrderIds == null || request.OrderIds.Count == 0)
+                throw new ArgumentException("OrderIds cannot be empty.");
+
+            // Kiểm tra DriverId có tồn tại và có Role "Driver" không
+            var driver = await _unitOfWork.Repository<User>()
+                                        .GetAsync(u => u.Userid == request.DriverId && u.Role == "Driver");
+            if (driver == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy Driver với ID: {request.DriverId} hoặc người dùng này không phải Driver.");
+            }
+
+            // 3) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 4) Duyệt từng orderId
+                foreach (var orderId in request.OrderIds)
+                {
+                    // a) Tìm Order => validate
+                    var order = _unitOfWork.Repository<Order>()
+                        .GetAll()
+                        .FirstOrDefault(o => o.Orderid == orderId);
+
+                    if (order == null)
+                    {
+                        throw new KeyNotFoundException($"OrderId {orderId} not found.");
+                    }
+
+                    // Chỉ assign pickup nếu order đang CONFIRMED
+                    if (order.Currentstatus != OrderStatusEnum.CONFIRMED.ToString())
+                    {
+                        throw new ApplicationException(
+                            $"Order {orderId} is not in CONFIRMED status. Current: {order.Currentstatus}"
+                        );
+                    }
+
+                    // b) Tạo record Orderassignmenthistory
+                    var assignment = new Orderassignmenthistory
+                    {
+                        Orderid = orderId,
+                        Assignedto = request.DriverId,
+                        Assignedat = DateTime.UtcNow,
+                        Status = AssignStatusEnum.ASSIGNED_PICKUP.ToString(), // từ enum AssignStatusEnum
+                    };
+                    await _unitOfWork.Repository<Orderassignmenthistory>().InsertAsync(assignment, saveChanges: false);
+
+                    // c) Tạo record Orderstatushistory
+                    var statusHistory = new Orderstatushistory
+                    {
+                        Orderid = orderId,
+                        Status = OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
+                        Statusdescription = "Đã lên lịch lấy hàng",
+                        Updatedby = adminUserId,
+                        Createdat = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(statusHistory, saveChanges: false);
+
+                    // d) Cập nhật Order -> Currentstatus = "SCHEDULED_PICKUP"
+                    order.Currentstatus = OrderStatusEnum.SCHEDULED_PICKUP.ToString();
+                    await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                }
+
+                // 5) Lưu và commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }
