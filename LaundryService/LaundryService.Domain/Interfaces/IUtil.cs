@@ -13,5 +13,7 @@ namespace LaundryService.Domain.Interfaces
         Guid GetCurrentUserIdOrThrow(HttpContext httpContext);
 
         DateTime ConvertToVnTime(DateTime utcDateTime);
+
+        string GenerateOrderId();
     }
 }

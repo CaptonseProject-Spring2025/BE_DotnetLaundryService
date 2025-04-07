@@ -8,7 +8,7 @@ namespace LaundryService.Dto.Responses
 {
     public class OrderResponse
     {
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
         public string CurrentStatus { get; set; }
         public DateTime? CreatedAt { get; set; }
 

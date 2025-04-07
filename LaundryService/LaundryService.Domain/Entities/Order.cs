@@ -5,17 +5,17 @@ namespace LaundryService.Domain.Entities;
 
 public partial class Order
 {
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public Guid Userid { get; set; }
 
     public string? Pickuplabel { get; set; }
 
-    public string? Pickupname { get; set; } = null!;
+    public string? Pickupname { get; set; }
 
-    public string? Pickupphone { get; set; } = null!;
+    public string? Pickupphone { get; set; }
 
-    public string? Pickupaddressdetail { get; set; } = null!;
+    public string? Pickupaddressdetail { get; set; }
 
     public string? Pickupdescription { get; set; }
 
@@ -25,11 +25,11 @@ public partial class Order
 
     public string? Deliverylabel { get; set; }
 
-    public string? Deliveryname { get; set; } = null!;
+    public string? Deliveryname { get; set; }
 
-    public string? Deliveryphone { get; set; } = null!;
+    public string? Deliveryphone { get; set; }
 
-    public string? Deliveryaddressdetail { get; set; } = null!;
+    public string? Deliveryaddressdetail { get; set; }
 
     public string? Deliverydescription { get; set; }
 
@@ -48,6 +48,8 @@ public partial class Order
     public decimal? Applicablefee { get; set; }
 
     public decimal? Otherprice { get; set; }
+
+    public string? Noteforotherprice { get; set; }
 
     public decimal? Totalprice { get; set; }
 

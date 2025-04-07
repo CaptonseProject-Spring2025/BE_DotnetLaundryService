@@ -13,9 +13,9 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<IEnumerable<NotificationResponse>> GetNotificationsByUserIdAsync(HttpContext httpContext);
         Task DeleteNotificationAsync(Guid notificationId);
         Task MarkAsReadAsync(Guid notificationId);
-        Task CreateOrderPlacedNotificationAsync(Guid userId, Guid orderId);
-        Task CreateOrderConfirmedNotificationAsync(Guid userId, Guid orderId);
-        Task CreateOrderCanceledNotificationAsync(Guid userId, Guid orderId);
+        Task CreateOrderPlacedNotificationAsync(Guid userId, string orderId);
+        Task CreateOrderConfirmedNotificationAsync(Guid userId, string orderId);
+        Task CreateOrderCanceledNotificationAsync(Guid userId, string orderId);
 
     }
 }

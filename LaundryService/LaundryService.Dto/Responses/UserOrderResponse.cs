@@ -8,7 +8,7 @@ namespace LaundryService.Dto.Responses
 {
     public class UserOrderResponse
     {
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
         public string OrderName { get; set; }
         public int ServiceCount { get; set; }
         public decimal? TotalPrice { get; set; }

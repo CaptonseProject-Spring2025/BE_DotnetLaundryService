@@ -15,7 +15,7 @@ namespace LaundryService.Dto.Responses
         public string NotificationType { get; set; }
         public bool IsRead { get; set; }
         public Guid? CustomerId { get; set; }
-        public Guid? OrderId { get; set; }
+        public string? OrderId { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsPushEnabled { get; set; }
     }

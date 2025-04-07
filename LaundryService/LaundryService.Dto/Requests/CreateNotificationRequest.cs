@@ -12,7 +12,7 @@ namespace LaundryService.Dto.Requests
         public string Title { get; set; }
         public string Message { get; set; }
         public string NotificationType { get; set; }
-        public Guid? OrderId { get; set; } 
+        public string? OrderId { get; set; } 
         public bool IsPushEnabled { get; set; } = true;
 
     }

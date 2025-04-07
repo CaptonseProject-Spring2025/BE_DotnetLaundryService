@@ -88,8 +88,8 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpPost("process-order/{orderId}")]
-        [ProducesResponseType(typeof(Guid), 200)]
-        public async Task<IActionResult> ProcessOrder(Guid orderId)
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> ProcessOrder(string orderId)
         {
             try
             {
@@ -151,7 +151,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [HttpPost("confirm-order")]
         [ProducesResponseType(typeof(string), 200)]
-        public async Task<IActionResult> ConfirmOrder([FromQuery] Guid orderId, [FromQuery] string? notes)
+        public async Task<IActionResult> ConfirmOrder([FromQuery] string orderId, [FromQuery] string? notes)
         {
             try
             {
@@ -279,7 +279,6 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpPost("cancel-order")]
-        [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> CancelOrder([FromQuery] Guid assignmentId, [FromQuery] string notes)
         {
             // Chú ý: assignmentId & notes là bắt buộc -> check or model validation
@@ -291,36 +290,6 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.CancelOrderAsync(HttpContext, assignmentId, notes);
-
-                // Lấy customerId để gửi notification
-                var customerId = await _orderService.GetCustomerIdByAssignmentAsync(assignmentId);
-
-                // Lưu notification vào DB
-                try
-                {
-                    await _notificationService.CreateOrderCanceledNotificationAsync(customerId, assignmentId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
-                }
-
-                // Gửi noti
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _firebaseNotificationService.SendOrderNotificationAsync(
-                            customerId.ToString(),
-                            NotificationType.OrderCanceled
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Lỗi gửi thông báo OrderCanceled: {ex.Message}");
-                    }
-                });
-
                 return Ok(new { Message = "Đơn hàng đã được hủy thành công." });
             }
             catch (KeyNotFoundException ex)

@@ -9,7 +9,7 @@ public partial class Driverlocationhistory
 
     public Guid Driverid { get; set; }
 
-    public Guid? Orderid { get; set; }
+    public string? Orderid { get; set; }
 
     public decimal Latitudep { get; set; }
 

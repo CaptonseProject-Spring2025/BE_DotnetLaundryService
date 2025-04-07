@@ -13,6 +13,8 @@ public partial class Subservice
 
     public string? Description { get; set; }
 
+    public int? Mincompletetime { get; set; }
+
     public DateTime? Createdat { get; set; }
 
     public virtual Servicecategory Category { get; set; } = null!;

@@ -19,7 +19,7 @@ public partial class Notification
 
     public Guid? Customerid { get; set; }
 
-    public Guid? Orderid { get; set; }
+    public string? Orderid { get; set; }
 
     public DateTime? Createdat { get; set; }
 
