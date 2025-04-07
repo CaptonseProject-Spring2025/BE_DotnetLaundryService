@@ -37,9 +37,8 @@ namespace LaundryService.Infrastructure
         public string GenerateOrderId()
         {
             // 1) Lấy ngày hiện tại
-            var now = DateTime.UtcNow;  // Hoặc DateTime.Now tùy bạn
+            var now = ConvertToVnTime(DateTime.UtcNow);
             var datePart = now.ToString("yyMMdd");
-            // => "230607" (năm cuối 2 số, tháng, ngày)
 
             // 2) Sinh 6 ký tự random (A-Z, 0-9)
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
