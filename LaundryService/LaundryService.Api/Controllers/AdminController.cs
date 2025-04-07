@@ -8,7 +8,7 @@ namespace LaundryService.Api.Controllers
 {
     [Route("api/admin")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminController : BaseApiController
     {
         private readonly IOrderService _orderService;
