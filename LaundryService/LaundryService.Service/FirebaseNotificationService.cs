@@ -62,7 +62,7 @@ namespace LaundryService.Service
             {
                 NotificationType.OrderPlaced => ("Thông báo đặt hàng", "Bạn đã đặt hàng thành công. Vui lòng chờ nhân viên liên hệ."),
                 NotificationType.OrderConfirmed => ("Xác nhận đơn hàng", "Đơn hàng của bạn đã được xác nhận thành công."),
-                NotificationType.OrderCanceled => ("Hủy đơn hàng", "Đơn hàng của bạn đã được hủy thành công."),
+                NotificationType.OrderCancelled => ("Hủy đơn hàng", "Đơn hàng của bạn đã được hủy thành công."),
                 _ => ("Thông báo", "Bạn có một thông báo mới.")
             };
         }
