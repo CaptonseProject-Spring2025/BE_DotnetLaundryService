@@ -1,6 +1,8 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Requests;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace LaundryService.Api.Controllers
 {
@@ -96,5 +98,48 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Lấy tên Quận/Huyện (locality) từ tọa độ địa lý (latitude, longitude).
+        /// </summary>
+        /// <param name="latitude">Vĩ độ (ví dụ: 10.809939).</param>
+        /// <param name="longitude">Kinh độ (ví dụ: 106.664737).</param>
+        /// <returns>Tên Quận/Huyện nếu tìm thấy, hoặc lỗi nếu không tìm thấy/có lỗi xảy ra.</returns>
+        [HttpGet("district")] // Route cụ thể cho action này: api/geocoding/district
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetDistrictFromCoordinates(
+            [FromQuery][Required] decimal latitude,  // Lấy từ query string và yêu cầu bắt buộc
+            [FromQuery][Required] decimal longitude) // Lấy từ query string và yêu cầu bắt buộc
+        {
+            // Có thể thêm validation phức tạp hơn cho khoảng giá trị của lat/long nếu cần
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var districtName = await _mapboxService.GetDistrictFromCoordinatesAsync(latitude, longitude);
+
+                if (districtName != null)
+                {
+                    // Trả về tên Quận nếu tìm thấy
+                    return Ok(districtName);
+                }
+                else
+                {
+                    // Trả về 404 Not Found nếu Mapbox không trả về tên Quận cho tọa độ này
+                    return NotFound(new { Message = $"Could not find district for coordinates ({latitude}, {longitude})." });
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi ở đây (sử dụng logger thay vì Console.WriteLine trong môi trường production)
+                Console.WriteLine($"Error in GetDistrictFromCoordinates: {ex}");
+                // Trả về lỗi 500 Internal Server Error cho các lỗi không mong muốn
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred while fetching district information." });
+            }
+        }
+
     }
 }
