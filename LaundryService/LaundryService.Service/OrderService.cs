@@ -1218,6 +1218,17 @@ namespace LaundryService.Service
             return order.Userid;
         }
 
+        public async Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId)
+        {
+            var assignment = await _unitOfWork.Repository<Orderassignmenthistory>().FindAsync(assignmentId);
+            if (assignment == null || string.IsNullOrWhiteSpace(assignment.Orderid))
+            {
+                throw new KeyNotFoundException("Không tìm thấy thông tin đơn hàng.");
+            }
+
+            return assignment.Orderid; // Chính là mã đơn như 250407GC1PHG
+        }
+
 
     }
 }

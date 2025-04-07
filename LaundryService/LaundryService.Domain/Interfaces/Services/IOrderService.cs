@@ -43,5 +43,9 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
+
+        Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
+
+
     }
 }

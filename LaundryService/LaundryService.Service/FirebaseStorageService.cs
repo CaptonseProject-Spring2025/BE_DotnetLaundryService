@@ -22,10 +22,21 @@ namespace LaundryService.Service
         {
             try
             {
-                var deviceId = Guid.NewGuid().ToString();
+                var tokensCollection = _firestore.Collection("user_tokens").Document(userId).Collection("tokens");
 
-                DocumentReference docRef = _firestore.Collection("user_tokens").Document(userId)
-                                                    .Collection("tokens").Document(deviceId);
+                var snapshot = await tokensCollection.GetSnapshotAsync();
+
+                foreach (var doc in snapshot.Documents)
+                {
+                    if (doc.ContainsField("Token") && doc.GetValue<string>("Token") == fcmToken)
+                    {
+                        await doc.Reference.DeleteAsync();
+                        break;
+                    }
+                }
+
+                var deviceId = Guid.NewGuid().ToString();
+                DocumentReference docRef = tokensCollection.Document(deviceId);
 
                 await docRef.SetAsync(new
                 {
@@ -37,9 +48,10 @@ namespace LaundryService.Service
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving fcntoken: {ex.Message}");
+                Console.WriteLine($"Error saving fcmToken: {ex.Message}");
             }
         }
+
 
         public async Task<List<string>> GetUserFcmTokensAsync(string userId)
         {

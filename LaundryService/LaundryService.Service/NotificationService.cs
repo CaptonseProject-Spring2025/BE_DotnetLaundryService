@@ -130,7 +130,7 @@ namespace LaundryService.Service
                 Userid = userId,
                 Title = "Hủy đơn hàng",
                 Message = "Đơn hàng của bạn đã được hủy thành công.",
-                Notificationtype = "OrderCanclled",
+                Notificationtype = "OrderCancelled",
                 Orderid = orderId,
                 Createdat = DateTime.UtcNow,
                 Ispushenabled = true,
