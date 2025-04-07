@@ -11,7 +11,7 @@ namespace LaundryService.Domain.Enums
         Customer,
         Staff,
         CustomerStaff,
-        Shipper,
+        Driver,
         Admin
     }
 }

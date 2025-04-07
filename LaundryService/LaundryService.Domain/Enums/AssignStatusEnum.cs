@@ -8,6 +8,11 @@ namespace LaundryService.Domain.Enums
 {
     public enum AssignStatusEnum
     {
+        PROCESING,
+        FAIL,
+        SUCCESS,
+
+        //pickup
         ASSIGNED_PICKUP,
         PICKING_UP,
         PICKED_UP,
