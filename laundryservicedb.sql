@@ -22,7 +22,7 @@ CREATE TABLE Users (
     Dob DATE,
     Gender TEXT,
     PhoneNumber TEXT UNIQUE,
-	RewardPoints INT DEFAULT 0,
+	RewardPoints INT NOT NULL DEFAULT 0,
     DateCreated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     DateModified TIMESTAMP WITH TIME ZONE,
     RefreshToken TEXT,
@@ -160,7 +160,7 @@ CREATE TABLE OrderItems (
     OrderItemID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     OrderID TEXT NOT NULL REFERENCES Orders(OrderID),
     ServiceID UUID NOT NULL REFERENCES ServiceDetails(ServiceID),
-    Quantity INT,--DEFAULT 1 CHECK (Quantity > 0),
+    Quantity INT NOT NULL,--DEFAULT 1 CHECK (Quantity > 0),
     BasePrice DECIMAL(10), -- Lưu giá tại thời điểm đặt hàng
     CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
