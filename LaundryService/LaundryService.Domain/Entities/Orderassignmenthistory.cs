@@ -7,15 +7,15 @@ public partial class Orderassignmenthistory
 {
     public Guid Assignmentid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public Guid Assignedto { get; set; }
 
     public DateTime? Assignedat { get; set; }
 
-    public string? Status { get; set; } //PROCESSING, FAIL, SUCCESS
+    public string? Status { get; set; }
 
-    public string? Declinereason { get; set; } //gọi là Declinereason nhưng thực ra là note chung khi xử lý đơn hàng
+    public string? Declinereason { get; set; }
 
     public DateTime? Completedat { get; set; }
 

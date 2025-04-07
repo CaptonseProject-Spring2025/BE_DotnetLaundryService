@@ -7,7 +7,7 @@ public partial class Payment
 {
     public Guid Paymentid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public DateTime? Paymentdate { get; set; }
 

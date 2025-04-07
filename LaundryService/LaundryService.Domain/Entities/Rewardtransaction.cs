@@ -9,7 +9,7 @@ public partial class Rewardtransaction
 
     public Guid Userid { get; set; }
 
-    public Guid? Orderid { get; set; }
+    public string? Orderid { get; set; }
 
     public string? Transactiontype { get; set; }
 

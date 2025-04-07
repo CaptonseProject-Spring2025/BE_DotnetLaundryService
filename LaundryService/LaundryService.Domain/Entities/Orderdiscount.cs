@@ -7,7 +7,7 @@ public partial class Orderdiscount
 {
     public Guid Orderdiscountid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public Guid Discountcodeid { get; set; }
 

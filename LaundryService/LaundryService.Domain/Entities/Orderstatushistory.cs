@@ -7,7 +7,7 @@ public partial class Orderstatushistory
 {
     public Guid Statushistoryid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public string? Status { get; set; }
 

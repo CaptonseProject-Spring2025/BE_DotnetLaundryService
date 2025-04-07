@@ -86,11 +86,8 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Contactphone).HasColumnName("contactphone");
             entity.Property(e => e.Datecreated)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("datecreated");
-            entity.Property(e => e.Datemodified)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("datemodified");
+            entity.Property(e => e.Datemodified).HasColumnName("datemodified");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Detailaddress).HasColumnName("detailaddress");
             entity.Property(e => e.Latitude)
@@ -118,7 +115,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("conversationid");
             entity.Property(e => e.Creationdate)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("creationdate");
             entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.Userone).HasColumnName("userone");
@@ -150,22 +146,17 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Code).HasColumnName("code");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Discounttype).HasColumnName("discounttype");
-            entity.Property(e => e.Enddate)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("enddate");
+            entity.Property(e => e.Enddate).HasColumnName("enddate");
             entity.Property(e => e.Maximumdiscount)
                 .HasPrecision(10)
                 .HasColumnName("maximumdiscount");
             entity.Property(e => e.Minimumordervalue)
                 .HasPrecision(10)
                 .HasColumnName("minimumordervalue");
-            entity.Property(e => e.Startdate)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("startdate");
+            entity.Property(e => e.Startdate).HasColumnName("startdate");
             entity.Property(e => e.Usagelimit).HasColumnName("usagelimit");
             entity.Property(e => e.Usageperuser).HasColumnName("usageperuser");
             entity.Property(e => e.Value)
@@ -184,7 +175,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("id");
             entity.Property(e => e.Assignedat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("assignedat");
             entity.Property(e => e.Discountcodeid).HasColumnName("discountcodeid");
             entity.Property(e => e.Userid).HasColumnName("userid");
@@ -211,7 +201,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("historyid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Driverid).HasColumnName("driverid");
             entity.Property(e => e.Latitudep)
@@ -243,7 +232,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("extraid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Extracategoryid).HasColumnName("extracategoryid");
@@ -272,7 +260,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("extracategoryid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Name).HasColumnName("name");
         });
@@ -289,7 +276,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Conversationid).HasColumnName("conversationid");
             entity.Property(e => e.Creationdate)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("creationdate");
             entity.Property(e => e.Imagelink).HasColumnName("imagelink");
             entity.Property(e => e.Isseen)
@@ -325,7 +311,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("notificationid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Customerid).HasColumnName("customerid");
             entity.Property(e => e.Ispushenabled).HasColumnName("ispushenabled");
@@ -350,18 +335,12 @@ public partial class LaundryServiceDbContext : DbContext
 
             entity.ToTable("orders");
 
-            entity.Property(e => e.Orderid)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("orderid");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Applicablefee)
                 .HasPrecision(10)
                 .HasColumnName("applicablefee");
-            entity.Property(e => e.Otherprice)
-                .HasPrecision(10)
-                .HasColumnName("otherprice");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Currentstatus).HasColumnName("currentstatus");
             entity.Property(e => e.Deliveryaddressdetail).HasColumnName("deliveryaddressdetail");
@@ -375,12 +354,14 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("deliverylongitude");
             entity.Property(e => e.Deliveryname).HasColumnName("deliveryname");
             entity.Property(e => e.Deliveryphone).HasColumnName("deliveryphone");
-            entity.Property(e => e.Deliverytime)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("deliverytime");
+            entity.Property(e => e.Deliverytime).HasColumnName("deliverytime");
             entity.Property(e => e.Discount)
                 .HasPrecision(10)
                 .HasColumnName("discount");
+            entity.Property(e => e.Noteforotherprice).HasColumnName("noteforotherprice");
+            entity.Property(e => e.Otherprice)
+                .HasPrecision(10)
+                .HasColumnName("otherprice");
             entity.Property(e => e.Pickupaddressdetail).HasColumnName("pickupaddressdetail");
             entity.Property(e => e.Pickupdescription).HasColumnName("pickupdescription");
             entity.Property(e => e.Pickuplabel).HasColumnName("pickuplabel");
@@ -392,9 +373,7 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("pickuplongitude");
             entity.Property(e => e.Pickupname).HasColumnName("pickupname");
             entity.Property(e => e.Pickupphone).HasColumnName("pickupphone");
-            entity.Property(e => e.Pickuptime)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("pickuptime");
+            entity.Property(e => e.Pickuptime).HasColumnName("pickuptime");
             entity.Property(e => e.Shippingdiscount)
                 .HasPrecision(10)
                 .HasColumnName("shippingdiscount");
@@ -423,12 +402,9 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("assignmentid");
             entity.Property(e => e.Assignedat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("assignedat");
             entity.Property(e => e.Assignedto).HasColumnName("assignedto");
-            entity.Property(e => e.Completedat)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("completedat");
+            entity.Property(e => e.Completedat).HasColumnName("completedat");
             entity.Property(e => e.Declinereason).HasColumnName("declinereason");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Status)
@@ -457,7 +433,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("orderdiscountid");
             entity.Property(e => e.Appliedat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("appliedat");
             entity.Property(e => e.Discountamount)
                 .HasPrecision(10)
@@ -487,7 +462,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("orderextraid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Extraid).HasColumnName("extraid");
             entity.Property(e => e.Extraprice)
@@ -520,7 +494,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("baseprice");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Quantity).HasColumnName("quantity");
@@ -566,7 +539,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("statushistoryid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Notes).HasColumnName("notes");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
@@ -598,12 +570,10 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("amount");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Paymentdate)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("paymentdate");
             entity.Property(e => e.Paymentmetadata)
                 .HasColumnType("jsonb")
@@ -611,9 +581,7 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Paymentmethodid).HasColumnName("paymentmethodid");
             entity.Property(e => e.Paymentstatus).HasColumnName("paymentstatus");
             entity.Property(e => e.Transactionid).HasColumnName("transactionid");
-            entity.Property(e => e.Updatedat)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("updatedat");
+            entity.Property(e => e.Updatedat).HasColumnName("updatedat");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.Orderid)
@@ -639,7 +607,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("paymentmethodid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Isactive)
@@ -659,7 +626,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("ratingid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Rating1).HasColumnName("rating");
@@ -694,7 +660,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("optionid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Discountamount)
                 .HasPrecision(10)
@@ -718,7 +683,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Points).HasColumnName("points");
             entity.Property(e => e.Transactiondate)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("transactiondate");
             entity.Property(e => e.Transactiontype).HasColumnName("transactiontype");
             entity.Property(e => e.Userid).HasColumnName("userid");
@@ -747,7 +711,6 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Banner).HasColumnName("banner");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Icon).HasColumnName("icon");
             entity.Property(e => e.Name).HasColumnName("name");
@@ -764,7 +727,6 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("serviceid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
             entity.Property(e => e.Image).HasColumnName("image");
@@ -815,9 +777,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Categoryid).HasColumnName("categoryid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("createdat");
             entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Mincompletetime).HasColumnName("mincompletetime");
             entity.Property(e => e.Name).HasColumnName("name");
 
             entity.HasOne(d => d.Category).WithMany(p => p.Subservices)
@@ -842,11 +804,8 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Avatar).HasColumnName("avatar");
             entity.Property(e => e.Datecreated)
                 .HasDefaultValueSql("now()")
-                .HasColumnType("timestamp with time zone")
                 .HasColumnName("datecreated");
-            entity.Property(e => e.Datemodified)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("datemodified");
+            entity.Property(e => e.Datemodified).HasColumnName("datemodified");
             entity.Property(e => e.Dob).HasColumnName("dob");
             entity.Property(e => e.Email).HasColumnName("email");
             entity.Property(e => e.Emailconfirmed)
@@ -857,9 +816,7 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Password).HasColumnName("password");
             entity.Property(e => e.Phonenumber).HasColumnName("phonenumber");
             entity.Property(e => e.Refreshtoken).HasColumnName("refreshtoken");
-            entity.Property(e => e.Refreshtokenexpirytime)
-                .HasColumnType("timestamp with time zone")
-                .HasColumnName("refreshtokenexpirytime");
+            entity.Property(e => e.Refreshtokenexpirytime).HasColumnName("refreshtokenexpirytime");
             entity.Property(e => e.Rewardpoints)
                 .HasDefaultValue(0)
                 .HasColumnName("rewardpoints");

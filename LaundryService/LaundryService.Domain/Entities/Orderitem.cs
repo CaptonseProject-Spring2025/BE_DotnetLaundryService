@@ -7,11 +7,11 @@ public partial class Orderitem
 {
     public Guid Orderitemid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public Guid Serviceid { get; set; }
 
-    public int Quantity { get; set; }
+    public int? Quantity { get; set; }
 
     public decimal? Baseprice { get; set; }
 

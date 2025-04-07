@@ -11,7 +11,7 @@ public partial class Rating
 
     public Guid Serviceid { get; set; }
 
-    public Guid Orderid { get; set; }
+    public string Orderid { get; set; } = null!;
 
     public int? Rating1 { get; set; }
 
