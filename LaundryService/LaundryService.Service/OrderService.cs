@@ -1015,6 +1015,23 @@ namespace LaundryService.Service
 
             try
             {
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+
+                if (order == null)
+                {
+                    throw new KeyNotFoundException("Order not found.");
+                }
+
+                //Chỉ xác nhận đơn có status = "PENDING"
+                if (order.Currentstatus != OrderStatusEnum.PENDING.ToString())
+                {
+                    throw new ApplicationException(
+                        $"Order {orderId} is not in PENDING status. Current: {order.Currentstatus}"
+                    );
+                }
+
                 // 1) Tìm Orderassignmenthistory có orderId = orderId AND Status="processing"
                 //    => ta giả định chỉ có 1 assignment "processing" tại 1 thời điểm
                 var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
@@ -1033,15 +1050,6 @@ namespace LaundryService.Service
                 await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
 
                 // 3) Tìm Order => set Currentstatus="CONFIRMED"
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-
-                if (order == null)
-                {
-                    throw new KeyNotFoundException("Order not found.");
-                }
-
                 // Cập nhật Currentstatus = "CONFIRMED"
                 order.Currentstatus = "CONFIRMED";
                 await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
