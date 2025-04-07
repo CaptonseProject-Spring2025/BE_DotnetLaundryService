@@ -9,7 +9,7 @@ namespace LaundryService.Dto.Responses
     public class OrderDetailCustomResponse
     {
         // Các trường chung của Order
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
         public Guid UserId { get; set; }
 
         public string? PickupLabel { get; set; }

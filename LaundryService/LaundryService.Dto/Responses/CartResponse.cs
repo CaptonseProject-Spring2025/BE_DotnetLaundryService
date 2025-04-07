@@ -8,7 +8,7 @@ namespace LaundryService.Dto.Responses
 {
     public class CartResponse
     {
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
         public List<CartItemResponse> Items { get; set; } = new List<CartItemResponse>();
 
         // Tổng tạm tính của cả giỏ

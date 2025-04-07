@@ -168,7 +168,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize]
         [HttpPost("place-order")]
-        [ProducesResponseType(typeof(Guid), 200)]
+        [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request)
         {
             if (!ModelState.IsValid)
@@ -343,7 +343,7 @@ namespace LaundryService.Api.Controllers
         [Authorize]
         [HttpGet("{orderId}")]
         [ProducesResponseType(typeof(OrderDetailCustomResponse), 200)]
-        public async Task<IActionResult> GetOrderDetailCustom(Guid orderId)
+        public async Task<IActionResult> GetOrderDetailCustom(string orderId)
         {
             try
             {
@@ -392,7 +392,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [HttpGet("history/{orderId}")]
         [ProducesResponseType(typeof(OrderStatusHistoryItemResponse), 200)]
-        public async Task<IActionResult> GetOrderStatusHistory(Guid orderId)
+        public async Task<IActionResult> GetOrderStatusHistory(string orderId)
         {
             try
             {

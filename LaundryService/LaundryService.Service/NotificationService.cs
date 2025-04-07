@@ -84,7 +84,7 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task CreateOrderPlacedNotificationAsync(Guid userId, Guid orderId)
+        public async Task CreateOrderPlacedNotificationAsync(Guid userId, string orderId)
         {
             var notification = new Notification
             {
@@ -103,7 +103,7 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task CreateOrderConfirmedNotificationAsync(Guid userId, Guid orderId)
+        public async Task CreateOrderConfirmedNotificationAsync(Guid userId, string orderId)
         {
             var notification = new Notification
             {
@@ -122,7 +122,7 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task CreateOrderCanceledNotificationAsync(Guid userId, Guid orderId)
+        public async Task CreateOrderCanceledNotificationAsync(Guid userId, string orderId)
         {
             var notification = new Notification
             {

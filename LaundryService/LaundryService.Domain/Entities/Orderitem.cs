@@ -11,7 +11,7 @@ public partial class Orderitem
 
     public Guid Serviceid { get; set; }
 
-    public int? Quantity { get; set; }
+    public int Quantity { get; set; }
 
     public decimal? Baseprice { get; set; }
 

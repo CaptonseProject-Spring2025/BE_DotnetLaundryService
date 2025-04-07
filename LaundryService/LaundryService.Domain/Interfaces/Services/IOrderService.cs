@@ -16,7 +16,7 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<CartResponse> GetCartAsync(HttpContext httpContext);
 
-        Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
+        Task<string> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
 
         Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext);
 
@@ -24,15 +24,15 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
 
-        Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, Guid orderId);
+        Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, string orderId);
 
-        Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, Guid orderId);
+        Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, string orderId);
 
         Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize);
 
-        Task<Guid> ProcessOrderAsync(HttpContext httpContext, Guid orderId);
+        Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
 
-        Task ConfirmOrderAsync(HttpContext httpContext, Guid orderId, string notes);
+        Task ConfirmOrderAsync(HttpContext httpContext, string orderId, string notes);
 
         Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes);
 
@@ -40,7 +40,7 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<CartResponse> UpdateCartItemAsync(HttpContext httpContext, UpdateCartItemRequest request);
 
-        Task<Guid> GetCustomerIdByOrderAsync(Guid orderId);
+        Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
     }

@@ -50,6 +50,7 @@ namespace LaundryService.Service
                 // Chưa có => tạo mới
                 order = new Order
                 {
+                    Orderid = _util.GenerateOrderId(),
                     Userid = userId,
                     Currentstatus = "INCART",
                     Createdat = DateTime.UtcNow
@@ -319,7 +320,7 @@ namespace LaundryService.Service
             return cartResponse;
         }
 
-        public async Task<Guid> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
+        public async Task<string> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request)
         {
             var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
@@ -662,7 +663,7 @@ namespace LaundryService.Service
             return paginationResult;
         }
 
-        public async Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, Guid orderId)
+        public async Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, string orderId)
         {
             // 1) Eager load
             var order = _unitOfWork.Repository<Order>()
@@ -788,7 +789,7 @@ namespace LaundryService.Service
             return response;
         }
 
-        public async Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, Guid orderId)
+        public async Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, string orderId)
         {
             // 1) Kiểm tra Order có tồn tại hay không
             var order = _unitOfWork.Repository<Order>()
@@ -945,7 +946,7 @@ namespace LaundryService.Service
             return paginationResult;
         }
 
-        public async Task<Guid> ProcessOrderAsync(HttpContext httpContext, Guid orderId)
+        public async Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId)
         {
             // 1) Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
@@ -1001,7 +1002,7 @@ namespace LaundryService.Service
             }
         }
 
-        public async Task ConfirmOrderAsync(HttpContext httpContext, Guid orderId, string notes)
+        public async Task ConfirmOrderAsync(HttpContext httpContext, string orderId, string notes)
         {
             // Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
@@ -1185,7 +1186,7 @@ namespace LaundryService.Service
             }
         }
 
-        public async Task<Guid> GetCustomerIdByOrderAsync(Guid orderId)
+        public async Task<Guid> GetCustomerIdByOrderAsync(string orderId)
         {
             var order = _unitOfWork.Repository<Order>()
                 .GetAll()

@@ -8,7 +8,7 @@ namespace LaundryService.Dto.Responses
 {
     public class InCartOrderAdminResponse
     {
-        public Guid OrderId { get; set; }
+        public string OrderId { get; set; }
         public AdminUserInfo UserInfo { get; set; } = new AdminUserInfo();
         public List<InCartOrderItemResponse> Items { get; set; } = new List<InCartOrderItemResponse>();
         public decimal EstimatedTotal { get; set; }
