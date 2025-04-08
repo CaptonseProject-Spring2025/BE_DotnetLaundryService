@@ -15,5 +15,11 @@ namespace LaundryService.Domain.Interfaces.Services
         Task ReceiveOrderForCheckAsync(HttpContext httpContext, string orderId);
 
         Task<List<PickedUpOrderResponse>> GetCheckingOrdersAsync(HttpContext httpContext);
+
+        Task<CheckingOrderUpdateResponse> UpdateCheckingOrderAsync(HttpContext httpContext,
+            string orderId,
+            string? notes,
+            IFormFileCollection? files
+        );
     }
 }

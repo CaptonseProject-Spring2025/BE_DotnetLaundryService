@@ -17,11 +17,13 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
+        private readonly IFileStorageService _fileStorageService;
 
-        public StaffService(IUnitOfWork unitOfWork, IUtil util)
+        public StaffService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
+            _fileStorageService = fileStorageService;
         }
 
         /// <summary>
@@ -235,6 +237,91 @@ namespace LaundryService.Service
             }
 
             return result;
+        }
+
+        public async Task<CheckingOrderUpdateResponse> UpdateCheckingOrderAsync(
+            HttpContext httpContext,
+            string orderId,
+            string? notes,
+            IFormFileCollection? files
+        )
+        {
+            // 1) Lấy staffId từ token
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tìm OrderStatusHistory => Status = "CHECKING", Orderid = orderId
+            //    Lấy row 'mới nhất' hay 'duy nhất'? Thường 1 status = checking
+            var checkingRow = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Orderid == orderId && h.Status == OrderStatusEnum.CHECKING.ToString())
+                .OrderByDescending(h => h.Createdat)
+                .FirstOrDefault();
+
+            if (checkingRow == null)
+                throw new KeyNotFoundException("Không tìm thấy đơn đang ở trạng thái CHECKING.");
+
+            // 3) Kiểm tra Updatedby có bằng staffId hay không
+            if (checkingRow.Updatedby != staffId)
+                throw new ApplicationException("Bạn không phải là người nhận xử lý đơn hàng này.");
+
+            // 4) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            var listPhotoUrls = new List<string>();
+            try
+            {
+                // 5) Nếu có notes => update
+                if (!string.IsNullOrWhiteSpace(notes))
+                {
+                    checkingRow.Notes = notes; // cập nhật notes
+                    // Mark entity => or call UpdateAsync
+                    _unitOfWork.DbContext.Entry(checkingRow).State = EntityState.Modified;
+                }
+
+                // 6) Nếu có files => upload
+                if (files != null && files.Count > 0)
+                {
+                    // Gọi hàm upload nhiều file -> 
+                    var uploadResult = await _fileStorageService.UploadMultipleFilesAsync(files, "order-photos");
+
+                    // Nếu muốn *fail entire transaction* nếu có bất kỳ file fail:
+                    if (uploadResult.FailureCount > 0)
+                    {
+                        // rollback transaction => ném exception
+                        var firstError = uploadResult.FailedUploads.First().ErrorMessage;
+                        throw new ApplicationException($"Đã upload thất bại 1 hoặc nhiều ảnh. Lỗi đầu tiên: {firstError}");
+                    }
+
+                    // Các file thành công => insert record trong Orderphoto
+                    foreach (var suc in uploadResult.SuccessfulUploads)
+                    {
+                        var newPhoto = new Orderphoto
+                        {
+                            Statushistoryid = checkingRow.Statushistoryid,
+                            Photourl = suc.Url
+                        };
+                        await _unitOfWork.Repository<Orderphoto>().InsertAsync(newPhoto, saveChanges: false);
+                        listPhotoUrls.Add(suc.Url);
+                    }
+                }
+
+                // 7) Save + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // Tạo response
+                var response = new CheckingOrderUpdateResponse
+                {
+                    OrderId = orderId,
+                    Notes = checkingRow.Notes,
+                    PhotoUrls = listPhotoUrls
+                };
+                return response;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
         }
     }
 }
