@@ -21,5 +21,7 @@ namespace LaundryService.Domain.Interfaces.Services
             string? notes,
             IFormFileCollection? files
         );
+
+        Task ConfirmCheckingDoneAsync(HttpContext httpContext, string orderId, string notes);
     }
 }

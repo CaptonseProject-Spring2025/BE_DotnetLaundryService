@@ -323,5 +323,66 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task ConfirmCheckingDoneAsync(HttpContext httpContext, string orderId, string notes)
+        {
+            // 1) Lấy staffId từ JWT
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tìm order => check currentstatus == CHECKING
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (order == null)
+                throw new KeyNotFoundException($"Order not found: {orderId}");
+
+            if (order.Currentstatus != OrderStatusEnum.CHECKING.ToString())
+                throw new ApplicationException($"Order {orderId} is not in CHECKING status.");
+
+            // 3) Kiểm tra xem Staff này có phải người xử lý CHECKING không?
+            //    Tức row Orderstatushistory mới nhất => Status=CHECKING => Updatedby=staffId
+            var checkingRow = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Orderid == orderId && h.Status == OrderStatusEnum.CHECKING.ToString())
+                .OrderByDescending(h => h.Createdat)
+                .FirstOrDefault();
+
+            if (checkingRow == null)
+                throw new KeyNotFoundException("Không tìm thấy history CHECKING cho order này.");
+
+            if (checkingRow.Updatedby != staffId)
+                throw new ApplicationException("Bạn không phải là người xử lý đơn CHECKING này.");
+
+            // 4) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 5) Update Order => CHECKED
+                order.Currentstatus = OrderStatusEnum.CHECKED.ToString();
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                // 6) Thêm Orderstatushistory => Status = CHECKED
+                var newHistory = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = OrderStatusEnum.CHECKED.ToString(),
+                    Statusdescription = "Đơn hàng đã được kiểm tra và sẽ sớm được mang đi giặt",
+                    Notes = notes, // Ghi chú (có thể rỗng)
+                    Updatedby = staffId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(newHistory, saveChanges: false);
+
+                // 7) Lưu DB + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }

@@ -196,5 +196,46 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"An error occurred: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Staff xác nhận đơn hàng CHECKING => CHECKED, sau khi kiểm tra xong.
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
+        /// <param name="notes">Ghi chú (tùy chọn)</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra order có status = CHECKING
+        /// 2) Kiểm tra có phải là staff đã cập nhật đơn này sang CHECKING không
+        /// 3) Update Order => CHECKED
+        /// 4) Thêm Orderstatushistory => status=CHECKED
+        /// </remarks>
+        /// <response code="200">Xác nhận CHECKED thành công</response>
+        /// <response code="400">Order không ở trạng thái CHECKING hoặc staff không phải người xử lý</response>
+        /// <response code="404">Không tìm thấy Order</response>
+        /// <response code="500">Lỗi server</response>
+        [HttpPost("orders/checking/confirm")]
+        public async Task<IActionResult> ConfirmCheckingDone([FromQuery] string orderId, [FromQuery] string? notes)
+        {
+            try
+            {
+                await _staffService.ConfirmCheckingDoneAsync(HttpContext, orderId, notes ?? "");
+                return Ok(new { Message = "Đơn hàng đã được xác nhận CHECKED thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // 404
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // 400
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // 500
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
