@@ -1,4 +1,5 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -110,6 +111,62 @@ namespace LaundryService.Api.Controllers
             {
                 _logger.LogError(ex, "An unexpected error occurred during file deletion for URL: {FileUrl}", fileUrl); // Log lỗi với Serilog
                 return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred during file deletion." });
+            }
+        }
+
+        /// <summary>
+        /// Tải lên nhiều files vào thư mục chỉ định trên B2 Storage.
+        /// </summary>
+        /// <param name="files">Danh sách các files cần tải lên (multipart/form-data).</param>
+        /// <param name="folderName">Tên thư mục trong bucket để lưu các files.</param>
+        /// <returns>Kết quả chi tiết về các files tải lên thành công và thất bại.</returns>
+        /// <response code="200">Xử lý hoàn tất, trả về danh sách thành công và thất bại.</response>
+        /// <response code="400">Thiếu files, thiếu tên thư mục hoặc dữ liệu không hợp lệ.</response>
+        /// <response code="500">Lỗi server trong quá trình xử lý.</response>
+        [HttpPost("upload-multiple")]
+        // Use FromForm for IFormFileCollection
+        [ProducesResponseType(typeof(UploadMultipleFilesResult), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UploadMultipleFiles(
+            [FromForm] IFormFileCollection files, // Use IFormFileCollection
+            [FromQuery, Required] string folderName)
+        {
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                return BadRequest(new { Message = "Folder name is required." });
+            }
+
+            if (files == null || files.Count == 0)
+            {
+                _logger.LogWarning("UploadMultipleFiles endpoint called with no files.");
+                return BadRequest(new { Message = "No files provided for upload." });
+            }
+
+            // Optional: Add validation for total size, individual file sizes/types, or file count limit here
+            long totalSize = files.Sum(f => f.Length);
+            _logger.LogInformation("Received {FileCount} files for multiple upload. Total size: {TotalSize} bytes. Folder: {Folder}", files.Count, totalSize, folderName);
+
+
+            try
+            {
+                // Call the service method
+                var result = await _fileStorageService.UploadMultipleFilesAsync(files, folderName);
+
+                // Return the detailed result object
+                // Status 200 OK indicates the *process* completed, even if some files failed.
+                // The client needs to inspect the response body for details.
+                return Ok(result);
+            }
+            catch (ArgumentException ex) // Catch specific argument errors from service (e.g., empty folder name)
+            {
+                _logger.LogWarning("UploadMultipleFiles argument error: {ErrorMessage}", ex.Message);
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex) // Catch unexpected errors during the service call setup or Task.WhenAll
+            {
+                _logger.LogError(ex, "Unexpected error during multiple file upload process.");
+                // Return a generic server error, as individual file errors are handled in the service and returned in the result DTO.
+                // If an exception happens here, it's likely before or after individual uploads were attempted/logged.
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An unexpected error occurred while processing the multiple file upload request." });
             }
         }
     }

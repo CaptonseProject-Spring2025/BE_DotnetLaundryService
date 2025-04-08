@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using LaundryService.Dto.Responses;
 
 namespace LaundryService.Service
 {
@@ -19,6 +20,7 @@ namespace LaundryService.Service
         private readonly string _bucketName;
         private readonly string _baseUrl;
         private readonly ILogger<B2StorageService> _logger;
+        private readonly TransferUtility _transferUtility;
 
         public B2StorageService(IConfiguration configuration, ILogger<B2StorageService> logger)
         {
@@ -49,6 +51,10 @@ namespace LaundryService.Service
             };
 
             _s3Client = new AmazonS3Client(accessKey, secretKey, s3Config);
+            _transferUtility = new TransferUtility(_s3Client); // <--- Initialize TransferUtility
+
+            _logger.LogInformation("B2StorageService initialized with Endpoint: {Endpoint}, Bucket: {BucketName}, SignatureVersion: {SignatureVersion}",
+                                   endpoint, _bucketName, s3Config.SignatureVersion);
         }
 
         public async Task<string> UploadFileAsync(IFormFile file, string folderName)
@@ -58,8 +64,13 @@ namespace LaundryService.Service
 
             // Create a unique file name
             var fileExtension = Path.GetExtension(file.FileName);
+            // Cân nhắc làm sạch fileExtension để tránh lỗ hổng bảo mật
+            fileExtension = fileExtension?.ToLowerInvariant(); // ví dụ: chuyển về chữ thường
             var fileName = $"{Guid.NewGuid()}{fileExtension}";
+            // Cân nhắc làm sạch folderName
             var key = $"{folderName}/{fileName}";
+
+            _logger.LogInformation("Attempting to upload file. Key: {Key}, ContentType: {ContentType}, Size: {Size}", key, file.ContentType, file.Length);
 
             try
             {
@@ -82,13 +93,143 @@ namespace LaundryService.Service
                     await _s3Client.PutObjectAsync(putRequest);
                 }
             }
+            catch (AmazonS3Exception s3Ex)
+            {
+                _logger.LogError(s3Ex, "AWS S3 Error uploading file to B2. Key: {Key}, AWS ErrorCode: {ErrorCode}, AWS ErrorType: {ErrorType}, HttpStatusCode: {StatusCode}",
+                                 key, s3Ex.ErrorCode, s3Ex.ErrorType, s3Ex.StatusCode);
+                // Ném lại lỗi cụ thể hơn nếu cần phân biệt lỗi S3
+                throw new ApplicationException($"S3 Error uploading file to B2: {s3Ex.Message} (Code: {s3Ex.ErrorCode})", s3Ex);
+            }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Generic error uploading file to B2. Key: {Key}", key);
                 throw new ApplicationException($"Error uploading file to B2: {ex.Message}", ex);
             }
 
             // Return the URL to the uploaded file
             return $"{_baseUrl}/{key}";
+        }
+
+        public async Task<UploadMultipleFilesResult> UploadMultipleFilesAsync(IFormFileCollection files, string folderName)
+        {
+            if (files == null || files.Count == 0)
+            {
+                _logger.LogWarning("UploadMultipleFilesAsync called with no files.");
+                // Returning an empty result might be better than throwing here
+                // throw new ArgumentException("No files provided for upload.");
+                return new UploadMultipleFilesResult();
+            }
+            if (string.IsNullOrWhiteSpace(folderName))
+            {
+                _logger.LogError("UploadMultipleFilesAsync called with empty folder name.");
+                throw new ArgumentException("Folder name cannot be empty.", nameof(folderName));
+            }
+
+            _logger.LogInformation("Starting multiple file upload. FileCount: {FileCount}, Folder: {Folder}", files.Count, folderName);
+
+            var result = new UploadMultipleFilesResult();
+            var uploadTasks = new List<Task>(); // Store tasks for concurrent execution
+
+            // --- IMPORTANT: Process files concurrently ---
+            foreach (var file in files)
+            {
+                // Create a task for each file upload
+                uploadTasks.Add(Task.Run(async () => // Use Task.Run for CPU-bound parts like Guid generation and potentially stream handling, but the core is I/O bound (UploadAsync)
+                {
+                    if (file == null || file.Length == 0)
+                    {
+                        _logger.LogWarning("Skipping invalid file entry in collection: {FileName}", file?.FileName ?? "N/A");
+                        // Optionally add to failed list here if desired
+                        // lock (result.FailedUploads) // Protect list access if modifying directly here
+                        // {
+                        //     result.FailedUploads.Add(new FailedUploadInfo { OriginalFileName = file?.FileName ?? "N/A", ErrorMessage = "Invalid or empty file data" });
+                        // }
+                        return; // Skip this file
+                    }
+
+                    var originalFileName = file.FileName; // Store before potential exceptions
+                    string key = ""; // Declare key outside try for logging in catch
+
+                    try
+                    {
+                        // Create unique key within the specified folder
+                        var fileExtension = Path.GetExtension(originalFileName)?.ToLowerInvariant();
+                        var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                        key = $"{folderName}/{uniqueFileName}"; // Consider sanitizing folderName and uniqueFileName
+
+                        _logger.LogDebug("Starting upload for: {OriginalFileName}, Key: {Key}, Size: {Size}", originalFileName, key, file.Length);
+
+                        using (var fileStream = file.OpenReadStream())
+                        {
+                            var uploadRequest = new TransferUtilityUploadRequest
+                            {
+                                BucketName = _bucketName,
+                                Key = key,
+                                InputStream = fileStream,
+                                ContentType = file.ContentType, // Use the file's content type
+                                CannedACL = S3CannedACL.PublicRead // Make file publicly readable
+                                                                   // TransferUtility handles ContentLength and multipart logic
+                            };
+
+                            await _transferUtility.UploadAsync(uploadRequest);
+                        }
+
+                        // If successful, add to the success list
+                        var fileUrl = $"{_baseUrl}/{key}";
+                        _logger.LogInformation("Successfully uploaded: {OriginalFileName} to {Url}", originalFileName, fileUrl);
+                        lock (result.SuccessfulUploads) // Lock to prevent race conditions when adding to the list from multiple threads
+                        {
+                            result.SuccessfulUploads.Add(new SuccessfulUploadInfo
+                            {
+                                OriginalFileName = originalFileName,
+                                Url = fileUrl
+                            });
+                        }
+                    }
+                    catch (AmazonS3Exception s3Ex)
+                    {
+                        _logger.LogError(s3Ex, "AWS S3 Error uploading file {OriginalFileName} to B2. Key: {Key}, AWS ErrorCode: {ErrorCode}, AWS ErrorType: {ErrorType}, HttpStatusCode: {StatusCode}",
+                                         originalFileName, key, s3Ex.ErrorCode, s3Ex.ErrorType, s3Ex.StatusCode);
+                        lock (result.FailedUploads) // Lock to prevent race conditions
+                        {
+                            result.FailedUploads.Add(new FailedUploadInfo
+                            {
+                                OriginalFileName = originalFileName,
+                                ErrorMessage = $"S3 Error: {s3Ex.Message} (Code: {s3Ex.ErrorCode})"
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Generic error uploading file {OriginalFileName} to B2. Key: {Key}", originalFileName, key);
+                        lock (result.FailedUploads) // Lock to prevent race conditions
+                        {
+                            result.FailedUploads.Add(new FailedUploadInfo
+                            {
+                                OriginalFileName = originalFileName,
+                                ErrorMessage = $"Generic Error: {ex.Message}"
+                            });
+                        }
+                    }
+                }));
+            }
+
+            // Wait for all upload tasks to complete
+            try
+            {
+                await Task.WhenAll(uploadTasks);
+                _logger.LogInformation("Finished multiple file upload process. Success: {SuccessCount}, Failed: {FailureCount}", result.SuccessCount, result.FailureCount);
+            }
+            catch (Exception ex)
+            {
+                // This catch block is primarily for issues with Task.WhenAll itself,
+                // individual file exceptions are handled within the Task.Run lambda.
+                _logger.LogError(ex, "Error occurred while waiting for multiple uploads to complete.");
+                // Potentially add a general failure note if needed, though individual errors are logged/captured.
+            }
+
+
+            return result;
         }
 
         public async Task DeleteFileAsync(string fileUrl)
@@ -135,10 +276,20 @@ namespace LaundryService.Service
 
                 //await _s3Client.DeleteObjectAsync(deleteRequest);
             }
+            catch (AmazonS3Exception s3Ex)
+            {
+                // Bắt lỗi cụ thể từ S3
+                _logger.LogError(s3Ex, "AWS S3 Error deleting file from B2. AWS ErrorCode: {ErrorCode}, AWS ErrorType: {ErrorType}, HttpStatusCode: {StatusCode}",
+                                 s3Ex.ErrorCode, s3Ex.ErrorType, s3Ex.StatusCode);
+                // Quyết định xem có nên ném lỗi ra ngoài không.
+                // Hiện tại đang "nuốt" lỗi, chỉ log lại.
+                // throw new ApplicationException($"S3 Error deleting file: {s3Ex.Message}", s3Ex);
+            }
             catch (Exception ex)
             {
-                // Log the error but don't throw exception
-                Console.WriteLine($"Error deleting file: {ex.Message}");
+                _logger.LogError(ex, "Generic error deleting file from B2.");
+                // Quyết định xem có nên ném lỗi ra ngoài không.
+                // throw new ApplicationException($"Error deleting file: {ex.Message}", ex);
             }
         }
 
