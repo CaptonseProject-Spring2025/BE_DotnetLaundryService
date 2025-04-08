@@ -13,5 +13,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<List<PickedUpOrderResponse>> GetPickedUpOrdersAsync(HttpContext httpContext);
 
         Task ReceiveOrderForCheckAsync(HttpContext httpContext, string orderId);
+
+        Task<List<PickedUpOrderResponse>> GetCheckingOrdersAsync(HttpContext httpContext);
     }
 }

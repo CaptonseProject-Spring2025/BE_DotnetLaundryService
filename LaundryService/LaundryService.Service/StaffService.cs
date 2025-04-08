@@ -107,6 +107,7 @@ namespace LaundryService.Service
                     PickupTime = pickupTimeVn,
                     DeliveryTime = deliveryTimeVn,
                     CurrentStatus = o.Currentstatus ?? "",
+                    OrderDate = _util.ConvertToVnTime(o.Createdat ?? DateTime.UtcNow),
                     TotalPrice = o.Totalprice
                 };
 
@@ -158,6 +159,82 @@ namespace LaundryService.Service
 
             // 5) Lưu DB
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Lấy danh sách các đơn có Currentstatus = "CHECKING", 
+        /// mà chính Staff này đã cập nhật (Orderstatushistory.Updatedby = staffId).
+        /// </summary>
+        public async Task<List<PickedUpOrderResponse>> GetCheckingOrdersAsync(HttpContext httpContext)
+        {
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+            var checkingStatus = OrderStatusEnum.CHECKING.ToString();
+
+            // 1) Tìm tất cả orderId trong Orderstatushistory 
+            //    có Status = "CHECKING" và Updatedby = staffId.
+            var orderIdsStaffUpdated = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Status == checkingStatus && h.Updatedby == staffId)
+                .Select(h => h.Orderid)
+                .Distinct()
+                .ToList();
+
+            if (!orderIdsStaffUpdated.Any())
+            {
+                // Không có order nào staff này cập nhật sang CHECKING
+                return new List<PickedUpOrderResponse>();
+            }
+
+            // 2) Lấy danh sách Orders thỏa mãn:
+            //    - OrderId ∈ orderIdsStaffUpdated
+            //    - Currentstatus == "CHECKING"
+            var orders = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.User)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Where(o => o.Currentstatus == checkingStatus
+                            && orderIdsStaffUpdated.Contains(o.Orderid))
+                .ToList();
+
+            // 3) Map Orders -> CheckingOrderResponse
+            var result = new List<PickedUpOrderResponse>();
+            foreach (var order in orders)
+            {
+                // Gom serviceNames
+                var serviceNames = order.Orderitems
+                    .Select(oi => oi.Service?.Name ?? "Unknown")
+                    .Distinct()
+                    .ToList();
+                var joinedServiceNames = string.Join("; ", serviceNames);
+
+                // Tạo DTO
+                var dto = new PickedUpOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    CustomerInfo = new CustomerInfoDto
+                    {
+                        CustomerId = order.Userid,
+                        CustomerName = order.User?.Fullname,
+                        CustomerPhone = order.User?.Phonenumber
+                    },
+                    ServiceNames = joinedServiceNames,
+                    ServiceCount = order.Orderitems.Count,
+                    OrderDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    PickupTime = order.Pickuptime.HasValue
+                                ? _util.ConvertToVnTime(order.Pickuptime.Value)
+                                : (DateTime?)null,
+                    DeliveryTime = order.Deliverytime.HasValue
+                                ? _util.ConvertToVnTime(order.Deliverytime.Value)
+                                : (DateTime?)null,
+                    CurrentStatus = order.Currentstatus,
+                    Emergency = order.Emergency ?? false, // Nếu null => false
+                    TotalPrice = order.Totalprice
+                };
+                result.Add(dto);
+            }
+
+            return result;
         }
     }
 }

@@ -115,5 +115,33 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Lấy các đơn hiện đang CHECKING mà Staff này (từ JWT) đã cập nhật sang CHECKING.
+        /// </summary>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Tìm OrderStatusHistory có Status = "CHECKING", Updatedby = staffId
+        /// 2) Lọc các Order cùng Currentstatus = "CHECKING"
+        /// 3) Map -> Trả về danh sách
+        /// </remarks>
+        /// <returns>Danh sách <see cref="CheckingOrderResponse"/></returns>
+        /// <response code="200">Trả về danh sách đơn checking của Staff</response>
+        /// <response code="401">Không có quyền</response>
+        /// <response code="500">Lỗi server</response>
+        [HttpGet("orders/checking")]
+        public async Task<IActionResult> GetCheckingOrders()
+        {
+            try
+            {
+                var orders = await _staffService.GetCheckingOrdersAsync(HttpContext);
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                // Log ...
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
