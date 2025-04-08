@@ -17,11 +17,12 @@ namespace LaundryService.Domain.Enums
         PICKING_UP,
         PICKED_UP,
         RECEIVED,
-        PICKUP_FAILED,
+        CANCELLED_ASSIGNED_PICKUP,
 
         ASSIGNED_DELIVERY,
         DELIVERING,
         DELIVERED,
-        DELIVERY_FAILED
+        FINISH,
+        CANCELLED_ASSIGNED_DELIVERY
     }
 }

@@ -117,6 +117,38 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Tài xế huỷ nhận hàng do sự cố (xe hư, không thể tiếp tục,...).
+        /// Trạng thái sẽ chuyển sang CANCELLED_ASSIGNED_PICKUP.
+        /// </summary>
+        /// <param name="orderId">ID đơn hàng.</param>
+        /// <param name="reason">Lý do huỷ nhận hàng.</param>
+        [HttpPost("cancel-pickup")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> CancelPickup([FromQuery] string orderId, [FromQuery] string reason)
+        {
+            try
+            {
+                await _orderService.CancelAssignedPickupAsync(HttpContext, orderId, reason);
+                return Ok(new { Message = "Đã huỷ nhận hàng thành công (CANCELLED_ASSIGNED_PICKUP)." });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
 
         /// <summary>
         /// Tài xế bắt đầu giao hàng. Chuyển trạng thái từ ASSIGNED_DELIVERY → DELIVERING.
@@ -162,6 +194,37 @@ namespace LaundryService.Api.Controllers
             {
                 await _orderService.ConfirmOrderDeliveredAsync(HttpContext, orderId, notes);
                 return Ok(new { Message = "Tài xế đã xác nhận giao hàng thành công (DELIVERED)." });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Tài xế xác nhận đã hoàn tất tất cả đơn giao hàng và quay về công ty.
+        /// Tất cả các assignment có trạng thái DELIVERED sẽ chuyển sang FINISH.
+        /// </summary>
+        [HttpPost("confirm-finish-delivery")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> ConfirmFinishDelivery()
+        {
+            try
+            {
+                await _orderService.ConfirmDriverFinishedDeliveryAsync(HttpContext);
+                return Ok(new { Message = "Tài xế đã xác nhận hoàn tất ca giao hàng (FINISH)." });
             }
             catch (ApplicationException ex)
             {
@@ -240,6 +303,39 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// Tài xế huỷ giao hàng do sự cố (không thể giao,...).
+        /// Trạng thái sẽ chuyển sang CANCELLED_ASSIGNED_DELIVERY.
+        /// </summary>
+        /// <param name="orderId">ID đơn hàng.</param>
+        /// <param name="reason">Lý do huỷ giao hàng.</param>
+        [HttpPost("cancel-delivery")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> CancelDelivery([FromQuery] string orderId, [FromQuery] string reason)
+        {
+            try
+            {
+                await _orderService.CancelAssignedDeliveryAsync(HttpContext, orderId, reason);
+                return Ok(new { Message = "Đã huỷ giao hàng thành công (CANCELLED_ASSIGNED_DELIVERY)." });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách các nhiệm vụ tài xế được phân công.
         /// </summary>
         [HttpGet("my-assignments")]
@@ -261,5 +357,28 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy chi tiết nhiệm vụ được giao theo AssignmentId.
+        /// </summary>
+        /// <param name="assignmentId">ID phân công</param>
+        /// <returns>Thông tin chi tiết assignment</returns>
+        [HttpGet("assignments/{assignmentId}")]
+        [ProducesResponseType(typeof(AssignmentDetailResponse), 200)]
+        public async Task<IActionResult> GetAssignmentDetail(Guid assignmentId)
+        {
+            try
+            {
+                var result = await _orderAssignmentHistoryService.GetAssignmentDetailAsync(HttpContext, assignmentId);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+        }
     }
 }

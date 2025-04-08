@@ -27,23 +27,20 @@ namespace LaundryService.Service
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            // 1. Lấy assignment của tài xế
+            // Lấy assignment của tài xế
             var assignments = await _unitOfWork.Repository<Orderassignmenthistory>()
                 .GetAllAsync(a => a.Assignedto == driverId);
 
             var orderIds = assignments.Select(a => a.Orderid).Distinct().ToList();
 
-            // 2. Lấy các order liên quan
             var orders = await _unitOfWork.Repository<Order>()
                 .GetAllAsync(o => orderIds.Contains(o.Orderid));
 
             var userIds = orders.Select(o => o.Userid).Distinct().ToList();
 
-            // 3. Lấy user (khách hàng)
             var users = await _unitOfWork.Repository<User>()
                 .GetAllAsync(u => userIds.Contains(u.Userid));
 
-            // 4. Lấy note từ Orderstatushistory với status = "PENDING"
             var pendingNotes = await _unitOfWork.Repository<Orderstatushistory>()
                 .GetAllAsync(h => orderIds.Contains(h.Orderid) && h.Status == "PENDING");
 
@@ -52,7 +49,7 @@ namespace LaundryService.Service
                 .ToDictionary(g => g.Key, g => g.FirstOrDefault()?.Notes);
 
 
-            // 4. Join các dữ liệu lại
+            // Join các dữ liệu lại
             var responses = assignments.Select(a =>
             {
                 var order = orders.FirstOrDefault(o => o.Orderid == a.Orderid);
@@ -73,6 +70,50 @@ namespace LaundryService.Service
             }).ToList();
 
             return responses;
+        }
+
+        public async Task<AssignmentDetailResponse?> GetAssignmentDetailAsync(HttpContext httpContext, Guid assignmentId)
+        {
+            var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            //  Lấy assignment theo ID
+            var assignmentList = await _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAllAsync(a => a.Assignmentid == assignmentId && a.Assignedto == driverId);
+            var assignment = assignmentList.FirstOrDefault();
+
+            if (assignment == null)
+                throw new Exception("Không tìm thấy phân công hoặc không thuộc tài xế hiện tại.");
+
+            var orderList = await _unitOfWork.Repository<Order>()
+                .GetAllAsync(o => o.Orderid == assignment.Orderid);
+            var order = orderList.FirstOrDefault();
+
+            if (order == null) return null;
+
+            var userList = await _unitOfWork.Repository<User>()
+                .GetAllAsync(u => u.Userid == order.Userid);
+            var user = userList.FirstOrDefault();
+
+            var pendingNoteList = await _unitOfWork.Repository<Orderstatushistory>()
+                .GetAllAsync(h => h.Orderid == order.Orderid && h.Status == "PENDING");
+            var note = pendingNoteList.FirstOrDefault()?.Notes;
+
+            return new AssignmentDetailResponse
+            {
+                AssignmentId = assignment.Assignmentid,
+                OrderId = order.Orderid,
+                Fullname = user?.Fullname,
+                Phonenumber = user?.Phonenumber,
+                Note = note,
+                AssignedAt = assignment.Assignedat,
+                Status = assignment.Status,
+                PickupAddress = order.Pickupaddressdetail,
+                DeliveryAddress = order.Deliveryaddressdetail,
+                PickupDescription = order.Pickupdescription,
+                DeliveryDescription = order.Deliverydescription,
+                TotalPrice = order.Totalprice,
+                CreatedAt = order.Createdat
+            };
         }
 
         private string? GetRelevantAddress(string? status, Order? order)

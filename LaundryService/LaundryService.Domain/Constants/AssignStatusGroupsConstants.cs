@@ -15,7 +15,7 @@ namespace LaundryService.Domain.Constants
         AssignStatusEnum.PICKING_UP,
         AssignStatusEnum.PICKED_UP,
         AssignStatusEnum.RECEIVED,
-        AssignStatusEnum.PICKUP_FAILED
+        AssignStatusEnum.CANCELLED_ASSIGNED_PICKUP
     };
 
         public static readonly HashSet<AssignStatusEnum> Delivery = new()
@@ -23,7 +23,8 @@ namespace LaundryService.Domain.Constants
         AssignStatusEnum.ASSIGNED_DELIVERY,
         AssignStatusEnum.DELIVERING,
         AssignStatusEnum.DELIVERED,
-        AssignStatusEnum.DELIVERY_FAILED
+        AssignStatusEnum.FINISH,
+        AssignStatusEnum.CANCELLED_ASSIGNED_DELIVERY
     };
     }
 }

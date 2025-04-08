@@ -56,8 +56,14 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId);
 
+        Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason);
+
+        Task ConfirmDriverFinishedDeliveryAsync(HttpContext httpContext);
+
         Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId);
 
         Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes);
+
+        Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason);
     }
 }
