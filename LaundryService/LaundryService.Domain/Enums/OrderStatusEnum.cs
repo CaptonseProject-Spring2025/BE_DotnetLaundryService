@@ -14,13 +14,14 @@ namespace LaundryService.Domain.Enums
         SCHEDULED_PICKUP = 3,
         PICKINGUP = 4,
         PICKEDUP = 5,
-        CHECKED = 6,
-        WASHING = 7,
-        WASHED = 8,
-        QUALITY_CHECKED = 9,
-        SCHEDULED_DELIVERY = 10,
-        DELIVERING = 11,
-        DELIVERED = 12,
-        CANCELLED = 13
+        CHECKING = 6,
+        CHECKED = 7,
+        WASHING = 8,
+        WASHED = 9,
+        QUALITY_CHECKED = 10,
+        SCHEDULED_DELIVERY = 11,
+        DELIVERING = 12,
+        DELIVERED = 13,
+        CANCELLED = 14
     }
 }
