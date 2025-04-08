@@ -115,5 +115,49 @@ namespace LaundryService.Service
 
             return result;
         }
+
+        /// <summary>
+        /// Staff nhận đơn (đơn đang PICKEDUP) để kiểm tra/giặt => chuyển Order sang CHECKING.
+        /// </summary>
+        public async Task ReceiveOrderForCheckAsync(HttpContext httpContext, string orderId)
+        {
+            // 1) Lấy userId (Staff) từ token
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tìm Order => check status = "PICKEDUP"
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (order == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy OrderId: {orderId}");
+            }
+
+            // Kiểm tra trạng thái có phải PICKEDUP không
+            if (order.Currentstatus != OrderStatusEnum.PICKEDUP.ToString())
+            {
+                // Nếu không đúng => throw
+                throw new ApplicationException("Đơn hàng không ở trạng thái PICKEDUP hoặc đang được xử lý bởi Staff khác.");
+            }
+
+            // 3) Cập nhật Order => "CHECKING"
+            order.Currentstatus = OrderStatusEnum.CHECKING.ToString();
+            await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+            // 4) Tạo Orderstatushistory
+            var history = new Orderstatushistory
+            {
+                Orderid = orderId,
+                Status = OrderStatusEnum.CHECKING.ToString(),
+                Statusdescription = "Đơn hàng đang được kiểm tra",
+                Updatedby = staffId,
+                Createdat = DateTime.UtcNow
+            };
+            await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+            // 5) Lưu DB
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

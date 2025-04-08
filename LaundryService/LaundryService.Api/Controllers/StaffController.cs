@@ -78,5 +78,42 @@ namespace LaundryService.Api.Controllers
             return Ok("Uploaded successfully");
         }
 
+        /// <summary>
+        /// Staff nhận đơn giặt (đơn đang PICKEDUP) => chuyển trạng thái sang CHECKING.
+        /// </summary>
+        /// <param name="orderId">ID đơn hàng cần nhận.</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra orderStatus == "PICKEDUP". Nếu không => 400
+        /// 2) Cập nhật order => status = "CHECKING"
+        /// 3) Tạo orderStatusHistory => Status="CHECKING"
+        /// 4) Trả về message success
+        /// </remarks>
+        /// <response code="200">Đơn hàng nhận giặt thành công.</response>
+        /// <response code="400">Đơn không ở trạng thái PICKEDUP.</response>
+        /// <response code="404">Không tìm thấy đơn.</response>
+        /// <response code="401">Không có quyền.</response>
+        /// <response code="500">Lỗi server.</response>
+        [HttpPost("orders/receive-for-check")]
+        public async Task<IActionResult> ReceiveOrderForCheck([FromQuery] string orderId)
+        {
+            try
+            {
+                await _staffService.ReceiveOrderForCheckAsync(HttpContext, orderId);
+                return Ok(new { Message = "Đã nhận đơn để kiểm tra/giặt (CHECKING) thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

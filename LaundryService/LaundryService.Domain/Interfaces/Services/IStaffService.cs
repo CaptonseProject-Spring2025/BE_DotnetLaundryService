@@ -11,5 +11,7 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IStaffService
     {
         Task<List<PickedUpOrderResponse>> GetPickedUpOrdersAsync(HttpContext httpContext);
+
+        Task ReceiveOrderForCheckAsync(HttpContext httpContext, string orderId);
     }
 }
