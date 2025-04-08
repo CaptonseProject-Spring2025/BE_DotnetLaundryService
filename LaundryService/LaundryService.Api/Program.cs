@@ -77,6 +77,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashBoardServices, DashBoardService>();
 builder.Services.AddScoped<IOrderAssignmentHistoryService, OrderAssignmentHistoryService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
 
 
