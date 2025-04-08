@@ -8,20 +8,27 @@ namespace LaundryService.Domain.Enums
 {
     public enum AssignStatusEnum
     {
-        PROCESING,
-        FAIL,
-        SUCCESS,
-
+        PROCESING, //customerStaff nhận đơn giao
+        FAIL, //customerStaff không nhận đơn giao, hoặc nhận rồi nhưng bị lỗi, hệ thống tự hủy đơn
+        SUCCESS, // customerStaff nhận đơn giao, hoàn tất (trong trường hợp khách hàng hủy vẫn là SUCCESS)
+        
+        //-----------------------------//
         //pickup
-        ASSIGNED_PICKUP,
-        PICKING_UP,
-        PICKED_UP,
-        RECEIVED,
+        ASSIGNED_PICKUP, // Admin giao đơn cho Driver 
+
+        // Driver đã đến lấy đồ thành công, hoàn thành công việc
+        // Driver đã đến lấy đồ nhưng không thành công, KH hủy or giao hôm khác
+        PICKUP_SUCCESS,
+        
+        //Driver từ chối đi lấy đồ
         PICKUP_FAILED,
 
+        //-----------------------------//
+
+        CHECKING,
+
         ASSIGNED_DELIVERY,
-        DELIVERING,
-        DELIVERED,
+        DELIVERY_SUCCESS,
         DELIVERY_FAILED
     }
 }
