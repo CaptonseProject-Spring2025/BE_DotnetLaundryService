@@ -1360,434 +1360,6 @@ namespace LaundryService.Service
             return assignment.Orderid; // Chính là mã đơn như 250407GC1PHG
         }
 
-        public async Task StartOrderPickupAsync(HttpContext httpContext, string orderId)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString());
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_PICKUP.");
-
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-
-                // Check nếu tài xế đang có đơn PICKING_UP thì không cho thực hiện
-                var isDriverBusy = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .Any(a => a.Assignedto == userId && a.Status == AssignStatusEnum.PICKING_UP.ToString());
-
-                if (isDriverBusy)
-                    throw new InvalidOperationException("Bạn chưa hoàn thành đơn nhận hàng trước đó.");
-
-                // Cập nhật trạng thái assignment
-                assignment.Status = AssignStatusEnum.PICKING_UP.ToString();
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Cập nhật trạng thái đơn hàng
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.PICKINGUP.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                // Ghi nhận lịch sử trạng thái
-                var history = new Orderstatushistory
-                {
-                    Orderid = orderId,
-                    Status = OrderStatusEnum.PICKINGUP.ToString(),
-                    Statusdescription = "Tài xế đang tiến hành đi nhận hàng",
-                    Updatedby = userId,
-                    Createdat = DateTime.UtcNow
-                };
-                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                // Lấy assignment đang ở trạng thái PICKING_UP
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.PICKING_UP.ToString());
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKING_UP.");
-
-                // Cập nhật sang PICKED_UP
-                assignment.Status = AssignStatusEnum.PICKED_UP.ToString();
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Lấy order
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                // Cập nhật trạng thái đơn
-                order.Currentstatus = OrderStatusEnum.PICKEDUP.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                // Ghi nhận lịch sử trạng thái
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-                var history = new Orderstatushistory
-                {
-                    Orderid = orderId,
-                    Status = OrderStatusEnum.PICKEDUP.ToString(),
-                    Statusdescription = "Tài xế đã nhận hàng thành công",
-                    Notes = notes,
-                    Updatedby = userId,
-                    Createdat = DateTime.UtcNow
-                };
-                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                // Lấy assignment đang ở trạng thái PICKED_UP
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.PICKED_UP.ToString());
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKED_UP.");
-
-                // Cập nhật sang RECEIVED và completed time
-                assignment.Status = AssignStatusEnum.RECEIVED.ToString();
-                assignment.Completedat = DateTime.UtcNow;
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Lấy order và cập nhật trạng thái CHECKED
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.CHECKING.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                // Ghi lịch sử trạng thái
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-                var history = new Orderstatushistory
-                {
-                    Orderid = orderId,
-                    Status = OrderStatusEnum.CHECKING.ToString(),
-                    Statusdescription = "Tài xế đã nhận hàng về tới nơi",
-                    Updatedby = userId,
-                    Createdat = DateTime.UtcNow
-                };
-                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason)
-        {
-            if (string.IsNullOrWhiteSpace(cancelReason))
-                throw new ArgumentException("Lý do huỷ không được để trống.");
-
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                // Tìm assignment ở trạng thái ASSIGNED_PICKUP hoặc PICKING_UP
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a =>
-                        a.Orderid == orderId &&
-                        (a.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString() ||
-                         a.Status == AssignStatusEnum.PICKING_UP.ToString()));
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment phù hợp để huỷ.");
-
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-
-                // Xoá lịch sử
-                var historyRepo = _unitOfWork.Repository<Orderstatushistory>();
-                var oldHistories = historyRepo.GetAll()
-                    .Where(h => h.Orderid == orderId &&
-                                (h.Status == OrderStatusEnum.PICKINGUP.ToString() ||
-                                 h.Status == OrderStatusEnum.SCHEDULED_PICKUP.ToString()))
-                    .ToList();
-
-                foreach (var item in oldHistories)
-                {
-                    await historyRepo.DeleteAsync(item, saveChanges: false);
-                }
-
-                // Cập nhật trạng thái assignment
-                assignment.Status = AssignStatusEnum.CANCELLED_ASSIGNED_PICKUP.ToString();
-                assignment.Completedat = DateTime.UtcNow;
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Cập nhật trạng thái đơn hàng -> CONFIRMED
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.CONFIRMED.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString());
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_DELIVERY.");
-
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-
-                // Check nếu tài xế đang có đơn DELIVERING thì không cho giao đơn mới
-                var isDriverBusy = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .Any(a => a.Assignedto == userId && a.Status == AssignStatusEnum.DELIVERING.ToString());
-
-                if (isDriverBusy)
-                    throw new InvalidOperationException("Bạn chưa hoàn thành đơn giao hàng trước đó.");
-
-                // Cập nhật trạng thái assignment
-                assignment.Status = AssignStatusEnum.DELIVERING.ToString();
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Cập nhật trạng thái đơn hàng
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.DELIVERING.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                // Ghi nhận lịch sử trạng thái
-                var history = new Orderstatushistory
-                {
-                    Orderid = orderId,
-                    Status = OrderStatusEnum.DELIVERING.ToString(),
-                    Statusdescription = "Tài xế đang đi giao hàng",
-                    Updatedby = userId,
-                    Createdat = DateTime.UtcNow
-                };
-                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                // Lấy assignment ở trạng thái DELIVERING
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.DELIVERING.ToString());
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment với trạng thái DELIVERING.");
-
-                // Cập nhật sang DELIVERED và Completedat
-                assignment.Status = AssignStatusEnum.DELIVERED.ToString();
-                assignment.Completedat = DateTime.UtcNow;
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Cập nhật đơn hàng sang DELIVERED
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.DELIVERED.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                // Lịch sử trạng thái
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-                var history = new Orderstatushistory
-                {
-                    Orderid = orderId,
-                    Status = OrderStatusEnum.DELIVERED.ToString(),
-                    Statusdescription = "Tài xế đã giao hàng thành công",
-                    Notes = notes,
-                    Updatedby = userId,
-                    Createdat = DateTime.UtcNow
-                };
-                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task ConfirmDriverFinishedDeliveryAsync(HttpContext httpContext)
-        {
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-
-                // Không cho hoàn thành nếu tài xế còn đơn đang ASSIGNED_DELIVERY hoặc DELIVERING
-                var stillHasActiveDelivery = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .Any(a => a.Assignedto == userId &&
-                              (a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString() ||
-                               a.Status == AssignStatusEnum.DELIVERING.ToString()));
-
-                if (stillHasActiveDelivery)
-                    throw new InvalidOperationException("Bạn vẫn còn đơn giao hàng chưa hoàn thành.");
-
-                // Lấy tất cả assignment đã DELIVERED của tài xế
-                var deliveredAssignments = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .Where(a => a.Assignedto == userId &&
-                                a.Status == AssignStatusEnum.DELIVERED.ToString())
-                    .ToList();
-
-                if (!deliveredAssignments.Any())
-                    throw new ApplicationException("Không có đơn giao hàng nào để xác nhận hoàn thành.");
-
-                // Cập nhật tất cả sang FINISH
-                foreach (var assignment in deliveredAssignments)
-                {
-                    assignment.Status = AssignStatusEnum.FINISH.ToString();
-                    await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
-        public async Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason)
-        {
-            if (string.IsNullOrWhiteSpace(cancelReason))
-                throw new ArgumentException("Lý do huỷ không được để trống.");
-
-            await _unitOfWork.BeginTransaction();
-            try
-            {
-                // Tìm assignment ở trạng thái ASSIGNED_DELIVERY hoặc DELIVERING
-                var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
-                    .GetAll()
-                    .FirstOrDefault(a =>
-                        a.Orderid == orderId &&
-                        (a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString() ||
-                         a.Status == AssignStatusEnum.DELIVERING.ToString()));
-
-                if (assignment == null)
-                    throw new ApplicationException("Không tìm thấy assignment phù hợp để huỷ giao hàng.");
-
-                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
-
-                // Xoá lịch sử
-                var historyRepo = _unitOfWork.Repository<Orderstatushistory>();
-                var deliveringHistory = historyRepo.GetAll()
-                    .Where(h => h.Orderid == orderId &&
-                                (h.Status == OrderStatusEnum.DELIVERING.ToString() ||
-                                h.Status == OrderStatusEnum.SCHEDULED_DELIVERY.ToString()))
-                    .ToList();
-
-                foreach (var item in deliveringHistory)
-                {
-                    await historyRepo.DeleteAsync(item, saveChanges: false);
-                }
-
-                // Cập nhật trạng thái assignment
-                assignment.Status = AssignStatusEnum.CANCELLED_ASSIGNED_DELIVERY.ToString();
-                assignment.Completedat = DateTime.UtcNow;
-                await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
-
-                // Cập nhật trạng thái đơn hàng
-                var order = _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefault(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
-
-                order.Currentstatus = OrderStatusEnum.QUALITY_CHECKED.ToString();
-                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransaction();
-                throw;
-            }
-        }
-
         public async Task AssignPickupToDriverAsync(HttpContext httpContext, AssignPickupRequest request)
         {
             // 1) Lấy userId admin từ token (người gọi API)
@@ -1868,5 +1440,433 @@ namespace LaundryService.Service
                 throw;
             }
         }
+        //public async Task StartOrderPickupAsync(HttpContext httpContext, string orderId)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString());
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_PICKUP.");
+
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+        //        // Check nếu tài xế đang có đơn PICKING_UP thì không cho thực hiện
+        //        var isDriverBusy = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .Any(a => a.Assignedto == userId && a.Status == AssignStatusEnum.PICKING_UP.ToString());
+
+        //        if (isDriverBusy)
+        //            throw new InvalidOperationException("Bạn chưa hoàn thành đơn nhận hàng trước đó.");
+
+        //        // Cập nhật trạng thái assignment
+        //        assignment.Status = AssignStatusEnum.PICKING_UP.ToString();
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Cập nhật trạng thái đơn hàng
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.PICKINGUP.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        // Ghi nhận lịch sử trạng thái
+        //        var history = new Orderstatushistory
+        //        {
+        //            Orderid = orderId,
+        //            Status = OrderStatusEnum.PICKINGUP.ToString(),
+        //            Statusdescription = "Tài xế đang tiến hành đi nhận hàng",
+        //            Updatedby = userId,
+        //            Createdat = DateTime.UtcNow
+        //        };
+        //        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        // Lấy assignment đang ở trạng thái PICKING_UP
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.PICKING_UP.ToString());
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKING_UP.");
+
+        //        // Cập nhật sang PICKED_UP
+        //        assignment.Status = AssignStatusEnum.PICKED_UP.ToString();
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Lấy order
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        // Cập nhật trạng thái đơn
+        //        order.Currentstatus = OrderStatusEnum.PICKEDUP.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        // Ghi nhận lịch sử trạng thái
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+        //        var history = new Orderstatushistory
+        //        {
+        //            Orderid = orderId,
+        //            Status = OrderStatusEnum.PICKEDUP.ToString(),
+        //            Statusdescription = "Tài xế đã nhận hàng thành công",
+        //            Notes = notes,
+        //            Updatedby = userId,
+        //            Createdat = DateTime.UtcNow
+        //        };
+        //        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        // Lấy assignment đang ở trạng thái PICKED_UP
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.PICKED_UP.ToString());
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment với trạng thái PICKED_UP.");
+
+        //        // Cập nhật sang RECEIVED và completed time
+        //        assignment.Status = AssignStatusEnum.RECEIVED.ToString();
+        //        assignment.Completedat = DateTime.UtcNow;
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Lấy order và cập nhật trạng thái CHECKED
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.CHECKING.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        // Ghi lịch sử trạng thái
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+        //        var history = new Orderstatushistory
+        //        {
+        //            Orderid = orderId,
+        //            Status = OrderStatusEnum.CHECKING.ToString(),
+        //            Statusdescription = "Tài xế đã nhận hàng về tới nơi",
+        //            Updatedby = userId,
+        //            Createdat = DateTime.UtcNow
+        //        };
+        //        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason)
+        //{
+        //    if (string.IsNullOrWhiteSpace(cancelReason))
+        //        throw new ArgumentException("Lý do huỷ không được để trống.");
+
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        // Tìm assignment ở trạng thái ASSIGNED_PICKUP hoặc PICKING_UP
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a =>
+        //                a.Orderid == orderId &&
+        //                (a.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString() ||
+        //                 a.Status == AssignStatusEnum.PICKING_UP.ToString()));
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment phù hợp để huỷ.");
+
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+        //        // Xoá lịch sử
+        //        var historyRepo = _unitOfWork.Repository<Orderstatushistory>();
+        //        var oldHistories = historyRepo.GetAll()
+        //            .Where(h => h.Orderid == orderId &&
+        //                        (h.Status == OrderStatusEnum.PICKINGUP.ToString() ||
+        //                         h.Status == OrderStatusEnum.SCHEDULED_PICKUP.ToString()))
+        //            .ToList();
+
+        //        foreach (var item in oldHistories)
+        //        {
+        //            await historyRepo.DeleteAsync(item, saveChanges: false);
+        //        }
+
+        //        // Cập nhật trạng thái assignment
+        //        assignment.Status = AssignStatusEnum.CANCELLED_ASSIGNED_PICKUP.ToString();
+        //        assignment.Completedat = DateTime.UtcNow;
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Cập nhật trạng thái đơn hàng -> CONFIRMED
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.CONFIRMED.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString());
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment có trạng thái ASSIGNED_DELIVERY.");
+
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+        //        // Check nếu tài xế đang có đơn DELIVERING thì không cho giao đơn mới
+        //        var isDriverBusy = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .Any(a => a.Assignedto == userId && a.Status == AssignStatusEnum.DELIVERING.ToString());
+
+        //        if (isDriverBusy)
+        //            throw new InvalidOperationException("Bạn chưa hoàn thành đơn giao hàng trước đó.");
+
+        //        // Cập nhật trạng thái assignment
+        //        assignment.Status = AssignStatusEnum.DELIVERING.ToString();
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Cập nhật trạng thái đơn hàng
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.DELIVERING.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        // Ghi nhận lịch sử trạng thái
+        //        var history = new Orderstatushistory
+        //        {
+        //            Orderid = orderId,
+        //            Status = OrderStatusEnum.DELIVERING.ToString(),
+        //            Statusdescription = "Tài xế đang đi giao hàng",
+        //            Updatedby = userId,
+        //            Createdat = DateTime.UtcNow
+        //        };
+        //        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        // Lấy assignment ở trạng thái DELIVERING
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a => a.Orderid == orderId && a.Status == AssignStatusEnum.DELIVERING.ToString());
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment với trạng thái DELIVERING.");
+
+        //        // Cập nhật sang DELIVERED và Completedat
+        //        assignment.Status = AssignStatusEnum.DELIVERED.ToString();
+        //        assignment.Completedat = DateTime.UtcNow;
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Cập nhật đơn hàng sang DELIVERED
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.DELIVERED.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        // Lịch sử trạng thái
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+        //        var history = new Orderstatushistory
+        //        {
+        //            Orderid = orderId,
+        //            Status = OrderStatusEnum.DELIVERED.ToString(),
+        //            Statusdescription = "Tài xế đã giao hàng thành công",
+        //            Notes = notes,
+        //            Updatedby = userId,
+        //            Createdat = DateTime.UtcNow
+        //        };
+        //        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task ConfirmDriverFinishedDeliveryAsync(HttpContext httpContext)
+        //{
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+        //        // Không cho hoàn thành nếu tài xế còn đơn đang ASSIGNED_DELIVERY hoặc DELIVERING
+        //        var stillHasActiveDelivery = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .Any(a => a.Assignedto == userId &&
+        //                      (a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString() ||
+        //                       a.Status == AssignStatusEnum.DELIVERING.ToString()));
+
+        //        if (stillHasActiveDelivery)
+        //            throw new InvalidOperationException("Bạn vẫn còn đơn giao hàng chưa hoàn thành.");
+
+        //        // Lấy tất cả assignment đã DELIVERED của tài xế
+        //        var deliveredAssignments = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .Where(a => a.Assignedto == userId &&
+        //                        a.Status == AssignStatusEnum.DELIVERED.ToString())
+        //            .ToList();
+
+        //        if (!deliveredAssignments.Any())
+        //            throw new ApplicationException("Không có đơn giao hàng nào để xác nhận hoàn thành.");
+
+        //        // Cập nhật tất cả sang FINISH
+        //        foreach (var assignment in deliveredAssignments)
+        //        {
+        //            assignment.Status = AssignStatusEnum.FINISH.ToString();
+        //            await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+        //        }
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
+        //public async Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason)
+        //{
+        //    if (string.IsNullOrWhiteSpace(cancelReason))
+        //        throw new ArgumentException("Lý do huỷ không được để trống.");
+
+        //    await _unitOfWork.BeginTransaction();
+        //    try
+        //    {
+        //        // Tìm assignment ở trạng thái ASSIGNED_DELIVERY hoặc DELIVERING
+        //        var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+        //            .GetAll()
+        //            .FirstOrDefault(a =>
+        //                a.Orderid == orderId &&
+        //                (a.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString() ||
+        //                 a.Status == AssignStatusEnum.DELIVERING.ToString()));
+
+        //        if (assignment == null)
+        //            throw new ApplicationException("Không tìm thấy assignment phù hợp để huỷ giao hàng.");
+
+        //        var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+        //        // Xoá lịch sử
+        //        var historyRepo = _unitOfWork.Repository<Orderstatushistory>();
+        //        var deliveringHistory = historyRepo.GetAll()
+        //            .Where(h => h.Orderid == orderId &&
+        //                        (h.Status == OrderStatusEnum.DELIVERING.ToString() ||
+        //                        h.Status == OrderStatusEnum.SCHEDULED_DELIVERY.ToString()))
+        //            .ToList();
+
+        //        foreach (var item in deliveringHistory)
+        //        {
+        //            await historyRepo.DeleteAsync(item, saveChanges: false);
+        //        }
+
+        //        // Cập nhật trạng thái assignment
+        //        assignment.Status = AssignStatusEnum.CANCELLED_ASSIGNED_DELIVERY.ToString();
+        //        assignment.Completedat = DateTime.UtcNow;
+        //        await _unitOfWork.Repository<Orderassignmenthistory>().UpdateAsync(assignment, saveChanges: false);
+
+        //        // Cập nhật trạng thái đơn hàng
+        //        var order = _unitOfWork.Repository<Order>()
+        //            .GetAll()
+        //            .FirstOrDefault(o => o.Orderid == orderId);
+        //        if (order == null)
+        //            throw new KeyNotFoundException("Order not found.");
+
+        //        order.Currentstatus = OrderStatusEnum.QUALITY_CHECKED.ToString();
+        //        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+        //        await _unitOfWork.SaveChangesAsync();
+        //        await _unitOfWork.CommitTransaction();
+        //    }
+        //    catch
+        //    {
+        //        await _unitOfWork.RollbackTransaction();
+        //        throw;
+        //    }
+        //}
+
     }
 }

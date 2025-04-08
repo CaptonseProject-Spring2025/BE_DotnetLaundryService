@@ -12,19 +12,15 @@ namespace LaundryService.Domain.Constants
         public static readonly HashSet<AssignStatusEnum> Pickup = new()
     {
         AssignStatusEnum.ASSIGNED_PICKUP,
-        AssignStatusEnum.PICKING_UP,
-        AssignStatusEnum.PICKED_UP,
-        AssignStatusEnum.RECEIVED,
-        AssignStatusEnum.CANCELLED_ASSIGNED_PICKUP
+        AssignStatusEnum.PICKUP_SUCCESS,
+        AssignStatusEnum.PICKUP_FAILED
     };
 
         public static readonly HashSet<AssignStatusEnum> Delivery = new()
     {
         AssignStatusEnum.ASSIGNED_DELIVERY,
-        AssignStatusEnum.DELIVERING,
-        AssignStatusEnum.DELIVERED,
-        AssignStatusEnum.FINISH,
-        AssignStatusEnum.CANCELLED_ASSIGNED_DELIVERY
+        AssignStatusEnum.DELIVERY_SUCCESS,
+        AssignStatusEnum.DELIVERY_FAILED
     };
     }
 }

@@ -352,6 +352,7 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Deliverylongitude)
                 .HasPrecision(9, 6)
                 .HasColumnName("deliverylongitude");
+            entity.Property(e => e.Emergency).HasColumnName("emergency");
             entity.Property(e => e.Deliveryname).HasColumnName("deliveryname");
             entity.Property(e => e.Deliveryphone).HasColumnName("deliveryphone");
             entity.Property(e => e.Deliverytime).HasColumnName("deliverytime");

@@ -21,6 +21,8 @@ namespace LaundryService.Api.Controllers
             _orderAssignmentHistoryService = orderAssignmentHistoryService;
         }
 
+        /*
+
         /// <summary>
         /// Tài xế bắt đầu đi nhận hàng. Chuyển trạng thái từ ASSIGNED_PICKUP → PICKING_UP.
         /// </summary>
@@ -380,5 +382,7 @@ namespace LaundryService.Api.Controllers
                 return NotFound(new { Message = ex.Message });
             }
         }
+
+        */
     }
 }

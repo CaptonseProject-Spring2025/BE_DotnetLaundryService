@@ -55,6 +55,8 @@ public partial class Order
 
     public decimal? Discount { get; set; }
 
+    public bool? Emergency { get; set; }
+
     public string? Currentstatus { get; set; }
 
     public DateTime? Createdat { get; set; }

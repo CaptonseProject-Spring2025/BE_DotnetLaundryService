@@ -25,8 +25,6 @@ namespace LaundryService.Domain.Enums
 
         //-----------------------------//
 
-        CHECKING,
-
         ASSIGNED_DELIVERY,
         DELIVERY_SUCCESS,
         DELIVERY_FAILED
