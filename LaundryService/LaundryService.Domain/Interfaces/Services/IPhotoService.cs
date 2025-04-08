@@ -9,5 +9,7 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IPhotoService
     {
         Task<List<string>> GetPhotoUrlsByStatusHistoryIdAsync(Guid statusHistoryId);
+
+        Task DeletePhotoByUrlAsync(string photoUrl);
     }
 }
