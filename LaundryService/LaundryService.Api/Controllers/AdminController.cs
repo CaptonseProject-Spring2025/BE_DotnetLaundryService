@@ -13,13 +13,13 @@ namespace LaundryService.Api.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : BaseApiController
     {
-        private readonly IOrderService _orderService;
+        private readonly IAdminService _adminService;
         private readonly IFirebaseNotificationService _firebaseNotificationService;
         private readonly INotificationService _notificationService;
 
-        public AdminController(IOrderService orderService,IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService) // Inject IOrderService
+        public AdminController(IAdminService adminService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService) // Inject IOrderService
         {
-            _orderService = orderService;
+            _adminService = adminService;
             _firebaseNotificationService = firebaseNotificationService;
             _notificationService = notificationService;
         }
@@ -51,7 +51,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                var result = await _orderService.GetConfirmedOrdersByAreaAsync();
+                var result = await _adminService.GetConfirmedOrdersByAreaAsync();
                 return Ok(result);
             }
             catch (Exception ex)
@@ -85,10 +85,10 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.AssignPickupToDriverAsync(HttpContext, request);
+                await _adminService.AssignPickupToDriverAsync(HttpContext, request);
 
                 var orderId = request.OrderIds.First();
-                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+                var customerId = await _adminService.GetCustomerIdByOrderAsync(orderId);
 
                 try
                 {

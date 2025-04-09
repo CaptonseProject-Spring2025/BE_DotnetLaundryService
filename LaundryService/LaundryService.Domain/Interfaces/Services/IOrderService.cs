@@ -44,10 +44,6 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
 
-        Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync();
-
-        Task AssignPickupToDriverAsync(HttpContext httpContext, AssignPickupRequest request);
-
         Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
 
         Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
