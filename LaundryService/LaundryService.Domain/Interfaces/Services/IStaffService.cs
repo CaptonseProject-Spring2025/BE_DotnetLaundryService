@@ -22,5 +22,7 @@ namespace LaundryService.Domain.Interfaces.Services
 
         // Lấy các đơn ở trạng thái CHECKED để nhân viên kế tiếp xử lý (đem đi giặt).
         Task<List<PickedUpOrderResponse>> GetCheckedOrdersAsync(HttpContext httpContext);
+
+        Task<Guid> ReceiveOrderForWashingAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
     }
 }

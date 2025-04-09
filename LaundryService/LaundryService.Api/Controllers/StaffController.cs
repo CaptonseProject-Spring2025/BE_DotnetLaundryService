@@ -241,5 +241,59 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Staff nhận đơn giặt (đơn đang CHECKED) => chuyển trạng thái sang WASHING.
+        /// Cho phép đính kèm ghi chú và upload ảnh (tùy chọn).
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
+        /// <param name="notes">Ghi chú (tùy chọn)</param>
+        /// <param name="files">Danh sách file ảnh (tùy chọn)</param>
+        /// <returns>Trả về thông báo thành công và Statushistoryid mới</returns>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra order đang ở trạng thái CHECKED.
+        /// 2) Nếu có ảnh => thêm ảnh
+        /// 3) Trả về `Statushistoryid` mới.
+        ///
+        /// **Request**:
+        /// - `multipart/form-data`
+        /// 
+        /// **Response codes**:
+        /// - `200 OK`: Thành công, trả về `{ Statushistoryid = ..., Message = ... }`
+        /// - `400 Bad Request`: Order không ở trạng thái CHECKED hoặc fail upload file
+        /// - `404 Not Found`: Không tìm thấy order
+        /// - `401 Unauthorized`: Staff không hợp lệ
+        /// - `500 Internal Server Error`: Lỗi server
+        /// </remarks>
+        [HttpPost("orders/washing/receive")]
+        public async Task<IActionResult> ReceiveOrderForWashing(
+            [FromForm] string orderId,
+            [FromForm] string? notes,
+            [FromForm] IFormFileCollection? files
+        )
+        {
+            try
+            {
+                var statusHistoryId = await _staffService.ReceiveOrderForWashingAsync(HttpContext, orderId, notes, files);
+                return Ok(new
+                {
+                    Statushistoryid = statusHistoryId,
+                    Message = "Đơn hàng đã được chuyển sang trạng thái WASHING thành công."
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
