@@ -838,6 +838,76 @@ namespace LaundryService.Service
             return response;
         }
 
+        public async Task<List<PickedUpOrderResponse>> GetWashedOrdersAsync(HttpContext httpContext)
+        {
+            // 1) (Nếu cần lấy staffId để logging hoặc tùy mục đích)
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Xác định trạng thái "WASHED"
+            var washedStatus = OrderStatusEnum.WASHED.ToString();
+
+            // 3) Truy vấn Order => Currentstatus = "WASHED"
+            var query = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.User)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Where(o => o.Currentstatus == washedStatus);
+
+            // 4) Sắp xếp:
+            //    - Emergency DESC (các đơn khẩn cấp lên trước)
+            //    - DeliveryTime ASC (đơn cần giao sớm hơn lên trước)
+            var orders = query
+                .OrderByDescending(o => o.Emergency ?? false)
+                .ThenBy(o => o.Deliverytime)
+                .ToList();  // Lấy dữ liệu về
+
+            // 5) Map sang List<PickedUpOrderResponse>
+            var result = new List<PickedUpOrderResponse>();
+            foreach (var order in orders)
+            {
+                // Gom ServiceNames
+                var serviceNames = order.Orderitems
+                    .Select(oi => oi.Service?.Name ?? "Unknown")
+                    .Distinct()
+                    .ToList();
+                var joinedServiceNames = string.Join("; ", serviceNames);
+
+                // Đưa các thời gian về múi giờ Việt Nam
+                var orderDateVn = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow);
+                var pickupTimeVn = order.Pickuptime.HasValue
+                                   ? _util.ConvertToVnTime(order.Pickuptime.Value)
+                                   : (DateTime?)null;
+                var deliveryTimeVn = order.Deliverytime.HasValue
+                                     ? _util.ConvertToVnTime(order.Deliverytime.Value)
+                                     : (DateTime?)null;
+
+                // Tạo DTO
+                var dto = new PickedUpOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    Emergency = order.Emergency ?? false,
+                    CustomerInfo = new CustomerInfoDto
+                    {
+                        CustomerId = order.Userid,
+                        CustomerName = order.User?.Fullname,
+                        CustomerPhone = order.User?.Phonenumber
+                    },
+                    ServiceNames = joinedServiceNames,
+                    ServiceCount = order.Orderitems.Count,
+                    OrderDate = orderDateVn,
+                    PickupTime = pickupTimeVn,
+                    DeliveryTime = deliveryTimeVn,
+                    CurrentStatus = order.Currentstatus ?? "",
+                    TotalPrice = order.Totalprice
+                };
+
+                result.Add(dto);
+            }
+
+            return result;
+        }
+
         public async Task<CheckingOrderUpdateResponse> ConfirmOrderQualityCheckedAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files)
         {
             // 1) Lấy staffId từ JWT

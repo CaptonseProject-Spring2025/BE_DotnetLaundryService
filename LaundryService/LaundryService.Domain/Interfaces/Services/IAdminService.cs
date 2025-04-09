@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace LaundryService.Domain.Interfaces.Services
 {
-    internal class IAdminService
+    public interface IAdminService
     {
+
     }
 }

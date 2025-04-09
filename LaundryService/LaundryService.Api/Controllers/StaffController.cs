@@ -420,7 +420,39 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// STEP 9: Staff xác nhận đơn hàng đã kiểm tra chất lượng (WASHED -> QUALITY_CHECKED).
+        /// STEP 9: Lấy danh sách các đơn hàng đang ở trạng thái WASHED để nhân viên kế tiếp nhận và kiểm tra chất lượng (QUALITY_CHECKED).
+        /// </summary>
+        /// <returns>Danh sách <see cref="PickedUpOrderResponse"/></returns>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Tìm Order.Currentstatus = "WASHED"
+        /// 2) Sắp xếp theo:
+        ///    - Emergency = true trước
+        ///    - DeliveryTime (gần nhất) trước
+        /// 
+        /// **Response codes**:
+        /// - 200: Thành công
+        /// - 401: Không có quyền
+        /// - 500: Lỗi server
+        /// </remarks>
+        [HttpGet("orders/washed")]
+        [ProducesResponseType(typeof(List<PickedUpOrderResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetWashedOrders()
+        {
+            try
+            {
+                var result = await _staffService.GetWashedOrdersAsync(HttpContext);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Ghi log nếu cần
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// STEP 10: Staff xác nhận đơn hàng đã kiểm tra chất lượng (WASHED -> QUALITY_CHECKED).
         /// </summary>
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
         /// <param name="notes">Ghi chú (tùy chọn)</param>
