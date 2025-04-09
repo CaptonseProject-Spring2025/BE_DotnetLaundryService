@@ -167,5 +167,51 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Giao việc giao hàng cho tài xế (Driver).
+        /// </summary>
+        /// <param name="request">Danh sách OrderId + DriverId</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra driverId có hợp lệ (tồn tại, role=Driver).
+        /// 2) Với mỗi orderId:
+        ///    - Tạo 1 record `Orderassignmenthistory` (Status="ASSIGNED_DELIVERY")
+        ///    - Tạo 1 record `Orderstatushistory` (Status="SCHEDULED_DELIVERY")
+        ///    - Update Order.Currentstatus = "SCHEDULED_DELIVERY"
+        ///
+        /// **Response codes**:
+        /// - `200`: Giao việc thành công.
+        /// - `400`: Dữ liệu không hợp lệ (driver rỗng, orderIds rỗng,...).
+        /// - `404`: Không tìm thấy driver hoặc không tìm thấy order.
+        /// - `500`: Lỗi server.
+        /// </remarks>
+        [HttpPost("assign-delivery")]
+        public async Task<IActionResult> AssignDeliveryToDriver([FromBody] AssignPickupRequest request)
+        {
+            try
+            {
+                await _adminService.AssignDeliveryToDriverAsync(HttpContext, request);
+                return Ok(new { Message = "Giao việc giao hàng cho tài xế thành công!" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Lỗi logic: order chưa sẵn sàng
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Lỗi server
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
     }
 }

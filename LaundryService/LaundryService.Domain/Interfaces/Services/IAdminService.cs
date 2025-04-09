@@ -18,5 +18,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<List<AreaOrdersResponse>> GetQualityCheckedOrdersByAreaAsync();
+
+        Task AssignDeliveryToDriverAsync(HttpContext httpContext, AssignPickupRequest request);
     }
 }

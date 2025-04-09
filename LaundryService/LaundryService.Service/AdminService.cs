@@ -353,5 +353,93 @@ namespace LaundryService.Service
 
             return result;
         }
+
+        public async Task AssignDeliveryToDriverAsync(HttpContext httpContext, AssignPickupRequest request)
+        {
+            // 1) Lấy AdminUserId (người gọi API) từ JWT
+            var adminUserId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Validate request
+            if (request.DriverId == Guid.Empty)
+                throw new ArgumentException("DriverId is required.");
+
+            if (request.OrderIds == null || request.OrderIds.Count == 0)
+                throw new ArgumentException("OrderIds cannot be empty.");
+
+            // Kiểm tra DriverId có tồn tại & có Role = "Driver" hay không
+            var driver = await _unitOfWork.Repository<User>()
+                                          .GetAsync(u => u.Userid == request.DriverId && u.Role == "Driver");
+            if (driver == null)
+            {
+                throw new KeyNotFoundException(
+                    $"Không tìm thấy Driver với ID: {request.DriverId} hoặc người này không phải Driver."
+                );
+            }
+
+            // 3) Bắt đầu Transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 4) Lặp qua từng OrderId
+                foreach (var orderId in request.OrderIds)
+                {
+                    // a) Tìm Order -> kiểm tra
+                    var order = _unitOfWork.Repository<Order>()
+                        .GetAll()
+                        .FirstOrDefault(o => o.Orderid == orderId);
+
+                    if (order == null)
+                        throw new KeyNotFoundException($"OrderId '{orderId}' không tồn tại.");
+
+                    // (Tuỳ logic) Kiểm tra order có đang "QUALITY_CHECKED" hay không
+                    // để đảm bảo logic (chỉ những đơn giặt xong, đã QA-check xong mới giao)
+                    if (order.Currentstatus != OrderStatusEnum.QUALITY_CHECKED.ToString())
+                    {
+                        throw new ApplicationException(
+                            $"Order {orderId} chưa sẵn sàng để giao. Trạng thái hiện tại: {order.Currentstatus}"
+                        );
+                    }
+
+                    // b) Tạo record Orderassignmenthistory
+                    var assignment = new Orderassignmenthistory
+                    {
+                        Orderid = orderId,
+                        Assignedto = request.DriverId,
+                        Assignedat = DateTime.UtcNow,
+                        // Giao cho driver => status = "ASSIGNED_DELIVERY"
+                        Status = AssignStatusEnum.ASSIGNED_DELIVERY.ToString()
+                    };
+                    await _unitOfWork.Repository<Orderassignmenthistory>()
+                                     .InsertAsync(assignment, saveChanges: false);
+
+                    // c) Tạo record Orderstatushistory
+                    var statusHistory = new Orderstatushistory
+                    {
+                        Orderid = orderId,
+                        Status = OrderStatusEnum.SCHEDULED_DELIVERY.ToString(),
+                        Statusdescription = "Đã lên lịch giao hàng. Bạn sẽ sớm nhận được đơn hàng.",
+                        Updatedby = adminUserId,
+                        Createdat = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Repository<Orderstatushistory>()
+                                     .InsertAsync(statusHistory, saveChanges: false);
+
+                    // d) Cập nhật Order => Currentstatus = "SCHEDULED_DELIVERY"
+                    order.Currentstatus = OrderStatusEnum.SCHEDULED_DELIVERY.ToString();
+                    await _unitOfWork.Repository<Order>()
+                                     .UpdateAsync(order, saveChanges: false);
+                }
+
+                // 5) SaveChanges + Commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                // Rollback nếu có lỗi
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }
