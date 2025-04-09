@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LaundryService.Dto.Responses;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IPhotoService
     {
-        Task<List<string>> GetPhotoUrlsByStatusHistoryIdAsync(Guid statusHistoryId);
+        Task<List<PhotoInfo>> GetPhotoUrlsByStatusHistoryIdAsync(Guid statusHistoryId);
 
         Task DeletePhotoByUrlAsync(string photoUrl);
     }

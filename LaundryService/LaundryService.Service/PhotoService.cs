@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using LaundryService.Dto.Responses;
 
 namespace LaundryService.Service
 {
@@ -21,7 +22,7 @@ namespace LaundryService.Service
             _fileStorageService = fileStorageService;
         }
 
-        public async Task<List<string>> GetPhotoUrlsByStatusHistoryIdAsync(Guid statusHistoryId)
+        public async Task<List<PhotoInfo>> GetPhotoUrlsByStatusHistoryIdAsync(Guid statusHistoryId)
         {
             // 1) Kiểm tra xem statusHistory có tồn tại không (nếu muốn báo lỗi 404)
             var statusHistory = await _unitOfWork.Repository<Orderstatushistory>()
@@ -33,14 +34,27 @@ namespace LaundryService.Service
                 throw new KeyNotFoundException("Status history not found.");
             }
 
+            var photoInfos = new List<PhotoInfo>();
+
             // 2) Lấy tất cả Orderphoto cho statusHistoryId
             var photos = await _unitOfWork.Repository<Orderphoto>()
                 .GetAll()
                 .Where(p => p.Statushistoryid == statusHistoryId)
-                .Select(p => p.Photourl)
                 .ToListAsync();
 
-            return photos;
+            if (photos == null || photos.Count == 0) return photoInfos;
+            // 3) Chuyển đổi sang PhotoInfo
+            foreach (var photo in photos)
+            {
+                var photoInfo = new PhotoInfo
+                {
+                    PhotoUrl = photo.Photourl,
+                    CreatedAt = photo.Createdat
+                };
+                photoInfos.Add(photoInfo);
+            }
+
+            return photoInfos;
         }
 
         public async Task DeletePhotoByUrlAsync(string photoUrl)
