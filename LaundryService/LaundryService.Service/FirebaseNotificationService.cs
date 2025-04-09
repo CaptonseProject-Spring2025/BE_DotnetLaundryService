@@ -61,8 +61,14 @@ namespace LaundryService.Service
             return type switch
             {
                 NotificationType.OrderPlaced => ("Thông báo đặt hàng", "Bạn đã đặt hàng thành công. Vui lòng chờ nhân viên liên hệ."),
-                NotificationType.OrderConfirmed => ("Xác nhận đơn hàng", "Đơn hàng của bạn đã được xác nhận thành công."),
-                NotificationType.OrderCancelled => ("Hủy đơn hàng", "Đơn hàng của bạn đã được hủy thành công."),
+                NotificationType.OrderConfirmed => ("Thông báo đặt hàng", "Đơn hàng của bạn đã được xác nhận thành công."),
+                NotificationType.OrderCancelled => ("Thông báo đặt hàng", "Đơn hàng của bạn đã được hủy thành công."),
+                NotificationType.PickupScheduled => ("Thông báo nhận hàng", "Tài xế sẽ đến nhận đơn hàng của bạn trong thời gian sớm nhất."),
+                NotificationType.PickupStarted => ("Thông báo nhận hàng", "Tài xế đã bắt đầu đi đến nhận đơn hàng của bạn."),
+                NotificationType.PickedUp => ("Thông báo nhận hàng", "Tài xế đã nhận đơn hàng thành công."),
+                NotificationType.DeliveryStarted => ("Thông báo giao hàng", "Tài xế đã bắt đầu đi giao hàng đến địa chỉ của bạn."),
+                NotificationType.Delivered => ("Thông báo giao hàng", "Tài xế đã giao đơn hàng đến bạn thành công."),
+                NotificationType.Finish => ("Dịch vụ giặt ủi", "Cảm ơn bạn đã sử dụng dịch vụ giặt ủi của chúng tôi. Hẹn gặp lại lần sau!"),
                 _ => ("Thông báo", "Bạn có một thông báo mới.")
             };
         }

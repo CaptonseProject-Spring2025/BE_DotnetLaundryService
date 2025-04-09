@@ -10,7 +10,13 @@ namespace LaundryService.Domain.Enums
     {
         OrderPlaced,
         OrderConfirmed,
-        OrderCancelled
+        OrderCancelled,
+        PickupScheduled,
+        PickupStarted,
+        PickedUp,
+        DeliveryStarted,
+        Delivered,
+        Finish
     }
 
 }

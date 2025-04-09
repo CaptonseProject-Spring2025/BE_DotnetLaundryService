@@ -1,5 +1,7 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using LaundryService.Domain.Enums;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Responses;
+using LaundryService.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,12 +15,16 @@ namespace LaundryService.Api.Controllers
         private readonly IOrderService _orderService;
         private readonly IAddressService _addressService;
         private readonly IOrderAssignmentHistoryService _orderAssignmentHistoryService;
+        private readonly IFirebaseNotificationService _firebaseNotificationService;
+        private readonly INotificationService _notificationService;
 
-        public DriverController(IOrderService orderService, IAddressService addressService, IOrderAssignmentHistoryService orderAssignmentHistoryService)
+        public DriverController(IOrderService orderService, IAddressService addressService, IOrderAssignmentHistoryService orderAssignmentHistoryService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService)
         {
             _orderService = orderService;
             _addressService = addressService;
             _orderAssignmentHistoryService = orderAssignmentHistoryService;
+            _firebaseNotificationService = firebaseNotificationService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -57,6 +63,33 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.StartOrderPickupAsync(HttpContext, orderId);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreatePickupStartedNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.PickupStarted
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Tài xế đã bắt đầu đi nhận hàng (PICKING_UP)." });
             }
             catch (ApplicationException ex)
@@ -117,6 +150,33 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.ConfirmOrderPickedUpAsync(HttpContext, orderId, notes);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreateOrderPickedUpNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.PickedUp
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Tài xế đã xác nhận nhận hàng thành công (PICKED_UP)." });
             }
             catch (ApplicationException ex)
@@ -137,33 +197,6 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-
-        //[HttpPost("confirm-picked-up")]
-        //[ProducesResponseType(typeof(string), 200)]
-        //public async Task<IActionResult> ConfirmOrderPickedUp([FromQuery] string orderId, [FromQuery] string notes)
-        //{
-        //    try
-        //    {
-        //        await _orderService.ConfirmOrderPickedUpAsync(HttpContext, orderId, notes);
-        //        return Ok(new { Message = "Tài xế đã xác nhận nhận hàng thành công (PICKED_UP)." });
-        //    }
-        //    catch (ApplicationException ex)
-        //    {
-        //        return BadRequest(new { Message = ex.Message });
-        //    }
-        //    catch (KeyNotFoundException ex)
-        //    {
-        //        return NotFound(new { Message = ex.Message });
-        //    }
-        //    catch (UnauthorizedAccessException ex)
-        //    {
-        //        return Unauthorized(new { Message = ex.Message });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
-        //    }
-        //}
 
         /// <summary>
         /// Xác nhận rằng tài xế đã mang hàng về thành công (kết thúc quá trình nhận hàng).
@@ -306,6 +339,33 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.StartOrderDeliveryAsync(HttpContext, orderId);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreateDeliveryStartedNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.DeliveryStarted
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Tài xế đã bắt đầu đi giao hàng (DELIVERING)." });
             }
             catch (ApplicationException ex)
@@ -412,6 +472,39 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.ConfirmOrderDeliverySuccessAsync(HttpContext, orderId);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreateOrderDeliveredNotificationAsync(customerId, orderId);
+                    await _notificationService.CreateThankYouNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.Delivered
+                        );
+
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.Finish
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Tài xế đã xác nhận giao hàng thành công và đã về." });
             }
             catch (ApplicationException ex)

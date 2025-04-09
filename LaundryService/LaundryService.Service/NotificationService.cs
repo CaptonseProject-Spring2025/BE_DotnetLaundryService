@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using LaundryService.Domain.Entities;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
+using LaundryService.Domain.Enums;
 
 namespace LaundryService.Service
 {
@@ -22,18 +23,15 @@ namespace LaundryService.Service
             _util = util;
         }
 
-        /// <summary>
-        /// Lấy danh sách thông báo cho user từ JWT
-        /// </summary>
         public async Task<IEnumerable<NotificationResponse>> GetNotificationsByUserIdAsync(HttpContext httpContext)
         {
-            var userId = _util.GetCurrentUserIdOrThrow(httpContext); // Lấy userId từ JWT
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             var notifications = await _unitOfWork.Repository<Notification>()
                 .GetAllAsync(n => n.Userid == userId);
 
             var sortedNotifications = notifications
-        .OrderByDescending(n => n.Createdat ?? DateTime.MinValue) // Sort giảm dần theo thời gian
+        .OrderByDescending(n => n.Createdat ?? DateTime.MinValue)
         .Select(n => new NotificationResponse
         {
             NotificationId = n.Notificationid,
@@ -53,9 +51,6 @@ namespace LaundryService.Service
         }
 
 
-        /// <summary>
-        /// Xóa một thông báo
-        /// </summary>
         public async Task DeleteNotificationAsync(Guid notificationId)
         {
             var notification = await _unitOfWork.Repository<Notification>().FindAsync(notificationId);
@@ -68,9 +63,6 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// Đánh dấu thông báo là đã đọc
-        /// </summary>
         public async Task MarkAsReadAsync(Guid notificationId)
         {
             var notification = await _unitOfWork.Repository<Notification>().FindAsync(notificationId);
@@ -82,6 +74,22 @@ namespace LaundryService.Service
             notification.Isread = true;
             await _unitOfWork.Repository<Notification>().UpdateAsync(notification);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task DeleteAllNotificationsOfCurrentUserAsync(HttpContext context)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(context);
+
+            var notifications = await _unitOfWork.Repository<Notification>()
+                .GetAllAsync(n => n.Userid == userId);
+
+            if (notifications.Any())
+            {
+                foreach (var n in notifications)
+                    await _unitOfWork.Repository<Notification>().DeleteAsync(n);
+
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
 
         public async Task CreateOrderPlacedNotificationAsync(Guid userId, string orderId)
@@ -140,5 +148,120 @@ namespace LaundryService.Service
             await _unitOfWork.Repository<Notification>().InsertAsync(notification);
             await _unitOfWork.SaveChangesAsync();
         }
+
+        public async Task CreatePickupScheduledNotificationAsync(Guid customerId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = customerId,
+                Title = "Thông báo nhận hàng",
+                Message = "Đơn hàng của bạn đã được lên lịch để tài xế đến nhận. Vui lòng chuẩn bị hàng sẵn sàng!",
+                Notificationtype = NotificationType.PickupScheduled.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreatePickupStartedNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Thông báo nhận hàng",
+                Message = "Tài xế đã bắt đầu đi đến nhận đơn hàng của bạn.",
+                Notificationtype = NotificationType.PickupStarted.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateOrderPickedUpNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Thông báo nhận hàng",
+                Message = "Tài xế đã nhận đơn hàng thành công.",
+                Notificationtype = NotificationType.PickedUp.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateDeliveryStartedNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Thông báo giao hàng",
+                Message = "Tài xế đã bắt đầu đi giao hàng đến địa chỉ của bạn.",
+                Notificationtype = NotificationType.DeliveryStarted.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateOrderDeliveredNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Thông báo giao hàng",
+                Message = "Tài xế đã giao đơn hàng đến bạn thành công.",
+                Notificationtype = NotificationType.Delivered.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateThankYouNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Dịch vụ giặt ủi",
+                Message = "Cảm ơn bạn đã sử dụng dịch vụ giặt ủi của chúng tôi. Hẹn gặp lại lần sau!",
+                Notificationtype = NotificationType.Finish.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
     }
 }
