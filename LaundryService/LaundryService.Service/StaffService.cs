@@ -266,7 +266,8 @@ namespace LaundryService.Service
 
             // 4) Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
-            var listPhotoUrls = new List<string>();
+
+            var photoInfo = new List<PhotoInfo>();
             try
             {
                 // 5) Nếu có notes => update
@@ -297,10 +298,15 @@ namespace LaundryService.Service
                         var newPhoto = new Orderphoto
                         {
                             Statushistoryid = checkingRow.Statushistoryid,
-                            Photourl = suc.Url
+                            Photourl = suc.Url,
+                            Createdat = DateTime.UtcNow
                         };
                         await _unitOfWork.Repository<Orderphoto>().InsertAsync(newPhoto, saveChanges: false);
-                        listPhotoUrls.Add(suc.Url);
+                        photoInfo.Add(new PhotoInfo
+                        {
+                            PhotoUrl = suc.Url,
+                            CreatedAt = newPhoto.Createdat
+                        });
                     }
                 }
 
@@ -313,7 +319,7 @@ namespace LaundryService.Service
                 {
                     OrderId = orderId,
                     Notes = checkingRow.Notes,
-                    PhotoUrls = listPhotoUrls
+                    PhotoUrls = photoInfo
                 };
                 return response;
             }

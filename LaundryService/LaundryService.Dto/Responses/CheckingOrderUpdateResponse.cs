@@ -10,6 +10,12 @@ namespace LaundryService.Dto.Responses
     {
         public string OrderId { get; set; }
         public string? Notes { get; set; }
-        public List<string> PhotoUrls { get; set; } = new List<string>();
+        public List<PhotoInfo> PhotoUrls { get; set; } = new List<PhotoInfo>();
+    }
+
+    public class PhotoInfo
+    {
+        public DateTime? CreatedAt { get; set; }
+        public string PhotoUrl { get; set; } = string.Empty;
     }
 }
