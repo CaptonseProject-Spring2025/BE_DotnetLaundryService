@@ -384,5 +384,76 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<List<PickedUpOrderResponse>> GetCheckedOrdersAsync(HttpContext httpContext)
+        {
+            // 1) Xác thực staff
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tạo query: Lấy tất cả Orders có Currentstatus = "CHECKED"
+            //    Eager load: .Include(o => o.User), .Include(o => o.Orderitems -> Service)
+            var checkedStatus = OrderStatusEnum.CHECKED.ToString();
+
+            var query = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.User)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Where(o => o.Currentstatus == checkedStatus);
+
+            // 3) Sắp xếp:
+            //    - Emergency desc
+            //    - DeliveryTime asc
+            var orders = query
+                .OrderByDescending(o => o.Emergency ?? false)
+                .ThenBy(o => o.Deliverytime)
+                .ToList();
+
+            // 4) Map -> PickedUpOrderResponse
+            var result = new List<PickedUpOrderResponse>();
+
+            foreach (var order in orders)
+            {
+                // Gom serviceNames (VD: "Giặt áo; Giặt quần")
+                var serviceNames = order.Orderitems
+                    .Select(oi => oi.Service?.Name ?? "Unknown")
+                    .Distinct()
+                    .ToList();
+                var joinedServiceNames = string.Join("; ", serviceNames);
+
+                // Tính giờ Việt Nam
+                DateTime? pickupTimeVn = order.Pickuptime.HasValue
+                    ? _util.ConvertToVnTime(order.Pickuptime.Value)
+                    : (DateTime?)null;
+
+                DateTime? deliveryTimeVn = order.Deliverytime.HasValue
+                    ? _util.ConvertToVnTime(order.Deliverytime.Value)
+                    : (DateTime?)null;
+
+                // Tạo DTO
+                var dto = new PickedUpOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    Emergency = order.Emergency ?? false,
+                    CustomerInfo = new CustomerInfoDto
+                    {
+                        CustomerId = order.Userid,
+                        CustomerName = order.User?.Fullname,
+                        CustomerPhone = order.User?.Phonenumber
+                    },
+                    ServiceNames = joinedServiceNames,
+                    ServiceCount = order.Orderitems.Count,
+                    OrderDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    PickupTime = pickupTimeVn,
+                    DeliveryTime = deliveryTimeVn,
+                    CurrentStatus = order.Currentstatus ?? "",
+                    TotalPrice = order.Totalprice
+                };
+
+                result.Add(dto);
+            }
+
+            return result;
+        }
     }
 }

@@ -16,12 +16,11 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<List<PickedUpOrderResponse>> GetCheckingOrdersAsync(HttpContext httpContext);
 
-        Task<CheckingOrderUpdateResponse> UpdateCheckingOrderAsync(HttpContext httpContext,
-            string orderId,
-            string? notes,
-            IFormFileCollection? files
-        );
+        Task<CheckingOrderUpdateResponse> UpdateCheckingOrderAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
 
         Task ConfirmCheckingDoneAsync(HttpContext httpContext, string orderId, string notes);
+
+        // Lấy các đơn ở trạng thái CHECKED để nhân viên kế tiếp xử lý (đem đi giặt).
+        Task<List<PickedUpOrderResponse>> GetCheckedOrdersAsync(HttpContext httpContext);
     }
 }

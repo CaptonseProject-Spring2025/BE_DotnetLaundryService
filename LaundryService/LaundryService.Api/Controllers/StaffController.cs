@@ -209,5 +209,37 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Lấy các đơn hàng đang ở trạng thái CHECKED (để nhân viên kế tiếp nhận, mang đi giặt).
+        /// </summary>
+        /// <returns>Danh sách <see cref="PickedUpOrderResponse"/> mô tả các đơn CHECKED.</returns>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Tìm Orders có `Currentstatus = "CHECKED"`.
+        /// 2) Sắp xếp:
+        ///    - `Emergency = true` trước,
+        ///    - `Deliverytime` sớm trước.
+        ///
+        /// **Response codes**:
+        /// - `200`: Trả về danh sách.
+        /// - `401`: Không có quyền (chưa đăng nhập or sai role).
+        /// - `500`: Lỗi server.
+        /// </remarks>
+        [HttpGet("orders/checked")]
+        [ProducesResponseType(typeof(List<PickedUpOrderResponse>), 200)]
+        public async Task<IActionResult> GetCheckedOrders()
+        {
+            try
+            {
+                var result = await _staffService.GetCheckedOrdersAsync(HttpContext);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log...
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
