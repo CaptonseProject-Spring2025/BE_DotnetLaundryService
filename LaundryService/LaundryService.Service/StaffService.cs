@@ -543,5 +543,86 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        /// <summary>
+        /// Lấy các đơn WASHING mà staff (theo JWT) đã nhận, tức:
+        /// - Order.currentStatus = "WASHING"
+        /// - Trong Orderstatushistory có row Status="WASHING" & Updatedby=staffId.
+        /// </summary>
+        public async Task<List<PickedUpOrderResponse>> GetWashingOrdersAsync(HttpContext httpContext)
+        {
+            // 1) Lấy staffId từ JWT
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+            var washingStatus = OrderStatusEnum.WASHING.ToString();
+
+            // 2) Tìm tất cả OrderId trong Orderstatushistory 
+            //    có Status = "WASHING" và Updatedby = staffId
+            var orderIdsStaffUpdated = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Status == washingStatus && h.Updatedby == staffId)
+                .Select(h => h.Orderid)
+                .Distinct()
+                .ToList();
+
+            if (!orderIdsStaffUpdated.Any())
+            {
+                // Không có đơn nào staff này update sang WASHING
+                return new List<PickedUpOrderResponse>();
+            }
+
+            // 3) Lọc Orders => Currentstatus=WASHING & orderId ∈ (danh sách trên)
+            var orders = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.User)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                .Where(o => o.Currentstatus == washingStatus
+                         && orderIdsStaffUpdated.Contains(o.Orderid))
+                .ToList();
+
+            // 4) Map -> PickedUpOrderResponse (tương tự logic cũ)
+            var result = new List<PickedUpOrderResponse>();
+            foreach (var order in orders)
+            {
+                // Gom serviceNames, ví dụ "Giặt áo; Giặt quần"
+                var serviceNames = order.Orderitems
+                    .Select(oi => oi.Service?.Name ?? "Unknown")
+                    .Distinct()
+                    .ToList();
+                var joinedServiceNames = string.Join("; ", serviceNames);
+
+                // Thời gian Pickup, Delivery (theo giờ VN)
+                DateTime? pickupTimeVn = order.Pickuptime.HasValue
+                    ? _util.ConvertToVnTime(order.Pickuptime.Value)
+                    : (DateTime?)null;
+
+                DateTime? deliveryTimeVn = order.Deliverytime.HasValue
+                    ? _util.ConvertToVnTime(order.Deliverytime.Value)
+                    : (DateTime?)null;
+
+                // Tạo DTO
+                var dto = new PickedUpOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    Emergency = order.Emergency ?? false,
+                    CustomerInfo = new CustomerInfoDto
+                    {
+                        CustomerId = order.Userid,
+                        CustomerName = order.User?.Fullname,
+                        CustomerPhone = order.User?.Phonenumber
+                    },
+                    ServiceNames = joinedServiceNames,
+                    ServiceCount = order.Orderitems.Count,
+                    OrderDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    PickupTime = pickupTimeVn,
+                    DeliveryTime = deliveryTimeVn,
+                    CurrentStatus = order.Currentstatus ?? "",
+                    TotalPrice = order.Totalprice
+                };
+                result.Add(dto);
+            }
+
+            return result;
+        }
     }
 }

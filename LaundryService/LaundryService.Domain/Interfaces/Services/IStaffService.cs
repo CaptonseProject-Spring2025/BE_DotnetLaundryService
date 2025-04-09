@@ -24,5 +24,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<List<PickedUpOrderResponse>> GetCheckedOrdersAsync(HttpContext httpContext);
 
         Task<Guid> ReceiveOrderForWashingAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
+
+        Task<List<PickedUpOrderResponse>> GetWashingOrdersAsync(HttpContext httpContext);
     }
 }

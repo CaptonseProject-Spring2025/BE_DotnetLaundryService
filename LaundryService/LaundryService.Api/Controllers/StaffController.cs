@@ -243,7 +243,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// STEP 6: Staff nhận đơn giặt (đơn đang CHECKED) => chuyển trạng thái sang WASHING.
+        /// STEP 6.1: Staff nhận đơn giặt (đơn đang CHECKED) => chuyển trạng thái sang WASHING.
         /// Cho phép đính kèm ghi chú và upload ảnh (tùy chọn).
         /// </summary>
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
@@ -292,6 +292,32 @@ namespace LaundryService.Api.Controllers
             }
             catch (Exception ex)
             {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// STEP 6.2: Lấy danh sách các đơn WASHING mà staff hiện tại (theo JWT) đã nhận và cập nhật.
+        /// </summary>
+        /// <remarks>
+        /// 
+        /// **Response codes**:
+        /// - <c>200</c>: Trả về danh sách
+        /// - <c>401</c>: Không có quyền
+        /// - <c>500</c>: Lỗi server
+        /// </remarks>
+        [HttpGet("orders/washing")]
+        [ProducesResponseType(typeof(List<PickedUpOrderResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetWashingOrders()
+        {
+            try
+            {
+                var orders = await _staffService.GetWashingOrdersAsync(HttpContext);
+                return Ok(orders);
+            }
+            catch (Exception ex)
+            {
+                // Log...
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
