@@ -21,7 +21,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách các đơn đã PICKEDUP cho staff Checking
+        /// STEP 1: Lấy danh sách các đơn đã PICKEDUP cho staff Checking
         /// </summary>
         /// <returns>Danh sách <see cref="PickedUpOrderResponse"/>.</returns>
         /// <remarks>
@@ -51,7 +51,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Staff nhận đơn giặt (đơn đang PICKEDUP) => chuyển trạng thái sang CHECKING.
+        /// STEP 2.1: Staff nhận đơn giặt (đơn đang PICKEDUP) => chuyển trạng thái sang CHECKING.
         /// </summary>
         /// <param name="orderId">ID đơn hàng cần nhận.</param>
         /// <remarks>
@@ -89,7 +89,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy các đơn hiện đang CHECKING mà Staff này (từ JWT) đã cập nhật sang CHECKING.
+        /// STEP 2.2: Lấy các đơn hiện đang CHECKING mà Staff này (từ JWT) đã cập nhật sang CHECKING.
         /// </summary>
         /// <remarks>
         /// **Logic**:
@@ -117,7 +117,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Staff cập nhật ảnh + ghi chú cho đơn đang CHECKING (mà staff này phụ trách).
+        /// STEP 3: Staff cập nhật ảnh + ghi chú cho đơn đang CHECKING (mà staff này phụ trách).
         /// </summary>
         /// <param name="orderId">Mã đơn hàng</param>
         /// <param name="notes">Ghi chú (optional)</param>
@@ -170,7 +170,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Staff xác nhận đơn hàng CHECKING => CHECKED, sau khi kiểm tra xong.
+        /// STEP 4: Staff xác nhận đơn hàng CHECKING => CHECKED, sau khi kiểm tra xong.
         /// </summary>
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
         /// <param name="notes">Ghi chú (tùy chọn)</param>
@@ -211,7 +211,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy các đơn hàng đang ở trạng thái CHECKED (để nhân viên kế tiếp nhận, mang đi giặt).
+        /// STEP 5: Lấy các đơn hàng đang ở trạng thái CHECKED (để nhân viên kế tiếp nhận, mang đi giặt).
         /// </summary>
         /// <returns>Danh sách <see cref="PickedUpOrderResponse"/> mô tả các đơn CHECKED.</returns>
         /// <remarks>
@@ -243,7 +243,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Staff nhận đơn giặt (đơn đang CHECKED) => chuyển trạng thái sang WASHING.
+        /// STEP 6: Staff nhận đơn giặt (đơn đang CHECKED) => chuyển trạng thái sang WASHING.
         /// Cho phép đính kèm ghi chú và upload ảnh (tùy chọn).
         /// </summary>
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
