@@ -522,6 +522,9 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasColumnName("photoid");
             entity.Property(e => e.Photourl).HasColumnName("photourl");
             entity.Property(e => e.Statushistoryid).HasColumnName("statushistoryid");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("createdat");
 
             entity.HasOne(d => d.Statushistory).WithMany(p => p.Orderphotos)
                 .HasForeignKey(d => d.Statushistoryid)

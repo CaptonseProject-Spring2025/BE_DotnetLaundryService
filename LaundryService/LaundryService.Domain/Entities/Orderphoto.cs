@@ -11,5 +11,7 @@ public partial class Orderphoto
 
     public string Photourl { get; set; } = null!;
 
+    public DateTime? Createdat { get; set; }
+
     public virtual Orderstatushistory Statushistory { get; set; } = null!;
 }
