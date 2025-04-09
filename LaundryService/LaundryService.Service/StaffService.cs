@@ -630,5 +630,93 @@ namespace LaundryService.Service
 
             return result;
         }
+
+        public async Task<CheckingOrderUpdateResponse> UpdateWashingOrderAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files)
+        {
+            // 1) Lấy staffId từ JWT
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tìm bản ghi Orderstatushistory => Status="WASHING", Orderid = orderId
+            //    Lấy row mới nhất (hoặc đầu tiên) - tùy logic, ở đây lấy row mới nhất
+            var washingRow = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Orderid == orderId && h.Status == OrderStatusEnum.WASHING.ToString())
+                .OrderByDescending(h => h.Createdat)
+                .FirstOrDefault();
+
+            if (washingRow == null)
+                throw new KeyNotFoundException("Không tìm thấy đơn đang ở trạng thái WASHING.");
+
+            // 3) Kiểm tra Updatedby có bằng staffId hay không
+            if (washingRow.Updatedby != staffId)
+                throw new ApplicationException("Bạn không phải là người nhận xử lý đơn hàng này.");
+
+            // 4) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            // Chuẩn bị list kết quả file đã upload
+            var photoInfos = new List<PhotoInfo>();
+
+            try
+            {
+                // 5) Nếu có notes => cập nhật
+                if (!string.IsNullOrWhiteSpace(notes))
+                {
+                    washingRow.Notes = notes;
+                    _unitOfWork.DbContext.Entry(washingRow).State = EntityState.Modified;
+                }
+
+                // 6) Nếu có files => upload
+                if (files != null && files.Count > 0)
+                {
+                    var uploadResult = await _fileStorageService.UploadMultipleFilesAsync(files, "order-photos");
+
+                    // Nếu có file fail => rollback
+                    if (uploadResult.FailureCount > 0)
+                    {
+                        var firstError = uploadResult.FailedUploads.First().ErrorMessage;
+                        throw new ApplicationException($"Đã upload thất bại ít nhất 1 ảnh. Lỗi đầu tiên: {firstError}");
+                    }
+
+                    // Tạo record Orderphoto
+                    foreach (var suc in uploadResult.SuccessfulUploads)
+                    {
+                        var photo = new Orderphoto
+                        {
+                            Statushistoryid = washingRow.Statushistoryid, // gắn với record WASHING
+                            Photourl = suc.Url,
+                            Createdat = DateTime.UtcNow
+                        };
+
+                        await _unitOfWork.Repository<Orderphoto>().InsertAsync(photo, saveChanges: false);
+
+                        photoInfos.Add(new PhotoInfo
+                        {
+                            PhotoUrl = suc.Url,
+                            CreatedAt = photo.Createdat
+                        });
+                    }
+                }
+
+                // 7) Lưu + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // 8) Tạo response
+                var response = new CheckingOrderUpdateResponse
+                {
+                    OrderId = orderId,
+                    Notes = washingRow.Notes,
+                    PhotoUrls = photoInfos
+                };
+                return response;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
     }
 }
