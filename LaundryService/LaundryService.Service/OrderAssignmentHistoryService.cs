@@ -23,6 +23,7 @@ namespace LaundryService.Service
             _unitOfWork = unitOfWork;
             _util = util;
         }
+
         public async Task<List<AssignmentHistoryResponse>> GetAssignmentsForDriverAsync(HttpContext httpContext)
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
@@ -50,7 +51,7 @@ namespace LaundryService.Service
                 .GroupBy(h => h.Orderid)
                 .ToDictionary(g => g.Key, g => g.FirstOrDefault()?.Notes);
 
-            // Join dữ liệu
+            // Join dữ liệu và trả thêm currentstatus của order
             var responses = assignments.Select(a =>
             {
                 orders.TryGetValue(a.Orderid, out var order);
@@ -66,7 +67,8 @@ namespace LaundryService.Service
                     Note = pendingNote,
                     AssignedAt = a.Assignedat,
                     Status = a.Status,
-                    Address = GetRelevantAddress(a.Status, order)
+                    Address = GetRelevantAddress(a.Status, order),
+                    CurrentStatus = order?.Currentstatus // Thêm currentstatus của order vào response
                 };
             }).ToList();
 
@@ -112,7 +114,8 @@ namespace LaundryService.Service
                 PickupDescription = order.Pickupdescription,
                 DeliveryDescription = order.Deliverydescription,
                 TotalPrice = order.Totalprice,
-                CreatedAt = order.Createdat
+                CreatedAt = order.Createdat,
+                CurrentStatus = order.Currentstatus 
             };
         }
 
@@ -131,6 +134,5 @@ namespace LaundryService.Service
 
             return null;
         }
-
     }
 }
