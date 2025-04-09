@@ -88,5 +88,35 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Xóa tất cả thông báo của người dùng hiện tại (dựa vào JWT).
+        /// </summary>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập.  
+        /// 
+        /// **Logic**:
+        /// - Lấy `userId` từ JWT.  
+        /// - Xóa toàn bộ thông báo thuộc user này.
+        /// 
+        /// **Response codes**:
+        /// - 200: Xóa thành công  
+        /// - 500: Lỗi hệ thống
+        /// </remarks>
+        /// <returns>Thông báo trạng thái xóa</returns>
+        [Authorize]
+        [HttpDelete("clear-all")]
+        public async Task<IActionResult> DeleteAllNotifications()
+        {
+            try
+            {
+                await _notificationService.DeleteAllNotificationsOfCurrentUserAsync(HttpContext);
+                return Ok(new { Message = "Đã xóa tất cả thông báo của bạn." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Lỗi khi xóa thông báo: {ex.Message}" });
+            }
+        }
     }
 }

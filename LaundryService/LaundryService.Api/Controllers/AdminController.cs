@@ -1,4 +1,5 @@
-﻿using LaundryService.Domain.Interfaces.Services;
+﻿using LaundryService.Domain.Enums;
+using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
@@ -13,10 +14,14 @@ namespace LaundryService.Api.Controllers
     public class AdminController : BaseApiController
     {
         private readonly IOrderService _orderService;
+        private readonly IFirebaseNotificationService _firebaseNotificationService;
+        private readonly INotificationService _notificationService;
 
-        public AdminController(IOrderService orderService) // Inject IOrderService
+        public AdminController(IOrderService orderService,IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService) // Inject IOrderService
         {
             _orderService = orderService;
+            _firebaseNotificationService = firebaseNotificationService;
+            _notificationService = notificationService;
         }
 
         /// <summary>
@@ -81,6 +86,34 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _orderService.AssignPickupToDriverAsync(HttpContext, request);
+
+                var orderId = request.OrderIds.First();
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreatePickupScheduledNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.PickupScheduled
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Giao việc lấy hàng thành công!" });
             }
             catch (KeyNotFoundException ex)
