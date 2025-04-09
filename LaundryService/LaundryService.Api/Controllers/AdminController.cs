@@ -137,5 +137,35 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Lấy danh sách đơn hàng ở trạng thái QUALITY_CHECKED, nhóm theo khu vực, để chuẩn bị giao hàng.
+        /// </summary>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Lọc Order `Currentstatus = QUALITY_CHECKED`
+        /// 2) Gọi Mapbox để tìm quận => phân vào khu vực (Area1, Area2, Area3 hoặc Unknown)
+        /// 3) Trong cùng 1 khu vực, sắp xếp các đơn theo CreatedAt
+        /// 
+        /// **Response codes**:
+        /// - `200 OK`: Trả về danh sách
+        /// - `401 Unauthorized`: Không có quyền (Admin)
+        /// - `500 Internal Server Error`: Lỗi server
+        /// </remarks>
+        [HttpGet("orders/quality-checked")]
+        [ProducesResponseType(typeof(List<AreaOrdersResponse>), 200)]
+        public async Task<IActionResult> GetQualityCheckedOrdersByArea()
+        {
+            try
+            {
+                var result = await _adminService.GetQualityCheckedOrdersByAreaAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                // Log ra file nếu cần
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
