@@ -718,5 +718,122 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task<CheckingOrderUpdateResponse> ConfirmOrderWashedAsync(
+            HttpContext httpContext,
+            string orderId,
+            string? notes,
+            IFormFileCollection? files
+        )
+        {
+            // 1) Lấy staffId từ JWT
+            var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // 2) Tìm order => check currentStatus == "WASHING"
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (order == null)
+                throw new KeyNotFoundException($"Không tìm thấy Order: {orderId}");
+
+            if (order.Currentstatus != OrderStatusEnum.WASHING.ToString())
+                throw new ApplicationException($"Đơn hàng {orderId} không ở trạng thái WASHING.");
+
+            // 3) Kiểm tra Staff này có phải người đang xử lý WASHING không?
+            //    => Tức Orderstatushistory có Status="WASHING" & Updatedby=staffId
+            var washingRow = _unitOfWork.Repository<Orderstatushistory>()
+                .GetAll()
+                .Where(h => h.Orderid == orderId && h.Status == OrderStatusEnum.WASHING.ToString())
+                .OrderByDescending(h => h.Createdat)
+                .FirstOrDefault();
+
+            if (washingRow == null)
+                throw new KeyNotFoundException("Không tìm thấy history WASHING cho đơn này.");
+
+            if (washingRow.Updatedby != staffId)
+                throw new ApplicationException("Bạn không phải là người xử lý đơn WASHING này.");
+
+            // 4) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            // Chuẩn bị list kết quả file đã upload
+            var photoInfos = new List<PhotoInfo>();
+            CheckingOrderUpdateResponse response;
+
+            try
+            {
+                // 5) Cập nhật Order => "WASHED"
+                order.Currentstatus = OrderStatusEnum.WASHED.ToString();
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                // 6) Thêm 1 Orderstatushistory => WASHED
+                var newHistory = new Orderstatushistory
+                {
+                    Orderid = orderId,
+                    Status = OrderStatusEnum.WASHED.ToString(),
+                    Statusdescription = "Đơn hàng đã được giặt xong.",
+                    Notes = notes,
+                    Updatedby = staffId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(newHistory, saveChanges: false);
+
+                // Lưu tạm để lấy Statushistoryid
+                await _unitOfWork.SaveChangesAsync();
+
+                // 7) Nếu có ảnh => upload => lưu Orderphoto
+                if (files != null && files.Count > 0)
+                {
+                    // Upload file lên B2 (hoặc storage khác)
+                    var uploadResult = await _fileStorageService.UploadMultipleFilesAsync(files, "order-photos");
+
+                    // Nếu có file fail => rollback
+                    if (uploadResult.FailureCount > 0)
+                    {
+                        var firstError = uploadResult.FailedUploads.First().ErrorMessage;
+                        throw new ApplicationException($"Upload ảnh thất bại. Lỗi đầu tiên: {firstError}");
+                    }
+
+                    // Tạo record Orderphoto cho mỗi file thành công
+                    foreach (var suc in uploadResult.SuccessfulUploads)
+                    {
+                        var photo = new Orderphoto
+                        {
+                            Statushistoryid = newHistory.Statushistoryid,
+                            Photourl = suc.Url,
+                            Createdat = DateTime.UtcNow
+                        };
+                        await _unitOfWork.Repository<Orderphoto>().InsertAsync(photo, saveChanges: false);
+
+                        photoInfos.Add(new PhotoInfo
+                        {
+                            PhotoUrl = suc.Url,
+                            CreatedAt = photo.Createdat
+                        });
+                    }
+                }
+
+                // 8) Lưu + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // 9) Tạo response
+                response = new CheckingOrderUpdateResponse
+                {
+                    Statushistoryid = newHistory.Statushistoryid,
+                    OrderId = orderId,
+                    Notes = notes,
+                    PhotoUrls = photoInfos
+                };
+            }
+            catch
+            {
+                // rollback nếu lỗi
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+
+            return response;
+        }
     }
 }

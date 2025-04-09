@@ -370,5 +370,53 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// STEP 8: Staff xác nhận đơn hàng đã giặt xong (WASHING -> WASHED).
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
+        /// <param name="notes">Ghi chú (tùy chọn)</param>
+        /// <param name="files">Danh sách ảnh (tùy chọn)</param>
+        /// <returns>Trả về <see cref="CheckingOrderUpdateResponse"/> chứa thông tin đơn sau cập nhật</returns>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra Order đang ở trạng thái WASHING.
+        /// 2) Kiểm tra staffId (từ JWT) có phải là người đang xử lý đơn WASHING này không.
+        /// 
+        /// **Request Body**: `multipart/form-data`
+        /// 
+        /// **Response code**:
+        /// - `200 OK`: Cập nhật thành công, trả về `CheckingOrderUpdateResponse`.
+        /// - `400 Bad Request`: Order không ở trạng thái WASHING hoặc Staff không phải người xử lý.
+        /// - `404 Not Found`: Không tìm thấy Order.
+        /// - `401 Unauthorized`: Không có quyền.
+        /// - `500 Internal Server Error`: Lỗi server hoặc upload ảnh.
+        /// </remarks>
+        [HttpPost("orders/washing/confirm")]
+        [ProducesResponseType(typeof(CheckingOrderUpdateResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConfirmOrderWashed(
+            [FromForm] string orderId,
+            [FromForm] string? notes,
+            [FromForm] IFormFileCollection? files
+        )
+        {
+            try
+            {
+                var result = await _staffService.ConfirmOrderWashedAsync(HttpContext, orderId, notes, files);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log...
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

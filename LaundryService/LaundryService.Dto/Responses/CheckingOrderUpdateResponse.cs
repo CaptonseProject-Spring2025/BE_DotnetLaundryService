@@ -8,6 +8,7 @@ namespace LaundryService.Dto.Responses
 {
     public class CheckingOrderUpdateResponse
     {
+        public Guid? Statushistoryid { get; set; }
         public string OrderId { get; set; }
         public string? Notes { get; set; }
         public List<PhotoInfo> PhotoUrls { get; set; } = new List<PhotoInfo>();
