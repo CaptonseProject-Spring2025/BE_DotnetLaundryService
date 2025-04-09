@@ -418,5 +418,57 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// STEP 9: Staff xác nhận đơn hàng đã kiểm tra chất lượng (WASHED -> QUALITY_CHECKED).
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
+        /// <param name="notes">Ghi chú (tùy chọn)</param>
+        /// <param name="files">Danh sách ảnh (tùy chọn)</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Kiểm tra Order đang ở trạng thái WASHED.
+        /// 2) Update Order => QUALITY_CHECKED
+        /// 
+        /// **Request Body**: `multipart/form-data`
+        /// - `OrderId`: string
+        /// - `Notes`: string? (optional)
+        /// - `Files`: list file (optional)
+        /// 
+        /// **Response Codes**:
+        /// - `200 OK`: Cập nhật thành công, trả về `CheckingOrderUpdateResponse`.
+        /// - `400 Bad Request`: Order không phải WASHED hoặc dữ liệu không hợp lệ.
+        /// - `404 Not Found`: Không tìm thấy Order.
+        /// - `401 Unauthorized`: Staff không có quyền.
+        /// - `500 Internal Server Error`: Lỗi server hoặc upload.
+        /// </remarks>
+        [HttpPost("orders/washed/quality-check")]
+        [ProducesResponseType(typeof(CheckingOrderUpdateResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConfirmOrderQualityChecked(
+            [FromForm] string orderId,
+            [FromForm] string? notes,
+            [FromForm] IFormFileCollection? files
+        )
+        {
+            try
+            {
+                var result = await _staffService.ConfirmOrderQualityCheckedAsync(HttpContext, orderId, notes, files);
+                return Ok(result);  // CheckingOrderUpdateResponse
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log...
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
     }
 }

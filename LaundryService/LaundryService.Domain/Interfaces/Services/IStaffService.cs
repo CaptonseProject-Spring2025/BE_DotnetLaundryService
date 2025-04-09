@@ -30,5 +30,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<CheckingOrderUpdateResponse> UpdateWashingOrderAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
 
         Task<CheckingOrderUpdateResponse> ConfirmOrderWashedAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
+
+        Task<CheckingOrderUpdateResponse> ConfirmOrderQualityCheckedAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files);
     }
 }
