@@ -27,19 +27,21 @@ namespace LaundryService.Service
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            // Lấy assignment của tài xế
+            // Lấy danh sách assignment của tài xế
             var assignments = await _unitOfWork.Repository<Orderassignmenthistory>()
                 .GetAllAsync(a => a.Assignedto == driverId);
 
-            var orderIds = assignments.Select(a => a.Orderid).Distinct().ToList();
+            var orderIds = assignments.Select(a => a.Orderid).Distinct().ToHashSet();
 
-            var orders = await _unitOfWork.Repository<Order>()
-                .GetAllAsync(o => orderIds.Contains(o.Orderid));
+            var orders = (await _unitOfWork.Repository<Order>()
+                .GetAllAsync(o => orderIds.Contains(o.Orderid)))
+                .ToDictionary(o => o.Orderid);
 
-            var userIds = orders.Select(o => o.Userid).Distinct().ToList();
+            var userIds = orders.Values.Select(o => o.Userid).Distinct().ToHashSet();
 
-            var users = await _unitOfWork.Repository<User>()
-                .GetAllAsync(u => userIds.Contains(u.Userid));
+            var users = (await _unitOfWork.Repository<User>()
+                .GetAllAsync(u => userIds.Contains(u.Userid)))
+                .ToDictionary(u => u.Userid);
 
             var pendingNotes = await _unitOfWork.Repository<Orderstatushistory>()
                 .GetAllAsync(h => orderIds.Contains(h.Orderid) && h.Status == "PENDING");
@@ -48,13 +50,12 @@ namespace LaundryService.Service
                 .GroupBy(h => h.Orderid)
                 .ToDictionary(g => g.Key, g => g.FirstOrDefault()?.Notes);
 
-
-            // Join các dữ liệu lại
+            // Join dữ liệu
             var responses = assignments.Select(a =>
             {
-                var order = orders.FirstOrDefault(o => o.Orderid == a.Orderid);
-                var user = users.FirstOrDefault(u => u.Userid == order?.Userid);
-                var pendingNote = notesDict.ContainsKey(a.Orderid) ? notesDict[a.Orderid] : null;
+                orders.TryGetValue(a.Orderid, out var order);
+                users.TryGetValue(order?.Userid ?? Guid.Empty, out var user);
+                notesDict.TryGetValue(a.Orderid, out var pendingNote);
 
                 return new AssignmentHistoryResponse
                 {
@@ -76,27 +77,26 @@ namespace LaundryService.Service
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            //  Lấy assignment theo ID
-            var assignmentList = await _unitOfWork.Repository<Orderassignmenthistory>()
-                .GetAllAsync(a => a.Assignmentid == assignmentId && a.Assignedto == driverId);
-            var assignment = assignmentList.FirstOrDefault();
+            var assignment = (await _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAllAsync(a => a.Assignmentid == assignmentId && a.Assignedto == driverId))
+                .FirstOrDefault();
 
             if (assignment == null)
                 throw new Exception("Không tìm thấy phân công hoặc không thuộc tài xế hiện tại.");
 
-            var orderList = await _unitOfWork.Repository<Order>()
-                .GetAllAsync(o => o.Orderid == assignment.Orderid);
-            var order = orderList.FirstOrDefault();
+            var order = (await _unitOfWork.Repository<Order>()
+                .GetAllAsync(o => o.Orderid == assignment.Orderid))
+                .FirstOrDefault();
 
             if (order == null) return null;
 
-            var userList = await _unitOfWork.Repository<User>()
-                .GetAllAsync(u => u.Userid == order.Userid);
-            var user = userList.FirstOrDefault();
+            var user = (await _unitOfWork.Repository<User>()
+                .GetAllAsync(u => u.Userid == order.Userid))
+                .FirstOrDefault();
 
-            var pendingNoteList = await _unitOfWork.Repository<Orderstatushistory>()
-                .GetAllAsync(h => h.Orderid == order.Orderid && h.Status == "PENDING");
-            var note = pendingNoteList.FirstOrDefault()?.Notes;
+            var note = (await _unitOfWork.Repository<Orderstatushistory>()
+                .GetAllAsync(h => h.Orderid == order.Orderid && h.Status == "PENDING"))
+                .FirstOrDefault()?.Notes;
 
             return new AssignmentDetailResponse
             {

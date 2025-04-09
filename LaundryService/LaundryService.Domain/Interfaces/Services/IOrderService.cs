@@ -50,20 +50,20 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
 
-        //Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
+        Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
 
-        //Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes);
+        Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes);
 
-        //Task ConfirmOrderReceivedAsync(HttpContext httpContext, string orderId);
+        Task ConfirmOrderPickupSuccessAsync(HttpContext httpContext, string orderId);
 
-        //Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason);
+        Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason);
 
-        //Task ConfirmDriverFinishedDeliveryAsync(HttpContext httpContext);
+        Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId);
 
-        //Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId);
+        Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes);
 
-        //Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes);
+        Task ConfirmOrderDeliverySuccessAsync(HttpContext httpContext, string orderId);
 
-        //Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason);
+        Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason);
     }
 }
