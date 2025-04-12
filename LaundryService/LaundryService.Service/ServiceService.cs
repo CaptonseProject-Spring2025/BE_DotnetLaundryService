@@ -16,11 +16,13 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IUtil _util;
 
-        public ServiceService(IUnitOfWork unitOfWork, IFileStorageService fileStorageService)
+        public ServiceService(IUnitOfWork unitOfWork, IFileStorageService fileStorageService, IUtil util)
         {
             _unitOfWork = unitOfWork;
             _fileStorageService = fileStorageService;
+            _util = util;
         }
 
         public async Task<IEnumerable<object>> GetAllAsync()
@@ -31,7 +33,7 @@ namespace LaundryService.Service
                 CategoryId = c.Categoryid,
                 Name = c.Name,
                 Icon = c.Icon,
-                CreatedAt = c.Createdat
+                CreatedAt = _util.ConvertToVnTime(c.Createdat ?? DateTime.UtcNow),
             }).ToList();
         }
 
@@ -156,7 +158,7 @@ namespace LaundryService.Service
                             Description = sd.Description,
                             Price = sd.Price,
                             ImageUrl = sd.Image,
-                            CreatedAt = sd.Createdat
+                            CreatedAt = _util.ConvertToVnTime(sd.Createdat ?? DateTime.UtcNow),
                         })
                         .ToList()
                 })
