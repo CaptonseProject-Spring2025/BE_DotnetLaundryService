@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  laundry-api:
+    image: laundry-api
+    build:
+      context: .
+      dockerfile: LaundryService.Api/Dockerfile
+    ports:
+      - "4000:8080"
+    env_file:
+      - .env
+    restart: always
