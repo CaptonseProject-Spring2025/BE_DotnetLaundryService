@@ -147,14 +147,14 @@ builder.Services.AddSingleton<ISpeedSmsService, SpeedSmsService>(provider =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyHeader()
-                   .AllowAnyMethod()
-                   .AllowCredentials(); //Nếu dùng cookies / SignalR cần có dòng này
-        });
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.SetIsOriginAllowed(origin =>
+            origin.Contains("vuhai.me") || origin.StartsWith("http://localhost"))
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
