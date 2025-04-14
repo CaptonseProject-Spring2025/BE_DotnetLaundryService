@@ -482,6 +482,78 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task<CartResponse> ReorderAsync(HttpContext httpContext, string orderId)
+        {
+            // Lấy userId từ HttpContext
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            // Kiểm tra xem người dùng đã có giỏ hàng (order ở trạng thái "INCART") hay chưa
+            var currentCart = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
+
+            if (currentCart != null)
+            {
+                throw new ApplicationException("Bạn đang có một giỏ hàng đang hoạt động. Vui lòng hoàn tất hoặc hủy giỏ hàng hiện tại trước khi đặt lại đơn hàng (re-order).");
+            }
+
+
+            // Lấy thông tin order cũ, include các OrderItem và Orderextra nếu có
+            var oldOrder = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Orderextras)
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            if (oldOrder == null)
+                throw new KeyNotFoundException("Order không tồn tại.");
+
+            if (oldOrder.Userid != userId)
+                throw new UnauthorizedAccessException("Order không thuộc về người dùng hiện tại.");
+
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                //Duyệt qua các OrderItem của order cũ
+                foreach (var orderItem in oldOrder.Orderitems)
+                {
+
+                    var extraIds = orderItem.Orderextras != null
+                        ? orderItem.Orderextras.Select(e => e.Extraid).ToList()
+                        : new List<Guid>();
+
+                    var addRequest = new AddToCartRequest
+                    {
+                        ServiceDetailId = orderItem.Serviceid,
+                        Quantity = orderItem.Quantity,
+                        ExtraIds = extraIds
+                    };
+
+                    //Gọi hàm AddToCartNoTransactionAsync để thêm item vào cart
+                    await AddToCartNoTransactionAsync(userId, addRequest);
+                }
+
+                //Lưu thay đổi và commit transaction
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                //Lấy lại thông tin cart và trả về
+                var cart = await GetCartAsync(httpContext);
+                if (cart == null || cart.Items.Count == 0)
+                {
+                    throw new KeyNotFoundException("Reorder thành công nhưng không tìm thấy cart.");
+                }
+
+                return cart;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
         public async Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext)
         {
             var userId = _util.GetCurrentUserIdOrThrow(httpContext);
