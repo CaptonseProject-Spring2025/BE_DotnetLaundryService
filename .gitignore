@@ -3,15 +3,15 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# Ignore appsettings files
-appsettings.json
-appsettings.*.json
+# # Ignore appsettings files
+# appsettings.json
+# appsettings.*.json
 
 .env
 
-# Ignore appsettings files in LaundryService.Api
-LaundryService/LaundryService.Api/appsettings.json
-LaundryService/LaundryService.Api/appsettings.*.json
+# # Ignore appsettings files in LaundryService.Api
+# LaundryService/LaundryService.Api/appsettings.json
+# LaundryService/LaundryService.Api/appsettings.*.json
 
 # User-specific files
 *.rsuser
