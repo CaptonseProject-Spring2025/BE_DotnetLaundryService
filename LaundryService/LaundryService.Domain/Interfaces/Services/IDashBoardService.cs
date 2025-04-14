@@ -13,13 +13,17 @@ namespace LaundryService.Domain.Interfaces.Services
         public Task<int> GetAllOrdersByCurrentStatusAsync();
 
 
-        public Task<Object> GetOrderStatisticAsync();    
-
 
         public Task<int> GetAllServicesAsync();
 
 
         public Task<int> GetAllExtrasAsync();
+
+        
+        public Task<Object> GetOrderStatisticAsync();    
+
+        public Task<Object> GetCustomerStatistic();
+
     
     }
 }

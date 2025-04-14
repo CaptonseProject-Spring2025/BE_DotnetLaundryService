@@ -164,6 +164,8 @@ namespace LaundryService.Service
 
         public async Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize)
         {
+       
+       
             var currentUserId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             var usersQuery = _unitOfWork.Repository<User>().GetAll().Where(u => u.Userid != currentUserId);
@@ -194,6 +196,7 @@ namespace LaundryService.Service
             .ToPagedListAsync(page, pageSize);
 
             return paginatedUsers;
+        
         }
 
         public async Task<UserDetailResponse> CreateUserAsync(CreateUserRequest request)

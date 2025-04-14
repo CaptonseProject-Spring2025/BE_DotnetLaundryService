@@ -95,4 +95,38 @@ public class DashBoardService : IDashBoardServices
 
     return extras.Result.Count;
   }
+
+  public async Task<object> GetCustomerStatistic()
+  {
+ // Lấy ngày hiện tại
+    var today = DateTime.UtcNow.Date;
+
+    // Lấy tất cả người dùng có role là "Customer" và trạng thái "Active"
+    var customers = await _unitOfWork.Repository<User>().GetAllAsync(
+        user => user.Role == "Customer" && user.Status == "Active"
+    );
+
+    // Số lượng khách hàng mới trong ngày
+    var newCustomersToday = customers.Where(c => c.Datecreated == today).Count();
+
+    // Số lượng khách hàng mới trong tuần
+    var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+    var newCustomersThisWeek = customers.Where(c => c.Datecreated >= startOfWeek && c.Datecreated <= today).Count();
+
+    // Số lượng khách hàng mới trong tháng
+    var startOfMonth = new DateTime(today.Year, today.Month, 1);
+    var newCustomersThisMonth = customers.Where(c => c.Datecreated >= startOfMonth && c.Datecreated <= today).Count();
+
+    // Tổng số lượng khách hàng
+    var totalCustomers = customers.Count;
+
+    // Trả về kết quả
+    return new
+    {
+        TotalCustomers = totalCustomers,
+        NewCustomersToday = newCustomersToday,
+        NewCustomersThisWeek = newCustomersThisWeek,
+        NewCustomersThisMonth = newCustomersThisMonth
+    };
+  }
 }

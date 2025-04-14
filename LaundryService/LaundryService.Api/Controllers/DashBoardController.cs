@@ -39,12 +39,7 @@ namespace LaundryService.Api.Controllers
             return Ok(new { OrderNumbers = ordersCount });
         }
 
-        [HttpGet("get-order-statistics")]
-        public async Task<ActionResult> GetOrderStatistics()
-        {
-            var statistics = await _dashBoardServices.GetOrderStatisticAsync();
-            return Ok(statistics);
-        }
+
 
         [HttpGet("get-all-services-numbers")]
         public async Task<ActionResult> GetAllServices()
@@ -60,5 +55,20 @@ namespace LaundryService.Api.Controllers
             return Ok(new { ExtrasNumbers = extrasCount });
         }
 
+
+        [HttpGet("get-order-statistics")]
+        public async Task<ActionResult> GetOrderStatistics()
+        {
+            var statistics = await _dashBoardServices.GetOrderStatisticAsync();
+            return Ok(statistics);
+        }
+
+
+        [HttpGet("get-customer-statistics")]
+        public async Task<ActionResult> GetCustomerStatistics()
+        {
+            var statistics = await _dashBoardServices.GetCustomerStatistic();
+            return Ok(statistics);
+        }
     }
 }

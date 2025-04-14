@@ -149,11 +149,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.SetIsOriginAllowed(origin =>
-            origin.Contains("vuhai.me") || origin.StartsWith("http://localhost"))
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        policy.AllowAnyOrigin() // Cho phép tất cả các domain
+              .AllowAnyHeader() // Cho phép tất cả các header
+              .AllowAnyMethod(); // Cho phép tất cả các phương thức HTTP (GET, POST, PUT, DELETE, v.v.)
     });
 });
 
