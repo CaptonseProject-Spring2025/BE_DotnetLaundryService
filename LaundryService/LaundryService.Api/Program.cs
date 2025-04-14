@@ -152,12 +152,10 @@ builder.Services.AddCors(options =>
         {
             builder.AllowAnyOrigin()
                    .AllowAnyHeader()
-                   .AllowAnyMethod();
+                   .AllowAnyMethod()
+                   .AllowCredentials(); //Nếu dùng cookies / SignalR cần có dòng này
         });
 });
-
-
-
 
 var app = builder.Build();
 
@@ -176,11 +174,11 @@ app.UseHttpsRedirection();
 // Cho phép truy cập các file tĩnh trong wwwroot
 app.UseStaticFiles();
 
-app.UseAuthentication();
-app.UseAuthorization();
-
+app.UseRouting();
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -191,6 +189,5 @@ app.UseSwaggerUI(c =>
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub"); // Đăng ký SignalR Hub
-
 
 app.Run();
