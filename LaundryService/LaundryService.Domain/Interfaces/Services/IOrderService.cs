@@ -18,6 +18,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<string> PlaceOrderAsync(HttpContext httpContext, PlaceOrderRequest request);
 
+        Task<CartResponse> ReorderAsync(HttpContext httpContext, string orderId);
+
         Task<List<UserOrderResponse>> GetUserOrdersAsync(HttpContext httpContext);
 
         Task<PaginationResult<UserOrderResponse>> GetAllOrdersAsync(HttpContext httpContext, string? status, int page, int pageSize);

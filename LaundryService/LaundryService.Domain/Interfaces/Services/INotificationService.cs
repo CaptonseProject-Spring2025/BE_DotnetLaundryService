@@ -13,6 +13,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<IEnumerable<NotificationResponse>> GetNotificationsByUserIdAsync(HttpContext httpContext);
         Task DeleteNotificationAsync(Guid notificationId);
         Task MarkAsReadAsync(Guid notificationId);
+        Task MarkAllUserNotificationsAsReadAsync(HttpContext httpContext);
         Task DeleteAllNotificationsOfCurrentUserAsync(HttpContext context);
         Task CreateOrderPlacedNotificationAsync(Guid userId, string orderId);
         Task CreateOrderConfirmedNotificationAsync(Guid userId, string orderId);

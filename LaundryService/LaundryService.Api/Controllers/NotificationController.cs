@@ -71,6 +71,7 @@ namespace LaundryService.Api.Controllers
         /// </summary>
         /// <param name="notificationId">ID của thông báo</param>
         /// <returns>Trạng thái cập nhật</returns>
+        [Authorize]
         [HttpPut("{notificationId}/read")]
         public async Task<IActionResult> MarkAsRead(Guid notificationId)
         {
@@ -86,6 +87,32 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
+        /// <summary>
+        /// Đánh dấu tất cả thông báo của người dùng hiện tại là đã đọc.
+        /// </summary>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (JWT).
+        /// 
+        /// **Logic**:
+        /// - Lấy `userId` từ JWT.
+        /// - Cập nhật tất cả các notification của user này có trạng thái chưa đọc thành đã đọc.
+        /// </remarks>
+        /// <returns>Thông báo trạng thái cập nhật</returns>
+        [Authorize]
+        [HttpPut("read-all")]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            try
+            {
+                await _notificationService.MarkAllUserNotificationsAsReadAsync(HttpContext);
+                return Ok(new { Message = "All notifications marked as read." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
 

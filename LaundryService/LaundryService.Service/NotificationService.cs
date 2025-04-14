@@ -9,6 +9,7 @@ using LaundryService.Domain.Entities;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Http;
 using LaundryService.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaundryService.Service
 {
@@ -73,6 +74,27 @@ namespace LaundryService.Service
 
             notification.Isread = true;
             await _unitOfWork.Repository<Notification>().UpdateAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task MarkAllUserNotificationsAsReadAsync(HttpContext httpContext)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            var notifications = await _unitOfWork.Repository<Notification>()
+                .GetAll()
+                .Where(n => n.Userid == userId && (n.Isread != true))
+                .ToListAsync();
+
+            if (notifications == null || notifications.Count == 0)
+            {
+                throw new KeyNotFoundException("Không tìm thấy thông báo chưa đọc của người dùng hiện tại.");
+            }
+
+            notifications.ForEach(n => n.Isread = true);
+
+            await _unitOfWork.Repository<Notification>().UpdateRangeAsync(notifications, saveChanges: false);
+
             await _unitOfWork.SaveChangesAsync();
         }
 

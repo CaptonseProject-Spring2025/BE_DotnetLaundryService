@@ -226,6 +226,60 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// Re-order: Tái sử dụng thông tin từ một order cũ để thêm lại các item vào giỏ hàng.
+        /// </summary>
+        /// <param name="request">
+        ///     - <c>OrderId</c>: ID của order cũ (kiểu string)
+        /// </param>
+        /// <returns>Trả về giỏ hàng sau khi re-order thành công</returns>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (có JWT).  
+        /// 
+        /// **Logic**:
+        /// 1) Lấy userId từ token.  
+        /// 2) Lấy thông tin order cũ dựa trên OrderId, include các OrderItem và Orderextra nếu có.  
+        /// 3) Kiểm tra quyền sử dụng của người dùng đối với order đó.  
+        /// 4) Với mỗi OrderItem trong order cũ: chuyển thông tin thành AddToCartRequest và gọi phương thức re-order logic.  
+        /// 5) Commit transaction, lấy lại giỏ hàng hiện tại và trả về.
+        /// 
+        /// **Response codes**:
+        /// - **200**: Re-order thành công và trả về giỏ hàng
+        /// - **400**: Logic xử lý sai hoặc trạng thái không hợp lệ
+        /// - **401**: Chưa đăng nhập, token không hợp lệ
+        /// - **404**: Order không tồn tại hoặc không thuộc về người dùng
+        /// - **500**: Lỗi server
+        /// </remarks>
+        [Authorize]
+        [HttpPost("re-order")]
+        public async Task<IActionResult> Reorder([FromBody] ReorderRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var cart = await _orderService.ReorderAsync(HttpContext, request.OrderId);
+                return Ok(cart);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách các đơn hàng đã đặt của người dùng hiện tại.
         /// (Chỉ lấy các đơn có trạng thái khác "INCART")
         /// </summary>
