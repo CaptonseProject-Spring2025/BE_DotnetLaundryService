@@ -1,4 +1,5 @@
-﻿using FirebaseAdmin;
+﻿using DocumentFormat.OpenXml.Presentation;
+using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using LaundryService.Api.Extensions;
 using LaundryService.Api.Hub;
@@ -149,9 +150,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin() // Cho phép tất cả các domain
-              .AllowAnyHeader() // Cho phép tất cả các header
-              .AllowAnyMethod(); // Cho phép tất cả các phương thức HTTP (GET, POST, PUT, DELETE, v.v.)
+        policy.WithOrigins("https://capstone-project-fe.vercel.app", "https://laundry.vuhai.me") // hoặc thêm domain khác bạn cần
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // bắt buộc để websocket hoạt động với auth/cookie
     });
 });
 
