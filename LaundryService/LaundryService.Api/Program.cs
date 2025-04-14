@@ -150,7 +150,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("https://capstone-project-fe.vercel.app", "https://laundry.vuhai.me") // hoặc thêm domain khác bạn cần
+        policy.WithOrigins("https://captonse-project-fe.vercel.app", "https://laundry.vuhai.me") // hoặc thêm domain khác bạn cần
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials(); // bắt buộc để websocket hoạt động với auth/cookie
