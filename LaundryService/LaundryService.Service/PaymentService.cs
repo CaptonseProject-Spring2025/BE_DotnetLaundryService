@@ -430,7 +430,7 @@ namespace LaundryService.Service
                 if (string.IsNullOrEmpty(thankYouUrl))
                 {
                     // fallback
-                    thankYouUrl = "https://static.vecteezy.com/system/resources/previews/004/243/185/non_2x/presentation-page-template-thank-you-page-abstract-background-with-3d-balls-vector.jpg";
+                    thankYouUrl = "captonse-project-fe.vercel.app";
                 }
 
                 // Tuỳ ý gắn param => "?paymentId=..."
