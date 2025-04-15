@@ -174,15 +174,6 @@ namespace LaundryService.Api.Controllers
         /// <summary>
         /// Callback URL từ PayOS khi thanh toán xong.
         /// </summary>
-        /// <remarks>
-        /// PayOS sẽ chuyển hướng về URL này kèm các query param: ?code=00&id={transactionId}&cancel=false&status=PAID&orderCode=xxx
-        /// Ta sẽ:
-        ///   - Lấy transactionId = param 'id'
-        ///   - Lấy status = param 'status'
-        ///   - Tìm Payment => update Paymentstatus
-        ///   - Trả về link redirect (front-end) 
-        /// <returns>JSON có "redirectUrl" hoặc bạn có thể 302 redirect.</returns>
-        /// </remarks>
         [HttpGet("payos/callback")]
         public async Task<IActionResult> PayOSCallback(
             [FromQuery] string id,
