@@ -170,5 +170,54 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Callback URL từ PayOS khi thanh toán xong.
+        /// </summary>
+        /// <remarks>
+        /// PayOS sẽ chuyển hướng về URL này kèm các query param: ?code=00&id={transactionId}&cancel=false&status=PAID&orderCode=xxx
+        /// Ta sẽ:
+        ///   - Lấy transactionId = param 'id'
+        ///   - Lấy status = param 'status'
+        ///   - Tìm Payment => update Paymentstatus
+        ///   - Trả về link redirect (front-end) 
+        /// <returns>JSON có "redirectUrl" hoặc bạn có thể 302 redirect.</returns>
+        /// </remarks>
+        [HttpGet("payos/callback")]
+        public async Task<IActionResult> PayOSCallback(
+            [FromQuery] string id,
+            [FromQuery] string status,
+            [FromQuery] bool cancel,
+            [FromQuery] long orderCode
+        )
+        {
+            try
+            {
+                // 1) Gọi service => update Paymentstatus
+                var finalLink = await _paymentService.ConfirmPayOSCallbackAsync(id, status);
+
+                // 2) Tuỳ: 
+                //    - Trả JSON => client fetch => redirect
+                //    - Hoặc 302 redirect server side
+                // Ở đây ta làm JSON:
+                return Ok(new
+                {
+                    Message = "Cập nhật Payment thành công.",
+                    RedirectUrl = finalLink
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

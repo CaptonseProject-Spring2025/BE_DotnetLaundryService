@@ -398,5 +398,51 @@ namespace LaundryService.Service
 
             return response;
         }
+
+        /// <summary>
+        /// Xử lý callback sau khi PayOS redirect
+        /// </summary>
+        public async Task<string> ConfirmPayOSCallbackAsync(string transactionId, string status)
+        {
+            // 1) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // 2) Tìm Payment => transactionid = transactionId
+                var payment = _unitOfWork.Repository<Payment>()
+                    .GetAll()
+                    .FirstOrDefault(p => p.Transactionid == transactionId);
+
+                if (payment == null)
+                    throw new KeyNotFoundException($"Không tìm thấy Payment với TransactionId={transactionId}.");
+
+                // 3) Cập nhật Paymentstatus
+                payment.Paymentstatus = status;
+                await _unitOfWork.Repository<Payment>().UpdateAsync(payment, saveChanges: false);
+
+                // 4) Lưu DB + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                // 5) return url redirect về frontend
+                var thankYouUrl = _configuration["PayOS:ThankYouUrl"];
+                if (string.IsNullOrEmpty(thankYouUrl))
+                {
+                    // fallback
+                    thankYouUrl = "https://static.vecteezy.com/system/resources/previews/004/243/185/non_2x/presentation-page-template-thank-you-page-abstract-background-with-3d-balls-vector.jpg";
+                }
+
+                // Tuỳ ý gắn param => "?paymentId=..."
+                //var finalLink = $"{thankYouUrl}?paymentId={payment.Paymentid}&status={status}";
+                //return finalLink;
+                return thankYouUrl;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }

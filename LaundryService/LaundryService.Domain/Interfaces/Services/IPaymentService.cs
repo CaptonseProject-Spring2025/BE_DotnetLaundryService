@@ -17,5 +17,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<CreatePayOSPaymentLinkResponse> CreatePayOSPaymentLinkAsync(CreatePayOSPaymentLinkRequest request);
 
         Task<PaymentLinkInfoResponse> GetPayOSPaymentLinkInfoAsync(Guid paymentId);
+
+        Task<string> ConfirmPayOSCallbackAsync(string transactionId, string status);
     }
 }
