@@ -80,6 +80,7 @@ builder.Services.AddScoped<IOrderAssignmentHistoryService, OrderAssignmentHistor
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
 
 
