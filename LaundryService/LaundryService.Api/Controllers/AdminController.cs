@@ -253,5 +253,47 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Lỗi: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Xóa nhiều Order cùng lúc, bao gồm tất cả dữ liệu liên quan.
+        /// </summary>
+        /// <param name="request">Chứa danh sách <c>OrderIds</c> cần xóa.</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Lặp qua mỗi OrderId => Thực hiện xóa giống như <c>DeleteOrder</c>.
+        /// 2) Dùng Transaction chung, nếu 1 đơn lỗi => rollback tất cả.
+        /// 
+        /// **Response Codes**:
+        /// - `200 OK`: Xóa thành công tất cả.
+        /// - `404 Not Found`: Có ít nhất 1 Order không tồn tại => rollback.
+        /// - `400 Bad Request`: Danh sách rỗng, logic khác.
+        /// - `401 Unauthorized`: Không có quyền Admin.
+        /// - `500 Internal Server Error`: Lỗi server.
+        /// </remarks>
+        [HttpDelete("orders/batch")]
+        public async Task<IActionResult> DeleteOrders([FromBody] DeleteOrdersRequest request)
+        {
+            try
+            {
+                await _adminService.DeleteOrdersAsync(request.OrderIds);
+                return Ok(new { Message = "Xóa nhiều đơn hàng thành công!" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Lỗi: {ex.Message}" });
+            }
+        }
     }
 }

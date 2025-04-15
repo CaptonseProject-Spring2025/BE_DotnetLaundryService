@@ -22,5 +22,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task AssignDeliveryToDriverAsync(HttpContext httpContext, AssignPickupRequest request);
 
         Task DeleteOrderAsync(string orderId);
+
+        Task DeleteOrdersAsync(List<string> orderIds);
     }
 }
