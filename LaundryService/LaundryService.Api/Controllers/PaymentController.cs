@@ -82,5 +82,51 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Tạo link thanh toán PayOS cho Order. 
+        /// </summary>
+        /// <param name="request">
+        ///  - <c>OrderId</c>  
+        ///  - <c>Description</c>
+        /// </param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Xác thực Order => lấy totalPrice, user => buyerName/phone  
+        /// 2) Gọi PayOS tạo payment link  
+        /// 3) Tạo record Payment trong DB (Transaction)  
+        /// 4) Trả về data.checkoutUrl, data.qrCode, data.paymentLinkId, data.status  
+        /// 
+        /// **Response codes**:  
+        /// - 200: Thành công  
+        /// - 404: Không tìm thấy Order / PaymentMethod.  
+        /// - 400: Lỗi logic (Order chưa có totalPrice,...)  
+        /// - 500: Lỗi server/PayOS  
+        /// </remarks>
+        [HttpPost("payos/link")]
+        [ProducesResponseType(typeof(CreatePayOSPaymentLinkResponse), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> CreatePayOSPaymentLink([FromBody] CreatePayOSPaymentLinkRequest request)
+        {
+            try
+            {
+                var result = await _paymentService.CreatePayOSPaymentLinkAsync(request);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Không tìm thấy order / user / paymethod
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Lỗi logic 
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // 500
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }
