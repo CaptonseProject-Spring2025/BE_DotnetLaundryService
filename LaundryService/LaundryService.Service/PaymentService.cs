@@ -108,6 +108,11 @@ namespace LaundryService.Service
             var order = _unitOfWork.Repository<Order>()
                 .GetAll()
                 .Include(o => o.User)
+                    .Include(o => o.Orderitems)
+                        .ThenInclude(oi => oi.Orderextras)
+                            .ThenInclude(e => e.Extra)
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
                 .FirstOrDefault(o => o.Orderid == request.OrderId);
 
             if (order == null)
@@ -132,7 +137,6 @@ namespace LaundryService.Service
             var clientId = _configuration["PayOS:ClientID"];
             var apiKey = _configuration["PayOS:APIKey"];
             var checksumKey = _configuration["PayOS:ChecksumKey"];
-
             var payOS = new PayOS(clientId, apiKey, checksumKey);
 
             // Tạo request body gửi sang PayOS
@@ -140,12 +144,6 @@ namespace LaundryService.Service
 
             //    - amount = (int)order.Totalprice
             var amountInt = (int)order.Totalprice.Value;
-
-            //    - buyerName = user.Fullname
-            var buyerName = user.Fullname ?? "Unknown";
-
-            //    - buyerPhone = user.Phonenumber ?? "NoPhone"
-            var buyerPhone = user.Phonenumber ?? "NoPhone";
 
             var cancelUrl = _configuration["PayOS:CancelUrl"];
             var returnUrl = _configuration["PayOS:ReturnUrl"];
@@ -157,25 +155,62 @@ namespace LaundryService.Service
             var rawSign = request.OrderId + checksumKey;
             var signature = CalculateSha256(rawSign);
 
-            // Tạo 1 list items (tuỳ, demo 1 item)
-            var items = new List<ItemData>
+            // Tạo danh sách items từ OrderItems
+            var itemDataList = new List<ItemData>();
+            foreach (var oi in order.Orderitems)
             {
-                new ItemData("Payment for OrderId=" + order.Orderid, 1, amountInt)
-            };
+                // service price
+                var serviceName = oi.Service?.Name ?? "Unknown Service";
+                decimal servicePrice = oi.Service?.Price ?? 0;
+                // tính tổng extras
+                decimal extrasSum = 0;
+                var extraNames = new List<string>();
+                foreach (var oe in oi.Orderextras)
+                {
+                    var exName = oe.Extra?.Name ?? "Extra";
+                    var exPrice = oe.Extra?.Price ?? 0;
+                    extrasSum += exPrice;
+                    extraNames.Add(exName);
+                }
+
+                // Tên item: ghép service + tên extras
+                var combinedName = serviceName;
+                if (extraNames.Any())
+                {
+                    combinedName += " + " + string.Join(", ", extraNames);
+                }
+
+                // Price = servicePrice + extrasSum
+                // Lưu ý: PayOS chờ kiểu int. Nếu sợ vượt int, xem có logic cap or throw?
+                var finalUnitPrice = (int)(servicePrice + extrasSum);
+                // Số lượng
+                var quantity = oi.Quantity;
+
+                itemDataList.Add(new ItemData(
+                    combinedName,
+                    quantity,
+                    finalUnitPrice
+                ));
+            }
+
+            // Xử lý request.Description: nếu rỗng => dùng orderId
+            var desc = string.IsNullOrWhiteSpace(request.Description)
+                ? request.OrderId
+                : request.Description.Trim();
 
             // Tạo PaymentData (nếu dùng SDK payOS)
             var paymentData = new PaymentData(
                 orderCodeLong,
                 amountInt,
-                request.Description.Trim(),
-                items,
+                desc,
+                itemDataList,
                 cancelUrl,
                 returnUrl
 )
             {
                 expiredAt = (int)expiredAt,
-                buyerName = buyerName,
-                buyerPhone = buyerPhone,
+                buyerName = user.Fullname ?? "Unknown",
+                buyerPhone = user.Phonenumber ?? "NoPhone",
                 signature = signature
             };            
 
@@ -190,10 +225,7 @@ namespace LaundryService.Service
                 throw new ApplicationException($"Lỗi khi gọi PayOS: {ex.Message}", ex);
             }
 
-            // Kiểm tra code trả về?
-            // if (payosResponse.code != "00") throw new ApplicationException("PayOS error: ...");
-
-            // 5) Lưu Payment record
+            // Lưu Payment record
             await _unitOfWork.BeginTransaction();
             try
             {

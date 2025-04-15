@@ -13,7 +13,6 @@ namespace LaundryService.Dto.Requests
         public string OrderId { get; set; } = null!;
 
 
-        [Required(ErrorMessage = "Description is required.")]
         [MaxLength(255, ErrorMessage = "Description cannot exceed 255 characters.")]
         public string Description { get; set; } = null!;
     }
