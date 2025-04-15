@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Net.payOS.Types;
 using Net.payOS;
+using System.Text.Json;
 
 namespace LaundryService.Service
 {
@@ -225,6 +226,9 @@ namespace LaundryService.Service
                 throw new ApplicationException($"Lỗi khi gọi PayOS: {ex.Message}", ex);
             }
 
+            // Paymentid để lưu vào DB
+            var paymentId = Guid.NewGuid();
+
             // Lưu Payment record
             await _unitOfWork.BeginTransaction();
             try
@@ -232,7 +236,7 @@ namespace LaundryService.Service
                 // Tạo Payment entity
                 var payment = new Payment
                 {
-                    Paymentid = Guid.NewGuid(),
+                    Paymentid = paymentId,
                     Orderid = order.Orderid,
                     Paymentdate = DateTime.UtcNow,
                     Amount = order.Totalprice.Value,
@@ -261,6 +265,7 @@ namespace LaundryService.Service
             //    - data.status => payosResponse.status
             var resp = new CreatePayOSPaymentLinkResponse
             {
+                PaymentId = paymentId,
                 CheckoutUrl = payosResponse.checkoutUrl,
                 QrCode = payosResponse.qrCode,
                 PaymentLinkId = payosResponse.paymentLinkId,
@@ -276,6 +281,122 @@ namespace LaundryService.Service
             var bytes = Encoding.UTF8.GetBytes(rawSign);
             var hash = sha.ComputeHash(bytes);
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
+        }
+
+        /// <summary>
+        /// (MỚI) Lấy thông tin link thanh toán PayOS dựa vào paymentId
+        /// </summary>
+        public async Task<PaymentLinkInfoResponse> GetPayOSPaymentLinkInfoAsync(Guid paymentId)
+        {
+            // 1) Tìm Payment => parse paymentmetadata để lấy orderCode (long)
+            var payment = _unitOfWork.Repository<Payment>()
+                .GetAll()
+                .FirstOrDefault(p => p.Paymentid == paymentId);
+
+            if (payment == null)
+                throw new KeyNotFoundException($"Không tìm thấy PaymentId={paymentId}.");
+
+            if (string.IsNullOrWhiteSpace(payment.Paymentmetadata))
+                throw new ApplicationException("Paymentmetadata rỗng, không có orderCode PayOS.");
+
+            // Giả sử paymentmetadata JSON có field "orderCode" => parse
+            // Demo parse object, bám theo data sample
+            var pmJsonDoc = JsonDocument.Parse(payment.Paymentmetadata);
+            var rootEl = pmJsonDoc.RootElement;
+            if (!rootEl.TryGetProperty("orderCode", out var orderCodeEl))
+                throw new ApplicationException("Không tìm thấy 'orderCode' trong paymentmetadata.");
+
+            var orderCodeLong = orderCodeEl.GetInt64();
+
+            // 2) Gọi PayOS => getPaymentLinkInformation(orderCodeLong)
+            var clientId = _configuration["PayOS:ClientID"];
+            var apiKey = _configuration["PayOS:APIKey"];
+            var checksumKey = _configuration["PayOS:ChecksumKey"];
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            PaymentLinkInformation payosInfo;
+            try
+            {
+                payosInfo = await payOS.getPaymentLinkInformation(orderCodeLong);
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException($"Lỗi khi gọi payOS.getPaymentLinkInformation: {ex.Message}", ex);
+            }
+
+            if (payosInfo == null)
+            {
+                // code != "00" hoặc data=null => có thể quăng lỗi
+                throw new ApplicationException(
+                    $"Không lấy được data PaymentLinkInformation từ PayOS. code={payosInfo}"
+                );
+            }
+
+            // 3) Convert payosInfo.data => PaymentLinkInfoResponse
+            //    createdAt, canceledAt => convert sang giờ VN (nếu parse OK)
+            DateTime createdAtVn = DateTime.UtcNow;
+            if (DateTime.TryParse(payosInfo.createdAt, out var dt))
+            {
+                // PayOS trả "2023-08-01T19:44:15.000Z" => Z => UTC
+                dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+
+                createdAtVn = _util.ConvertToVnTime(dt);
+            }
+
+            DateTime? canceledAtVn = null;
+            if (!string.IsNullOrWhiteSpace(payosInfo.canceledAt))
+            {
+                if (DateTime.TryParse(payosInfo.canceledAt, out var cat))
+                {
+                    canceledAtVn = _util.ConvertToVnTime(cat);
+                }
+            }
+
+            var response = new PaymentLinkInfoResponse
+            {
+                Id = payosInfo.id ?? "",
+                OrderCode = payosInfo.orderCode,
+                Amount = payosInfo.amount,
+                AmountPaid = payosInfo.amountPaid,
+                AmountRemaining = payosInfo.amountRemaining,
+                Status = payosInfo.status ?? "",
+                CreatedAt = createdAtVn,
+                CancellationReason = payosInfo.cancellationReason,
+                CanceledAt = canceledAtVn,
+            };
+
+            // map transactions => PaymentLinkTransactionResponse
+            if (payosInfo.transactions != null)
+            {
+                foreach (var t in payosInfo.transactions)
+                {
+                    DateTime transDateTimeVn = DateTime.UtcNow;
+                    if (DateTime.TryParse(t.transactionDateTime, out var dtT))
+                    {
+                        // PayOS trả "2023-08-01T19:44:15.000Z" => Z => UTC
+                        dtT = DateTime.SpecifyKind(dtT, DateTimeKind.Utc);
+
+                        transDateTimeVn = _util.ConvertToVnTime(dtT);
+                    }
+
+                    response.Transactions.Add(new PaymentLinkTransactionResponse
+                    {
+                        Reference = t.reference ?? "",
+                        Amount = t.amount,
+                        AccountNumber = t.accountNumber,
+                        Description = t.description,
+                        TransactionDateTime = transDateTimeVn,
+                        VirtualAccountName = t.virtualAccountName,
+                        VirtualAccountNumber = t.virtualAccountNumber,
+                        CounterAccountBankId = t.counterAccountBankId,
+                        CounterAccountBankName = t.counterAccountBankName,
+                        CounterAccountName = t.counterAccountName,
+                        CounterAccountNumber = t.counterAccountNumber
+                    });
+                }
+            }
+
+            return response;
         }
     }
 }

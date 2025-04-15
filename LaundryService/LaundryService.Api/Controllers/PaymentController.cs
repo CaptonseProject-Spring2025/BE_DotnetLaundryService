@@ -128,5 +128,47 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Lấy thông tin link thanh toán PayOS từ paymentId.
+        /// </summary>
+        /// <param name="paymentId">PaymentId (Guid)</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Tìm Payment theo paymentId -> parse metadata -> ra orderCode (long).
+        /// 2) Gọi PayOS.getPaymentLinkInformation(orderCode).
+        /// 3) Trả về toàn bộ thông tin PaymentLinkInformation (có convert thời gian sang VN).
+        /// 
+        /// **Response codes**:
+        /// - 200: Thành công, trả về <see cref="PaymentLinkInfoResponse"/>.
+        /// - 404: Không tìm thấy Payment / orderCode.
+        /// - 400: Lỗi logic metadata / date parse.
+        /// - 500: Lỗi server/PayOS.
+        /// </remarks>
+        [HttpGet("payos/info/{paymentId}")]
+        [ProducesResponseType(typeof(PaymentLinkInfoResponse), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetPayOSPaymentLinkInfo(Guid paymentId)
+        {
+            try
+            {
+                var result = await _paymentService.GetPayOSPaymentLinkInfoAsync(paymentId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // 404
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // 400
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // 500
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

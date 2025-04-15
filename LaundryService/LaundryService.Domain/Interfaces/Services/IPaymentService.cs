@@ -15,5 +15,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<List<PaymentMethodResponse>> GetAllPaymentMethodsAsync();
 
         Task<CreatePayOSPaymentLinkResponse> CreatePayOSPaymentLinkAsync(CreatePayOSPaymentLinkRequest request);
+
+        Task<PaymentLinkInfoResponse> GetPayOSPaymentLinkInfoAsync(Guid paymentId);
     }
 }
