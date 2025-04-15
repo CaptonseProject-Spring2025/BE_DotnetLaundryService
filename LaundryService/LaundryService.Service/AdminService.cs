@@ -21,13 +21,15 @@ namespace LaundryService.Service
         private readonly IUtil _util;
         private readonly IConfiguration _configuration;
         private readonly IMapboxService _mapboxService;
+        private readonly IFileStorageService _fileStorageService;
 
-        public AdminService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, IMapboxService mapboxService)
+        public AdminService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, IMapboxService mapboxService, IFileStorageService fileStorageService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _configuration = configuration;
             _mapboxService = mapboxService;
+            _fileStorageService = fileStorageService;
         }
 
         public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
@@ -437,6 +439,150 @@ namespace LaundryService.Service
             catch
             {
                 // Rollback nếu có lỗi
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public async Task DeleteOrderAsync(string orderId)
+        {
+            // Bắt đầu Transaction
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                // Tìm Order => nếu ko có => throw
+                var order = _unitOfWork.Repository<Order>()
+                    .GetAll()
+                    .FirstOrDefault(o => o.Orderid == orderId);
+
+                if (order == null)
+                    throw new KeyNotFoundException($"Không tìm thấy OrderId = {orderId}");
+
+                // Lấy hết OrderStatusHistory => sau đó xoá OrderPhotos
+                var orderStatusHistories = _unitOfWork.Repository<Orderstatushistory>()
+                    .GetAll()
+                    .Include(x => x.Orderphotos)  // cần Include để load list OrderPhoto
+                    .Where(x => x.Orderid == orderId)
+                    .ToList();
+
+                // 1) Xoá ảnh (OrderPhotos) trên Backblaze + DB
+                foreach (var history in orderStatusHistories)
+                {
+                    var photos = history.Orderphotos.ToList();
+                    foreach (var photo in photos)
+                    {
+                        // Xoá file B2
+                        await _fileStorageService.DeleteFileAsync(photo.Photourl);
+
+                        // Xoá record OrderPhoto
+                        await _unitOfWork.Repository<Orderphoto>()
+                                         .DeleteAsync(photo, saveChanges: false);
+                    }
+                }
+
+                // 2) Xoá OrderStatusHistory
+                foreach (var history in orderStatusHistories)
+                {
+                    await _unitOfWork.Repository<Orderstatushistory>()
+                                     .DeleteAsync(history, saveChanges: false);
+                }
+
+                // Xoá OrderExtras => reliant on OrderItems
+                //    => Lấy các OrderItem => Lấy OrderExtra
+                var orderItemIds = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Where(oi => oi.Orderid == orderId)
+                    .Select(oi => oi.Orderitemid)
+                    .ToList();
+
+                // 3) Lấy tất cả OrderExtras => xóa
+                var orderExtras = _unitOfWork.Repository<Orderextra>()
+                    .GetAll()
+                    .Where(oe => orderItemIds.Contains(oe.Orderitemid))
+                    .ToList();
+                foreach (var oe in orderExtras)
+                {
+                    await _unitOfWork.Repository<Orderextra>()
+                                     .DeleteAsync(oe, saveChanges: false);
+                }
+
+                // 4) Xoá OrderItems
+                var orderItems = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Where(oi => oi.Orderid == orderId)
+                    .ToList();
+                foreach (var item in orderItems)
+                {
+                    await _unitOfWork.Repository<Orderitem>()
+                                     .DeleteAsync(item, saveChanges: false);
+                }
+
+                // 5) Xoá OrderAssignmentHistory
+                var assignmentHistories = _unitOfWork.Repository<Orderassignmenthistory>()
+                    .GetAll()
+                    .Where(ah => ah.Orderid == orderId)
+                    .ToList();
+                foreach (var ah in assignmentHistories)
+                {
+                    await _unitOfWork.Repository<Orderassignmenthistory>()
+                                     .DeleteAsync(ah, saveChanges: false);
+                }
+
+                // 6) Xoá Payments
+                var payments = _unitOfWork.Repository<Payment>()
+                    .GetAll()
+                    .Where(p => p.Orderid == orderId)
+                    .ToList();
+                foreach (var pay in payments)
+                {
+                    await _unitOfWork.Repository<Payment>()
+                                     .DeleteAsync(pay, saveChanges: false);
+                }
+
+                // 7) Xoá DriverLocationHistory
+                var driverLoc = _unitOfWork.Repository<Driverlocationhistory>()
+                    .GetAll()
+                    .Where(d => d.Orderid == orderId)
+                    .ToList();
+                foreach (var dlh in driverLoc)
+                {
+                    await _unitOfWork.Repository<Driverlocationhistory>()
+                                     .DeleteAsync(dlh, saveChanges: false);
+                }
+
+                // 8) Xoá Ratings
+                var ratings = _unitOfWork.Repository<Rating>()
+                    .GetAll()
+                    .Where(r => r.Orderid == orderId)
+                    .ToList();
+                foreach (var r in ratings)
+                {
+                    await _unitOfWork.Repository<Rating>()
+                                     .DeleteAsync(r, saveChanges: false);
+                }
+
+                // 9) Xoá OrderDiscounts
+                var orderDiscounts = _unitOfWork.Repository<Orderdiscount>()
+                    .GetAll()
+                    .Where(od => od.Orderid == orderId)
+                    .ToList();
+                foreach (var od in orderDiscounts)
+                {
+                    await _unitOfWork.Repository<Orderdiscount>()
+                                     .DeleteAsync(od, saveChanges: false);
+                }
+
+                // 10) Xoá Order
+                await _unitOfWork.Repository<Order>().DeleteAsync(order, saveChanges: false);
+
+                // Save + commit transaction
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                // rollback nếu có lỗi
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }

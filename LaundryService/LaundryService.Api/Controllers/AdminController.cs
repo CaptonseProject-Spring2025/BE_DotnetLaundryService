@@ -213,5 +213,45 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Xóa Order và toàn bộ dữ liệu liên quan (OrderStatusHistory, OrderPhotos, OrderItems, v.v.). 
+        /// Kèm xóa file trên Backblaze (nếu có) ở OrderPhotos.
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng cần xóa.</param>
+        /// <remarks>
+        /// **Logic**:
+        /// 1) Tìm Order. Nếu không có => 404.
+        /// 2) Xóa theo thứ tự: OrderPhoto -> OrderStatusHistory -> OrderExtras -> OrderItems 
+        ///    -> OrderAssignmentHistory -> Payments -> DriverLocationHistory -> Ratings -> OrderDiscounts -> Orders
+        /// 
+        /// **Response codes**:
+        /// - 200: Xoá thành công.
+        /// - 404: Không tìm thấy orderId.
+        /// - 400: Lỗi logic (nếu cần).
+        /// - 401: Không có quyền.
+        /// - 500: Lỗi server.
+        /// </remarks>
+        [HttpDelete("orders/{orderId}")]
+        public async Task<IActionResult> DeleteOrder(string orderId)
+        {
+            try
+            {
+                await _adminService.DeleteOrderAsync(orderId);
+                return Ok(new { Message = "Xóa đơn hàng thành công!" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Lỗi: {ex.Message}" });
+            }
+        }
     }
 }
