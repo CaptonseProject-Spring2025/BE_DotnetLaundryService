@@ -104,6 +104,7 @@ namespace LaundryService.Service
             {
                 AssignmentId = assignment.Assignmentid,
                 OrderId = order.Orderid,
+                CustomerId = order.Userid,
                 Fullname = user?.Fullname,
                 Phonenumber = user?.Phonenumber,
                 Note = note,

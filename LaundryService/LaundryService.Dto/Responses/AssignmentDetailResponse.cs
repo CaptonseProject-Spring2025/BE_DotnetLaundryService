@@ -10,6 +10,7 @@ namespace LaundryService.Dto.Responses
     {
         public Guid AssignmentId { get; set; }
         public string OrderId { get; set; } = null!;
+        public Guid CustomerId { get; set; }
         public string? Fullname { get; set; }
         public string? Phonenumber { get; set; }
         public string? Note { get; set; }
