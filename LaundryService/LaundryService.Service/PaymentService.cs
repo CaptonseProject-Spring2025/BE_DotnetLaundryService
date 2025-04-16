@@ -564,9 +564,11 @@ namespace LaundryService.Service
                 }
 
                 DateTime transDateTimeVn = DateTime.UtcNow;
+
                 if (DateTime.TryParse(verifiedData.transactionDateTime, out var dtT))
                 {
-                    transDateTimeVn = dtT.ToUniversalTime();
+                    // Không convert giờ nữa, chỉ cần đánh dấu là UTC để PostgreSQL cho phép lưu
+                    transDateTimeVn = DateTime.SpecifyKind(dtT, DateTimeKind.Utc);
                 }
 
                 // Cập nhật Payment
