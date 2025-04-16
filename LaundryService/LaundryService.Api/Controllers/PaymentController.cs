@@ -228,8 +228,11 @@ namespace LaundryService.Api.Controllers
         {
             // Không xử lý DB nữa — Webhook đã lo.
             // Chỉ redirect về FE, kèm query string
+
             var AppUrl = "https://laundry.vuhai.me/";
             var redirectUrl = $"{AppUrl}?status={status}&orderCode={orderCode}";
+
+            await Task.Delay(2000); // Dừng 2 giây
 
             return Redirect(redirectUrl); // 302 redirect về FE
         }

@@ -558,23 +558,14 @@ namespace LaundryService.Service
                 }
                 if (payment.Paymentstatus == "PAID" && finalStatus != "PAID")
                 {
-                    // Cẩn thận: Nếu đã PAID rồi mà webhook báo trạng thái khác -> có vấn đề, cần điều tra.
+                    // Nếu đã PAID rồi mà webhook báo trạng thái khác -> có vấn đề, cần điều tra.
                     _logger.LogWarning("Payment {PaymentId} is already PAID, but received webhook with status '{Status}'. Potential issue. Skipping update.", payment.Paymentid, finalStatus);
                     return; // Không nên thay đổi trạng thái từ PAID thành trạng thái khác qua webhook tự động.
-                }
-
-                DateTime transDateTimeVn = DateTime.UtcNow;
-                if (DateTime.TryParse(verifiedData.transactionDateTime, out var dtT))
-                {
-                    // PayOS trả giờ VN, nên phải gắn Local → rồi convert về UTC để lưu
-                    dtT = DateTime.SpecifyKind(dtT, DateTimeKind.Local);
-                    transDateTimeVn = dtT.ToUniversalTime(); // chuyển sang UTC trước khi lưu
                 }
 
                 // Cập nhật Payment
                 payment.Paymentstatus = finalStatus;
                 payment.Updatedat = DateTime.UtcNow;
-                payment.Paymentdate = transDateTimeVn;
 
                 await paymentRepo.UpdateAsync(payment, saveChanges: false);
 
