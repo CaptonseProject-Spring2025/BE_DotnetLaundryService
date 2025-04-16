@@ -423,13 +423,23 @@ namespace LaundryService.Service
                     throw new KeyNotFoundException($"Payment associated with PayOS link ID '{paymentLinkId}' not found.");
 
                 // 3) Cập nhật Paymentstatus
-                payment.Paymentstatus = status;
-                payment.Updatedat = DateTime.UtcNow;
-                await _unitOfWork.Repository<Payment>().UpdateAsync(payment, saveChanges: false);
+                // Chỗ này chỉ cho cập nhật status = "CANCELLED", vì status "PAID" đã được cập nhật qua webhook
+                if (status == "CANCELLED")
+                {
+                    _logger.LogInformation("Change status to CANCELLED");
+                    payment.Paymentstatus = status;
+                    payment.Updatedat = DateTime.UtcNow;
+                    await _unitOfWork.Repository<Payment>().UpdateAsync(payment, saveChanges: false);
 
-                // 4) Lưu DB + commit
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitTransaction();
+                    // 4) Lưu DB + commit
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransaction();
+                }
+                else
+                {
+                    // Nếu status khác thì không cập nhật gì cả
+                    _logger.LogInformation("Status is not CANCELLED, no update needed.");
+                }
 
                 // 5) return url redirect về frontend
                 var thankYouUrl = _configuration["PayOS:ThankYouUrl"];
