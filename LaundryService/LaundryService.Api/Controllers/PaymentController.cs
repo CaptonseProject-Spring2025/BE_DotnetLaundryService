@@ -20,6 +20,7 @@ namespace LaundryService.Api.Controllers
     {
         private readonly IPaymentService _paymentService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentController> _logger;
 
         public PaymentController(IPaymentService paymentService, IConfiguration configuration)
         {
@@ -265,10 +266,10 @@ namespace LaundryService.Api.Controllers
         [AllowAnonymous] // Webhook không cần user login
         public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody)
         {
-            if (webhookBody == null || webhookBody.data == null || string.IsNullOrEmpty(webhookBody.signature))
-            {
-                return BadRequest(new { Message = "Invalid webhook payload." });
-            }
+            //if (webhookBody == null || webhookBody.data == null || string.IsNullOrEmpty(webhookBody.signature))
+            //{
+            //    return BadRequest(new { Message = "Invalid webhook payload." });
+            //}
 
             try
             {
