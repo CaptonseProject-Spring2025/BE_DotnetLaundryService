@@ -563,13 +563,10 @@ namespace LaundryService.Service
                     return; // Không nên thay đổi trạng thái từ PAID thành trạng thái khác qua webhook tự động.
                 }
 
-                // Chuyển đổi transactionDateTime sang giờ VN
                 DateTime transDateTimeVn = DateTime.UtcNow;
                 if (DateTime.TryParse(verifiedData.transactionDateTime, out var dtT))
                 {
-                    // PayOS trả "2023-08-01T19:44:15.000Z" => Z => UTC
-                    dtT = DateTime.SpecifyKind(dtT, DateTimeKind.Utc);
-                    transDateTimeVn = _util.ConvertToVnTime(dtT);
+                    transDateTimeVn = dtT.ToUniversalTime();
                 }
 
                 // Cập nhật Payment
