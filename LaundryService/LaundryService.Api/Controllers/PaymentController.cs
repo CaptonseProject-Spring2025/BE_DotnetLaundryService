@@ -4,6 +4,8 @@ using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Net.payOS;
+using Net.payOS.Types;
 using System.Net;
 
 namespace LaundryService.Api.Controllers
@@ -17,10 +19,12 @@ namespace LaundryService.Api.Controllers
     public class PaymentController : BaseApiController
     {
         private readonly IPaymentService _paymentService;
+        private readonly IConfiguration _configuration;
 
-        public PaymentController(IPaymentService paymentService)
+        public PaymentController(IPaymentService paymentService, IConfiguration configuration)
         {
             _paymentService = paymentService;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -171,6 +175,46 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        ///// <summary>
+        ///// Callback URL từ PayOS khi thanh toán xong.
+        ///// </summary>
+        //[HttpGet("payos/callback")]
+        //public async Task<IActionResult> PayOSCallback(
+        //    [FromQuery] string id,
+        //    [FromQuery] string status,
+        //    [FromQuery] bool cancel,
+        //    [FromQuery] long orderCode
+        //)
+        //{
+        //    try
+        //    {
+        //        // 1) Gọi service => update Paymentstatus
+        //        var finalLink = await _paymentService.ConfirmPayOSCallbackAsync(id, status);
+
+        //        // 2) Tuỳ: 
+        //        //    - Trả JSON => client fetch => redirect
+        //        //    - Hoặc 302 redirect server side
+        //        // Ở đây ta làm JSON:
+        //        return Ok(new
+        //        {
+        //            Message = "Cập nhật Payment thành công.",
+        //            RedirectUrl = finalLink
+        //        });
+        //    }
+        //    catch (KeyNotFoundException ex)
+        //    {
+        //        return NotFound(new { Message = ex.Message });
+        //    }
+        //    catch (ApplicationException ex)
+        //    {
+        //        return BadRequest(new { Message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { Message = ex.Message });
+        //    }
+        //}
+
         /// <summary>
         /// Callback URL từ PayOS khi thanh toán xong.
         /// </summary>
@@ -182,33 +226,98 @@ namespace LaundryService.Api.Controllers
             [FromQuery] long orderCode
         )
         {
+            // Không xử lý DB nữa — Webhook đã lo.
+            // Chỉ redirect về FE, kèm query string
+            var AppUrl = "https://laundry.vuhai.me/";
+            var redirectUrl = $"{AppUrl}?status={status}&orderCode={orderCode}";
+
+            return Redirect(redirectUrl); // 302 redirect về FE
+        }
+
+        /// <summary>
+        /// [Webhook] Endpoint nhận thông báo cập nhật trạng thái thanh toán từ PayOS.
+        /// </summary>
+        /// <param name="webhookBody">Dữ liệu JSON được gửi từ PayOS.</param>
+        /// <remarks>
+        /// **Quan trọng:** Endpoint này KHÔNG yêu cầu xác thực người dùng (Authorize).
+        /// Việc xác thực dựa trên signature của webhook được xử lý trong service.
+        /// URL này cần được cấu hình trong trang quản trị của PayOS.
+        ///
+        /// **Logic**:
+        /// 1. Nhận request POST từ PayOS.
+        /// 2. Chuyển toàn bộ body cho `IPaymentService.HandlePayOSWebhookAsync`.
+        /// 3. Service sẽ:
+        ///    a. Xác thực signature.
+        ///    b. Tìm Payment tương ứng.
+        ///    c. Cập nhật Payment status, Order status (nếu PAID).
+        ///    d. Lưu vào DB.
+        /// 4. Trả về HTTP Status Code cho PayOS:
+        ///    - 200 OK: Xử lý thành công (signature hợp lệ, DB update OK).
+        ///    - 400 Bad Request: Signature không hợp lệ.
+        ///    - 404 Not Found: Không tìm thấy Payment tương ứng (service có thể chọn bỏ qua thay vì trả 404).
+        ///    - 500 Internal Server Error: Lỗi hệ thống trong quá trình xử lý hoặc cập nhật DB.
+        /// </remarks>
+        /// <response code="200">Webhook đã được nhận và xử lý thành công.</response>
+        /// <response code="400">Dữ liệu webhook không hợp lệ (sai signature).</response>
+        /// <response code="500">Lỗi server trong quá trình xử lý webhook.</response>
+        [HttpPost("payos/webhook")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [AllowAnonymous] // Webhook không cần user login
+        public async Task<IActionResult> PayOSWebhook([FromBody] WebhookType webhookBody)
+        {
+            if (webhookBody == null || webhookBody.data == null || string.IsNullOrEmpty(webhookBody.signature))
+            {
+                return BadRequest(new { Message = "Invalid webhook payload." });
+            }
+
             try
             {
-                // 1) Gọi service => update Paymentstatus
-                var finalLink = await _paymentService.ConfirmPayOSCallbackAsync(id, status);
+                // 1) Gọi service để xử lý
+                await _paymentService.HandlePayOSWebhookAsync(webhookBody);
 
-                // 2) Tuỳ: 
-                //    - Trả JSON => client fetch => redirect
-                //    - Hoặc 302 redirect server side
-                // Ở đây ta làm JSON:
-                return Ok(new
-                {
-                    Message = "Cập nhật Payment thành công.",
-                    RedirectUrl = finalLink
-                });
+                // 2) Trả về 200 OK (có thể trả object tuỳ ý, quan trọng là PayOS thấy status code 200)
+                return Ok(new { Message = "Webhook processed successfully" });
             }
             catch (KeyNotFoundException ex)
             {
+                // Payment / orderCode / link not found
                 return NotFound(new { Message = ex.Message });
             }
             catch (ApplicationException ex)
             {
+                // Lỗi logic (chữ ký sai, code != "00", v.v.)
                 return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Các lỗi khác (lỗi DB, lỗi logic không mong muốn trong service)
+                // Trả về 500 để PayOS biết có lỗi phía server và có thể thử gửi lại webhook sau
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Tích hợp Xác nhận Webhook URL
+        /// </summary>
+        [HttpPost("payos/confirm-webhook")]
+        public async Task<IActionResult> ConfirmWebhookUrl([FromBody] string webhookUrl)
+        {
+            try
+            {
+                var clientId = _configuration["PayOS:ClientID"];
+                var apiKey = _configuration["PayOS:APIKey"];
+                var checksumKey = _configuration["PayOS:ChecksumKey"];
+                var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+                var result = payOS.confirmWebhook(webhookUrl);
+
+                return Ok(new { Message = "Webhook URL confirmed", Result = result });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
     }
 }

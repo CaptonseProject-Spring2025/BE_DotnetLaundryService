@@ -13,6 +13,9 @@ using Microsoft.Extensions.Configuration;
 using Net.payOS.Types;
 using Net.payOS;
 using System.Text.Json;
+using Amazon.Runtime.Internal.Util;
+using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace LaundryService.Service
 {
@@ -21,12 +24,14 @@ namespace LaundryService.Service
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration)
+        public PaymentService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, ILogger<PaymentService> logger)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<PaymentMethodResponse> CreatePaymentMethodAsync(CreatePaymentMethodRequest request)
@@ -284,7 +289,7 @@ namespace LaundryService.Service
         }
 
         /// <summary>
-        /// (MỚI) Lấy thông tin link thanh toán PayOS dựa vào paymentId
+        /// Lấy thông tin link thanh toán PayOS dựa vào paymentId
         /// </summary>
         public async Task<PaymentLinkInfoResponse> GetPayOSPaymentLinkInfoAsync(Guid paymentId)
         {
@@ -402,23 +407,24 @@ namespace LaundryService.Service
         /// <summary>
         /// Xử lý callback sau khi PayOS redirect
         /// </summary>
-        public async Task<string> ConfirmPayOSCallbackAsync(string transactionId, string status)
+        public async Task<string> ConfirmPayOSCallbackAsync(string paymentLinkId, string status)
         {
             // 1) Bắt đầu transaction
             await _unitOfWork.BeginTransaction();
 
             try
             {
-                // 2) Tìm Payment => transactionid = transactionId
+                // 2) Tìm Payment => transactionid = paymentLinkId
                 var payment = _unitOfWork.Repository<Payment>()
                     .GetAll()
-                    .FirstOrDefault(p => p.Transactionid == transactionId);
+                    .FirstOrDefault(p => p.Transactionid == paymentLinkId);
 
                 if (payment == null)
-                    throw new KeyNotFoundException($"Không tìm thấy Payment với TransactionId={transactionId}.");
+                    throw new KeyNotFoundException($"Payment associated with PayOS link ID '{paymentLinkId}' not found.");
 
                 // 3) Cập nhật Paymentstatus
                 payment.Paymentstatus = status;
+                payment.Updatedat = DateTime.UtcNow;
                 await _unitOfWork.Repository<Payment>().UpdateAsync(payment, saveChanges: false);
 
                 // 4) Lưu DB + commit
@@ -442,6 +448,148 @@ namespace LaundryService.Service
             {
                 await _unitOfWork.RollbackTransaction();
                 throw;
+            }
+        }
+
+        // --- Phương thức xử lý Webhook ---
+        public async Task HandlePayOSWebhookAsync(WebhookType webhookBody)
+        {
+            _logger.LogInformation("Received PayOS webhook.");
+
+            // 1) Tạo PayOS client
+            var clientId = _configuration["PayOS:ClientID"];
+            var apiKey = _configuration["PayOS:APIKey"];
+            var checksumKey = _configuration["PayOS:ChecksumKey"];
+            var payOS = new PayOS(clientId, apiKey, checksumKey);
+
+            // 2) Xác minh chữ ký => verifyPaymentWebhookData
+            WebhookData verifiedData;
+            try
+            {
+                verifiedData = payOS.verifyPaymentWebhookData(webhookBody);
+                _logger.LogInformation("Webhook signature verified successfully for OrderCode: {OrderCode}", verifiedData.orderCode);
+            }
+            catch (Exception ex)
+            {
+                // Nếu xác minh chữ ký sai => ném lỗi
+                _logger.LogError(ex, "PayOS webhook signature verification failed.");
+                throw new ApplicationException($"Webhook signature invalid: {ex.Message}", ex);
+            }
+
+            if (verifiedData == null)
+            {
+                _logger.LogError("PayOS verifyPaymentWebhookData returned null after signature check (unexpected).");
+                throw new ApplicationException("Webhook verification returned invalid data.");
+            }
+
+            // 3) Kiểm tra code= "00", success= true => success
+            //    code != "00" => fail / partial
+            //    Tùy logic => Paymentstatus
+            var code = verifiedData.code; // "00" or "99"...
+            var desc = verifiedData.desc; // "success" ...
+            var orderCode = verifiedData.orderCode; // long
+            var paymentLinkId = verifiedData.paymentLinkId;
+
+            // 4) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 4.1) Tìm Payment => gợi ý: 
+                //      - Tìm theo transactionid= paymentLinkId, 
+                //        hoặc parse Paymentmetadata -> so sánh orderCode
+                var paymentRepo = _unitOfWork.Repository<Payment>();
+
+                var payment = paymentRepo
+                    .GetAll()
+                    .FirstOrDefault(p => p.Transactionid == paymentLinkId);
+
+                if (payment == null)
+                {
+                    // Nếu transactionid ko thấy => ta parse Paymentmetadata so sánh orderCode
+                    var allPayments = paymentRepo.GetAll().ToList();
+                    payment = allPayments.FirstOrDefault(p =>
+                    {
+                        if (string.IsNullOrWhiteSpace(p.Paymentmetadata))
+                            return false;
+
+                        try
+                        {
+                            using var doc = JsonDocument.Parse(p.Paymentmetadata);
+                            var root = doc.RootElement;
+                            if (root.TryGetProperty("orderCode", out var ocEl))
+                            {
+                                long oc = ocEl.GetInt64();
+                                return oc == orderCode;
+                            }
+                        }
+                        catch { /* ignore */ }
+                        return false;
+                    });
+                }
+
+                if (payment == null)
+                {
+                    _logger.LogError("Payment not found for PaymentLinkId: {PaymentLinkId} and OrderCode: {OrderCode}", paymentLinkId, orderCode);
+                    throw new KeyNotFoundException($"Payment with linkId={paymentLinkId} or orderCode={orderCode} not found");
+                }
+
+                // biến lưu trạng thái cuối cùng
+                string finalStatus;
+                //      code= "00" & success= true => "PAID" 
+                //      code= "99" => "FAILED"? 
+                if (code == "00" && webhookBody.success == true)
+                {
+                    // success
+                    finalStatus = "PAID";
+                }
+                else
+                {
+                    finalStatus = "FAILED";
+                }
+                _logger.LogInformation("Webhook indicates final status: {Status} for PaymentLinkId: {PaymentLinkId}", finalStatus, verifiedData.paymentLinkId);
+
+                // --- 4.2) Cập nhật Paymentstatus ----
+                // Idempotency Check: Nếu trạng thái trong DB đã là trạng thái cuối cùng rồi thì bỏ qua
+                // Điều này quan trọng vì webhook có thể được gửi lại nhiều lần.
+                if (payment.Paymentstatus == finalStatus)
+                {
+                    _logger.LogInformation("Payment status for Payment {PaymentId} is already '{Status}'. Webhook is likely a duplicate. Skipping update.", payment.Paymentid, finalStatus);
+                    return; // Bỏ qua nếu đã ở trạng thái cuối cùng
+                }
+                if (payment.Paymentstatus == "PAID" && finalStatus != "PAID")
+                {
+                    // Cẩn thận: Nếu đã PAID rồi mà webhook báo trạng thái khác -> có vấn đề, cần điều tra.
+                    _logger.LogWarning("Payment {PaymentId} is already PAID, but received webhook with status '{Status}'. Potential issue. Skipping update.", payment.Paymentid, finalStatus);
+                    return; // Không nên thay đổi trạng thái từ PAID thành trạng thái khác qua webhook tự động.
+                }
+
+                // Chuyển đổi transactionDateTime sang giờ VN
+                DateTime transDateTimeVn = DateTime.UtcNow;
+                if (DateTime.TryParse(verifiedData.transactionDateTime, out var dtT))
+                {
+                    // PayOS trả "2023-08-01T19:44:15.000Z" => Z => UTC
+                    dtT = DateTime.SpecifyKind(dtT, DateTimeKind.Utc);
+                    transDateTimeVn = _util.ConvertToVnTime(dtT);
+                }
+
+                // Cập nhật Payment
+                payment.Paymentstatus = finalStatus;
+                payment.Updatedat = DateTime.UtcNow;
+                payment.Paymentdate = transDateTimeVn;
+
+                await paymentRepo.UpdateAsync(payment, saveChanges: false);
+
+                // 4.3) Lưu + commit
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+                _logger.LogInformation("Successfully processed webhook and committed database changes for Payment {PaymentId}.", payment.Paymentid);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransaction();
+
+                // Throw lỗi để Controller biết xử lý thất bại và trả về lỗi 500 cho PayOS (PayOS có thể thử gửi lại webhook)
+                throw new ApplicationException($"Failed to update database after processing webhook for payment link ID '{verifiedData.paymentLinkId}'.", ex);
             }
         }
     }
