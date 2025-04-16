@@ -536,7 +536,7 @@ namespace LaundryService.Service
                 // biến lưu trạng thái cuối cùng
                 string finalStatus;
                 //      code= "00" & success= true => "PAID" 
-                //      code= "99" => "FAILED"? 
+                //      code= "99" => "CANCELLED"? 
                 if (code == "00" && webhookBody.success == true)
                 {
                     // success
@@ -544,7 +544,7 @@ namespace LaundryService.Service
                 }
                 else
                 {
-                    finalStatus = "FAILED";
+                    finalStatus = "CANCELLED";
                 }
                 _logger.LogInformation("Webhook indicates final status: {Status} for PaymentLinkId: {PaymentLinkId}", finalStatus, verifiedData.paymentLinkId);
 
