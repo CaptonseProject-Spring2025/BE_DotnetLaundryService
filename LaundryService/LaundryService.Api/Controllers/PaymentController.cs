@@ -311,7 +311,7 @@ namespace LaundryService.Api.Controllers
 
                 var result = payOS.confirmWebhook(webhookUrl);
 
-                return Ok(new { Message = "Webhook URL confirmed", Result = result });
+                return Ok(new { Message = "Webhook URL confirmed" });
             }
             catch (Exception ex)
             {
