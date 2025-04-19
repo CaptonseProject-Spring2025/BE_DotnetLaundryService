@@ -22,7 +22,7 @@ namespace LaundryService.Api.Controllers
         }
 
             // Endpoint xuất file Excel
-        [HttpGet("export")]
+        [HttpGet("export-excel-users")]
         public async Task<IActionResult> ExportUsersToExcel()
         {
             // Gọi service để xuất file Excel
@@ -32,7 +32,7 @@ namespace LaundryService.Api.Controllers
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Users.xlsx");
         }
 
-         [HttpPost("import")]
+         [HttpPost("import-excel-users")]
         public async Task<IActionResult> ImportUsersFromExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)

@@ -53,14 +53,14 @@ namespace LaundryService.Api.Services
       int row = 2;
       foreach (var user in users)
       {
-        worksheet.Cell(row, 1).Value = user?.Userid.ToString();
-        worksheet.Cell(row, 2).Value = user?.Fullname;
-        worksheet.Cell(row, 3).Value = user?.Status;
-        worksheet.Cell(row, 4).Value = user?.Role;
+        worksheet.Cell(row, 1).Value = user?.Userid.ToString() ?? "Chưa có mã người dùng"; // Nếu không có mã người dùng thì hiển thị "Chưa có mã người dùng"
+        worksheet.Cell(row, 2).Value = user?.Fullname ?? "Chưa có họ tên"; // Nếu không có họ tên thì hiển thị "Chưa có họ tên"
+        worksheet.Cell(row, 3).Value = user?.Status ?? "Chưa có trạng thái"; // Nếu không có trạng thái thì hiển thị "Chưa có trạng thái"
+        worksheet.Cell(row, 4).Value = user?.Role ?? "Chưa có vai trò"; // Nếu không có vai trò thì hiển thị "Chưa có vai trò"
         worksheet.Cell(row, 5).Value = user?.Avatar ?? "Chưa có hình ảnh"; // Nếu không có hình ảnh thì hiển thị "Chưa có hình ảnh"
-        worksheet.Cell(row, 6).Value = user?.Dob?.ToString("yyyy-MM-dd"); // Nếu có DOB
-        worksheet.Cell(row, 7).Value = user?.Gender;
-        worksheet.Cell(row, 8).Value = user?.Phonenumber;
+        worksheet.Cell(row, 6).Value = user?.Dob?.ToString("yyyy-MM-dd") ?? "Chưa có ngày sinh"; // Nếu có DOB
+        worksheet.Cell(row, 7).Value = user?.Gender ?? "Chưa có giới tính"; // Nếu không có giới tính thì hiển thị "Chưa có giới tính"
+        worksheet.Cell(row, 8).Value = user?.Phonenumber ?? "Chưa có số điện thoại"; // Nếu không có số điện thoại thì hiển thị "Chưa có số điện thoại"
         row++;
       }
 
