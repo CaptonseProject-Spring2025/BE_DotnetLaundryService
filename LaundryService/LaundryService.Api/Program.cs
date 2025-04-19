@@ -103,7 +103,8 @@ builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService
 
 builder.Services.AddSignalR(options =>
 {
-    // options.EnableDetailedErrors = true; // Bật chế độ lỗi chi tiết cho SignalR
+    //Test lỗi kết nối server
+    options.EnableDetailedErrors = true; // Bật chế độ lỗi chi tiết cho SignalR
 });
 
 

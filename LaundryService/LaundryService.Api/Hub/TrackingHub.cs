@@ -19,21 +19,38 @@ public class TrackingHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var http = Context.GetHttpContext()!;
-        var orderId = http.Request.Query["orderId"].ToString();
-        if (string.IsNullOrEmpty(orderId))
-            throw new HubException("Missing orderId.");
-
-        var userId = _util.GetCurrentUserIdOrThrow(http);
-
-        if (await _perm.CanDriverTrackAsync(orderId, userId)
-         || await _perm.CanCustomerViewAsync(orderId, userId))
+        try
         {
+            var http = Context.GetHttpContext()!;
+            var orderId = http.Request.Query["orderId"].ToString();
+            if (string.IsNullOrEmpty(orderId))
+                throw new HubException("Missing orderId.");
+
+            Guid userId;
+            try
+            {
+                userId = _util.GetCurrentUserIdOrThrow(http);
+            }
+            catch
+            {
+                throw new HubException("Invalid token: Cannot retrieve userId.");
+            }
+
+            var canDriver = await _perm.CanDriverTrackAsync(orderId, userId);
+            var canCustomer = await _perm.CanCustomerViewAsync(orderId, userId);
+
+            if (!canDriver && !canCustomer)
+                throw new HubException("Unauthorized to join this order.");
+
             await Groups.AddToGroupAsync(Context.ConnectionId, orderId);
         }
-        else
+        catch (HubException)
         {
-            throw new HubException("Unauthorized to join this order.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException("Connection failed: " + ex.Message);
         }
 
         await base.OnConnectedAsync();
@@ -41,13 +58,32 @@ public class TrackingHub : Hub
 
     public async Task SendLocation(string orderId, double lat, double lng)
     {
-        var http = Context.GetHttpContext()!;
-        var userId = _util.GetCurrentUserIdOrThrow(http);
+        try
+        {
+            var http = Context.GetHttpContext()!;
+            Guid userId;
+            try
+            {
+                userId = _util.GetCurrentUserIdOrThrow(http);
+            }
+            catch
+            {
+                throw new HubException("Invalid token: Cannot retrieve userId.");
+            }
 
-        if (!await _perm.CanDriverTrackAsync(orderId, userId))
-            throw new HubException("Unauthorized to send location.");
+            if (!await _perm.CanDriverTrackAsync(orderId, userId))
+                throw new HubException("Unauthorized to send location.");
 
-        await Clients.OthersInGroup(orderId)
-                     .SendAsync("ReceiveLocation", lat, lng);
+            await Clients.OthersInGroup(orderId)
+                         .SendAsync("ReceiveLocation", lat, lng);
+        }
+        catch (HubException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new HubException("Internal error: " + ex.Message);
+        }
     }
 }
