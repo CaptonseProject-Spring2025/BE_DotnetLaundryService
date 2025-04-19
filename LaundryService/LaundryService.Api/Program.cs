@@ -42,6 +42,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true, // Kiểm tra hạn của token
             ClockSkew = TimeSpan.Zero // Không có thời gian trễ khi so sánh thời gian hết hạn
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/trackingHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+
     });
 
 builder.Services.AddAuthorization(); // Bắt buộc để dùng `[Authorize]`
@@ -82,6 +98,7 @@ builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
+builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService>();
 
 
 builder.Services.AddSignalR(options =>
@@ -195,5 +212,6 @@ app.UseSwaggerUI(c =>
 
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub"); // Đăng ký SignalR Hub
+app.MapHub<TrackingHub>("/trackingHub");
 
 app.Run();
