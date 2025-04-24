@@ -285,5 +285,60 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task CreateAssignedPickupNotificationAsync(Guid driverId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = driverId,
+                Title = "Thông báo nhận hàng",
+                Message = $"Bạn đã được giao đơn nhận hàng {orderId}. Vui lòng kiểm tra và thực hiện nhận hàng.",
+                Notificationtype = NotificationType.AssignedPickup.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateDeliveryScheduledNotificationAsync(Guid customerId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = customerId,
+                Title = "Thông báo giao hàng",
+                Message = "Đơn hàng của bạn đã được lên lịch để tài xế đến giao. Vui lòng có mặt khi tài xế đến giao hàng!",
+                Notificationtype = NotificationType.DeliveryScheduled.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task CreateAssignedDeliveryNotificationAsync(Guid driverId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = driverId,
+                Title = "Thông báo giao hàng",
+                Message = $"Bạn đã được giao đơn giao hàng {orderId}. Vui lòng kiểm tra và thực hiện hiện giao hàng.",
+                Notificationtype = NotificationType.AssignedDelivery.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
     }
 }
