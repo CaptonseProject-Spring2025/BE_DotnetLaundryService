@@ -87,32 +87,38 @@ namespace LaundryService.Api.Controllers
             {
                 await _adminService.AssignPickupToDriverAsync(HttpContext, request);
 
-                var orderId = request.OrderIds.First();
-                var customerId = await _adminService.GetCustomerIdByOrderAsync(orderId);
+                var driverId = request.DriverId;
 
-                try
+                foreach (var orderId in request.OrderIds)
                 {
+                    var customerId = await _adminService.GetCustomerIdByOrderAsync(orderId);
+
                     await _notificationService.CreatePickupScheduledNotificationAsync(customerId, orderId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
-                }
 
-                _ = Task.Run(async () =>
-                {
-                    try
+                    _ = Task.Run(async () =>
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.PickupScheduled
+                            NotificationType.PickupScheduled,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
-                    }
-                    catch (Exception ex)
+                    });
+                }
+
+                foreach (var orderId in request.OrderIds)
+                {
+                    await _notificationService.CreateAssignedPickupNotificationAsync(driverId, orderId);
+
+                    _ = Task.Run(async () =>
                     {
-                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
-                    }
-                });
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            driverId.ToString(),
+                            NotificationType.AssignedPickup,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
+                        );
+                    });
+                }
+
 
                 return Ok(new { Message = "Giao việc lấy hàng thành công!" });
             }
@@ -192,6 +198,41 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _adminService.AssignDeliveryToDriverAsync(HttpContext, request);
+
+                var driverId = request.DriverId;
+
+                foreach (var orderId in request.OrderIds)
+                {
+                    var customerId = await _adminService.GetCustomerIdByOrderAsync(orderId);
+
+                    await _notificationService.CreateDeliveryScheduledNotificationAsync(customerId, orderId);
+
+                    _ = Task.Run(async () =>
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.DeliveryScheduled,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
+                        );
+                    });
+                }
+
+
+                foreach (var orderId in request.OrderIds)
+                {
+
+                    await _notificationService.CreateAssignedDeliveryNotificationAsync(driverId, orderId);
+
+                    _ = Task.Run(async () =>
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            driverId.ToString(),
+                            NotificationType.AssignedDelivery,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
+                        );
+                    });
+                }
+
                 return Ok(new { Message = "Giao việc giao hàng cho tài xế thành công!" });
             }
             catch (KeyNotFoundException ex)
