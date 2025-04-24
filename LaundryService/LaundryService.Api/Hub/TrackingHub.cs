@@ -16,6 +16,9 @@ public class TrackingHub : Hub
     private static readonly ConcurrentDictionary<string, string> _connectionOrders
          = new ConcurrentDictionary<string, string>();
 
+    private static readonly ConcurrentDictionary<string, (double lat, double lng)> _lastLocations
+        = new ConcurrentDictionary<string, (double lat, double lng)>();
+
     public TrackingHub(IUtil util, ITrackingPermissionService perm)
     {
         _util = util;
@@ -67,6 +70,12 @@ public class TrackingHub : Hub
 
         // Lưu orderId cho connection này
         _connectionOrders[Context.ConnectionId] = orderId;
+
+        // Replay vị trí gần nhất nếu có
+        if (_lastLocations.TryGetValue(orderId, out var last))
+        {
+            await Clients.Caller.SendAsync("ReceiveLocation", last.lat, last.lng);
+        }
     }
 
     public async Task SendLocation(double lat, double lng)
@@ -80,6 +89,10 @@ public class TrackingHub : Hub
         Guid userId = _util.GetCurrentUserIdOrThrow(http);
         if (!await _perm.CanDriverTrackAsync(orderId, userId))
             throw new HubException("Unauthorized to send location.");
+
+        _lastLocations.AddOrUpdate(orderId,
+            (lat, lng),
+            (key, old) => (lat, lng));
 
         // Gửi tọa độ cho cả group
         await Clients.OthersInGroup(orderId)
