@@ -72,6 +72,39 @@ namespace LaundryService.Api.Controllers
     }
 
 
+    //Lấy danh sách cuộc trò chuyện của người dùng
+    [HttpGet("{userId}/conversations")]
+    public async Task<ActionResult> GetConversations(string userId)
+    {
+      // Lấy danh sách cuộc trò chuyện của người dùng và bao gồm thông tin người dùng
+      var conversations = await _unitOfWork.Repository<Conversation>()
+          .GetAll()
+          .Where(c => c.Userone == Guid.Parse(userId) || c.Usertwo == Guid.Parse(userId))
+          .Include(c => c.UseroneNavigation) // Eager load Userone để lấy thông tin người dùng (Fullname, Avatar)
+          .Include(c => c.UsertwoNavigation) // Eager load Usertwo để lấy thông tin người dùng (Fullname, Avatar)
+          .Include(c => c.Messages) // Eager load Messages để lấy thông tin tin nhắn
+          .Select(c => new
+          {
+            c.Conversationid,
+            c.Userone,
+            c.Usertwo,
+            UserOneFullName = c.UseroneNavigation.Fullname,
+            UserOneAvatar = c.UseroneNavigation.Avatar,
+            UserTwoFullName = c.UsertwoNavigation.Fullname,
+            UserTwoAvatar = c.UsertwoNavigation.Avatar,
+            LastMessage = c.Messages.OrderByDescending(m => m.Creationdate).FirstOrDefault().Message1, // Tin nhắn cuối cùng
+            LastMessageDate = c.Messages.OrderByDescending(m => m.Creationdate).FirstOrDefault().Creationdate // Thời gian gửi tin nhắn cuối cùng
+          })
+          .ToListAsync(); // Sử dụng ToListAsync để lấy dữ liệu từ cơ sở dữ liệu
+
+      if (conversations == null || conversations.Count == 0)
+      {
+        return Ok(new { success = false, message = "No conversations found." });
+      }
+
+      return Ok(new { success = true, conversations });
+    }
+
 
 
     //Tạo mới 1 cuộc trò chuyện mới
