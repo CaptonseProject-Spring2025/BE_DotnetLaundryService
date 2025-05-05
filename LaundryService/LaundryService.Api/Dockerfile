@@ -23,6 +23,23 @@ RUN dotnet publish LaundryService.Api/LaundryService.Api.csproj -c Release -o /a
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
+# Cập nhật danh sách gói và cài đặt các gói font cần thiết
+# fonts-dejavu-core: Cung cấp font DejaVu Sans
+# ttf-mscorefonts-installer: Cung cấp các font Microsoft phổ biến (Arial, Times New Roman, v.v.) - rất hữu ích làm fallback
+# fontconfig: Công cụ quản lý font, bao gồm fc-cache
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        fonts-dejavu-core \
+        fontconfig \
+        # Chấp nhận EULA cho font Microsoft trước khi cài đặt
+        && echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections \
+        && apt-get install -y --no-install-recommends ttf-mscorefonts-installer \
+    # Cập nhật font cache của hệ thống
+    && fc-cache -fv && \
+    # Dọn dẹp sau khi cài đặt để giảm kích thước image
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy các file publish từ build stage
 COPY --from=build /app/publish .
 

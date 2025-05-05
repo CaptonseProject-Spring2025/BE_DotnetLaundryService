@@ -25,7 +25,7 @@ namespace LaundryService.Api.Services
         {
             var loadOptions = new LoadOptions
             {
-                GraphicEngine = new DefaultGraphicEngine("DejaVu Sans")
+                GraphicEngine = new DefaultGraphicEngine("Arial")
             };
 
             // Lấy danh sách người dùng từ CSDL
