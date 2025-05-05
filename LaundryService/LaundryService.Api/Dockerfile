@@ -26,9 +26,12 @@ WORKDIR /app
 # >>> THÊM FONT + fontconfig <<<
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      fontconfig \
-      ttf-dejavu \
-      ttf-mscorefonts-installer \
+        fontconfig \
+        fonts-dejavu-core \
+        fonts-dejavu-extra \
+        cabextract xz-utils wget \
+ && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
+ && apt-get install -y --no-install-recommends ttf-mscorefonts-installer \
  && fc-cache -fv \
  && rm -rf /var/lib/apt/lists/*
 
