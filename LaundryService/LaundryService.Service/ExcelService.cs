@@ -23,13 +23,16 @@ namespace LaundryService.Api.Services
 
         public async Task<byte[]> ExportUsersToExcel()
         {
-            LoadOptions.DefaultGraphicEngine = new DefaultGraphicEngine("DejaVu Sans");
+            var loadOptions = new LoadOptions
+            {
+                GraphicEngine = new DefaultGraphicEngine("DejaVu Sans")
+            };
 
             // Lấy danh sách người dùng từ CSDL
             var users = await _unitOfWork.Repository<User>().GetAllAsync();
 
             // Tạo một Workbook mới
-            var workbook = new XLWorkbook();
+            using var workbook = new XLWorkbook(loadOptions);
             var worksheet = workbook.Worksheets.Add("Users");
 
             // Tạo header cho các cột
@@ -70,11 +73,9 @@ namespace LaundryService.Api.Services
             worksheet.Columns().AdjustToContents();
 
             // Trả về file Excel dưới dạng byte array
-            using (var stream = new MemoryStream())
-            {
-                workbook.SaveAs(stream);
-                return stream.ToArray();
-            }
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
         }
 
         public async Task<List<User>> ImportUsersFromExcel(IFormFile file)
