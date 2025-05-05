@@ -23,6 +23,15 @@ RUN dotnet publish LaundryService.Api/LaundryService.Api.csproj -c Release -o /a
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
+# >>> THÊM FONT + fontconfig <<<
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      fontconfig \
+      ttf-dejavu \
+      ttf-mscorefonts-installer \
+ && fc-cache -fv \
+ && rm -rf /var/lib/apt/lists/*
+
 # Copy các file publish từ build stage
 COPY --from=build /app/publish .
 
