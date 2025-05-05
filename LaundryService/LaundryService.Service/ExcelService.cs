@@ -24,13 +24,13 @@ namespace LaundryService.Api.Services
         public async Task<byte[]> ExportUsersToExcel()
         {
             LoadOptions.DefaultGraphicEngine = new DefaultGraphicEngine("DejaVu Sans");
+
             // Lấy danh sách người dùng từ CSDL
             var users = await _unitOfWork.Repository<User>().GetAllAsync();
 
             // Tạo một Workbook mới
             var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Users");
-
 
             // Tạo header cho các cột
             var headerRow = worksheet.Row(1); // Lấy dòng header
