@@ -13,15 +13,15 @@ namespace LaundryService.Api.Controllers
     public class ExcelsController : ControllerBase
     {
 
-          private readonly IExcelService _excelService;
+        private readonly IExcelService _excelService;
 
 
         public ExcelsController(IExcelService excelsService)
         {
-          _excelService = excelsService;
+            _excelService = excelsService;
         }
 
-            // Endpoint xuất file Excel
+        // Endpoint xuất file Excel
         [HttpGet("export-excel-users")]
         public async Task<IActionResult> ExportUsersToExcel()
         {
@@ -32,7 +32,7 @@ namespace LaundryService.Api.Controllers
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Users.xlsx");
         }
 
-         [HttpPost("import-excel-users")]
+        [HttpPost("import-excel-users")]
         public async Task<IActionResult> ImportUsersFromExcel(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -51,8 +51,15 @@ namespace LaundryService.Api.Controllers
             {
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
-        }    
-        
-       
+        }
+
+        [HttpGet("export-laundry-services")]
+        public async Task<IActionResult> ExportLaundryServices()
+        {
+            var bytes = await _excelService.ExportLaundryServicesToExcel();
+            return File(bytes,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"LaundryServices_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+        }
     }
 }

@@ -9,4 +9,6 @@ public interface IExcelService
   Task<byte[]> ExportUsersToExcel();
 
   Task<List<User>> ImportUsersFromExcel(IFormFile file);
+
+    Task<byte[]> ExportLaundryServicesToExcel();
 }

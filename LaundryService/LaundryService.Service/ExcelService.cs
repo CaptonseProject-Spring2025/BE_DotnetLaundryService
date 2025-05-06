@@ -3,6 +3,7 @@ using ClosedXML.Graphics;
 using LaundryService.Domain.Entities;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -15,10 +16,20 @@ namespace LaundryService.Api.Services
     public class ExcelsService : IExcelService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUtil _util;
 
-        public ExcelsService(IUnitOfWork unitOfWork)
+        public ExcelsService(IUnitOfWork unitOfWork, IUtil util)
         {
             _unitOfWork = unitOfWork;
+            _util = util;
+        }
+
+        private static void StyleHeader(IXLRow headerRow)
+        {
+            headerRow.Style.Fill.BackgroundColor = XLColor.CornflowerBlue;
+            headerRow.Style.Font.FontColor = XLColor.White;
+            headerRow.Style.Font.Bold = true;
+            headerRow.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
 
         public async Task<byte[]> ExportUsersToExcel()
@@ -143,6 +154,111 @@ namespace LaundryService.Api.Services
             return users;
         }
 
+        public async Task<byte[]> ExportLaundryServicesToExcel()
+        {
+            // 1) Lấy dữ liệu cần thiết
+            var serviceDetails = _unitOfWork.Repository<Servicedetail>()
+                .GetAll()
+                .ToList();                                 // dùng navigation property
 
+            var serviceCategories = await _unitOfWork.Repository<Servicecategory>().GetAllAsync();
+            var subServices = await _unitOfWork.Repository<Subservice>().GetAllAsync();
+            var extras = await _unitOfWork.Repository<Extra>().GetAllAsync();
+            var extraCategories = await _unitOfWork.Repository<Extracategory>().GetAllAsync();
+            var mappings = _unitOfWork.Repository<Serviceextramapping>().GetAll().ToList();
+
+            // 2) Tạo workbook
+            using var workbook = new XLWorkbook();
+
+            /*************** SHEET 1 – ServiceDetails ****************/
+            var wsSd = workbook.Worksheets.Add("ServiceDetails");
+            wsSd.Cell(1, 1).SetValue("Tên Category");
+            wsSd.Cell(1, 2).SetValue("Tên SubCategory");
+            wsSd.Cell(1, 3).SetValue("ServiceId");
+            wsSd.Cell(1, 4).SetValue("Tên ServiceDetail");
+            wsSd.Cell(1, 5).SetValue("Mô tả");
+            wsSd.Cell(1, 6).SetValue("Giá");
+            wsSd.Cell(1, 7).SetValue("Ảnh");
+            wsSd.Cell(1, 8).SetValue("Ngày tạo");
+            wsSd.Cell(1, 9).SetValue("ExtraIds (phẩy)");
+            StyleHeader(wsSd.Row(1));
+
+            int row = 2;
+            foreach (var sd in serviceDetails)
+            {
+                var sub = subServices.FirstOrDefault(s => s.Subserviceid == sd.Subserviceid);
+                var cate = serviceCategories.FirstOrDefault(c => c.Categoryid == sub?.Categoryid);
+
+                // Danh sách ExtraIds
+                var extraIds = mappings.Where(m => m.Serviceid == sd.Serviceid)
+                                       .Select(m => m.Extraid.ToString())
+                                       .ToList();
+                var extraIdCsv = string.Join(",", extraIds);
+
+                wsSd.Cell(row, 1).SetValue(cate?.Name);
+                wsSd.Cell(row, 2).SetValue(sub?.Name);
+                wsSd.Cell(row, 3).SetValue(sd.Serviceid.ToString());
+                wsSd.Cell(row, 4).SetValue(sd.Name);
+                wsSd.Cell(row, 5).SetValue(sd.Description);
+                wsSd.Cell(row, 6).SetValue(sd.Price);
+                wsSd.Cell(row, 7).SetValue(sd.Image);
+                wsSd.Cell(row, 8).SetValue(_util.ConvertToVnTime(sd.Createdat ?? DateTime.UtcNow));
+                wsSd.Cell(row, 9).SetValue(extraIdCsv);
+                row++;
+            }
+            wsSd.Columns().AdjustToContents();
+
+            var rngSd = wsSd.Range(1, 1, row - 1, 9);   // bao trọn vùng có dữ liệu
+            var tblSd = rngSd.CreateTable();            // biến range thành Table
+            tblSd.Theme = XLTableTheme.TableStyleLight9; // cùng theme với InsertTable mặc định
+            tblSd.ShowRowStripes = true;                  // kẻ sọc cho dễ nhìn
+
+            /*************** SHEET 2 – ServiceCategories ****************/
+            var wsCat = workbook.Worksheets.Add("ServiceCategories");
+            wsCat.Cell(1, 1).InsertTable(serviceCategories.Select(c => new {
+                c.Categoryid,
+                c.Name,
+                c.Icon,
+                c.Banner,           // Banner có thể null tuỳ DB
+                CreatedAt = _util.ConvertToVnTime(c.Createdat ?? DateTime.UtcNow)
+            }));
+            wsCat.Columns().AdjustToContents();
+
+            /*************** SHEET 3 – SubServices ****************/
+            var wsSub = workbook.Worksheets.Add("SubServices");
+            wsSub.Cell(1, 1).InsertTable(subServices.Select(s => new {
+                s.Subserviceid,
+                s.Categoryid,
+                s.Name,
+                s.Description,
+                s.Mincompletetime,
+                CreatedAt = _util.ConvertToVnTime(s.Createdat ?? DateTime.UtcNow)
+            }));
+            wsSub.Columns().AdjustToContents();
+
+            /*************** SHEET 4 – Extras ****************/
+            var wsExtra = workbook.Worksheets.Add("Extras");
+            wsExtra.Cell(1, 1).InsertTable(extras.Select(e => {
+                var ec = extraCategories.FirstOrDefault(x => x.Extracategoryid == e.Extracategoryid);
+                return new
+                {
+                    e.Extracategoryid,
+                    ExtraCategoryName = ec?.Name,
+                    ExtraCategoryCreate = _util.ConvertToVnTime(ec?.Createdat ?? DateTime.UtcNow),
+                    e.Extraid,
+                    e.Name,
+                    e.Description,
+                    e.Price,
+                    e.Image,
+                    CreatedAt = _util.ConvertToVnTime(e.Createdat ?? DateTime.UtcNow)
+                };
+            }));
+            wsExtra.Columns().AdjustToContents();
+
+            // 3) Trả về mảng bytes
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
+        }
     }
 }
