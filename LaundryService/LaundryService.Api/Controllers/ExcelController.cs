@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LaundryService.Api.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/excels")]
     [ApiController]
     public class ExcelsController : ControllerBase
     {

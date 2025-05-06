@@ -32,6 +32,18 @@ namespace LaundryService.Api.Services
             headerRow.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
 
+        private static void SetImageFormula(IXLCell cell, string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            // IMAGE("url") – KHÔNG có dấu =
+            cell.FormulaA1 = $"IMAGE(\"{url}\")";
+
+            // tuỳ thích: đặt kích thước ô cao hơn cho dễ nhìn
+            cell.WorksheetRow().Height = 90;       // ví dụ 90 px
+            cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+        }
+
         public async Task<byte[]> ExportUsersToExcel()
         {
             LoadOptions.DefaultGraphicEngine = new DefaultGraphicEngine("DejaVu Sans");
@@ -170,6 +182,60 @@ namespace LaundryService.Api.Services
             // 2) Tạo workbook
             using var workbook = new XLWorkbook();
 
+            /*****************  SHEET 0 – Master Sheet  *****************/
+            var wsMaster = workbook.Worksheets.Add("Master Sheet");
+
+            // Header
+            string[] masterHeaders = {
+                "Category Name", "Category Icon", "Category Banner",
+                "SubCategory Name", "SubCategory Description", "SubCategory Mincompletetime",
+                "Service Name", "Service Description", "Service Price", "Service Image",
+                "Extras"
+            };
+            for (int i = 0; i < masterHeaders.Length; i++)
+                wsMaster.Cell(1, i + 1).SetValue(masterHeaders[i]);
+
+            StyleHeader(wsMaster.Row(1));
+
+            // Body
+            int mRow = 2;
+            foreach (var sd in serviceDetails)
+            {
+                var sub = subServices.FirstOrDefault(s => s.Subserviceid == sd.Subserviceid);
+                var cate = serviceCategories.FirstOrDefault(c => c.Categoryid == sub?.Categoryid);
+
+                /*--- Lấy danh sách Extra NAMES gắn với ServiceDetail ---*/
+                var extraNames = mappings
+                    .Where(m => m.Serviceid == sd.Serviceid)
+                    .Join(extras, m => m.Extraid, e => e.Extraid, (m, e) => e.Name)
+                    .ToList();
+                var extrasNewLine = string.Join("\n", extraNames);    // mỗi extra 1 dòng
+
+                // Ghi dữ liệu
+                wsMaster.Cell(mRow, 1).SetValue(cate?.Name);
+                wsMaster.Cell(mRow, 2).SetValue(cate?.Icon);
+                wsMaster.Cell(mRow, 3).SetValue(cate?.Banner);
+                wsMaster.Cell(mRow, 4).SetValue(sub?.Name);
+                wsMaster.Cell(mRow, 5).SetValue(sub?.Description);
+                wsMaster.Cell(mRow, 6).SetValue(sub?.Mincompletetime);
+                wsMaster.Cell(mRow, 7).SetValue(sd.Name);
+                wsMaster.Cell(mRow, 8).SetValue(sd.Description);
+                wsMaster.Cell(mRow, 9).SetValue(sd.Price);
+                SetImageFormula(wsMaster.Cell(mRow, 10), sd.Image);
+                wsMaster.Cell(mRow, 11).SetValue(extrasNewLine);
+                wsMaster.Cell(mRow, 11).Style.Alignment.WrapText = true;   // xuống dòng hiển thị
+                mRow++;
+            }
+
+            wsMaster.Columns().AdjustToContents();
+
+            // style
+            var rngMaster = wsMaster.Range(1, 1, mRow - 1, masterHeaders.Length);
+            var tblMaster = rngMaster.CreateTable();
+            tblMaster.Theme = XLTableTheme.TableStyleLight9;
+            tblMaster.ShowRowStripes = true;
+
+
             /*************** SHEET 1 – ServiceDetails ****************/
             var wsSd = workbook.Worksheets.Add("ServiceDetails");
             wsSd.Cell(1, 1).SetValue("Tên Category");
@@ -201,7 +267,7 @@ namespace LaundryService.Api.Services
                 wsSd.Cell(row, 4).SetValue(sd.Name);
                 wsSd.Cell(row, 5).SetValue(sd.Description);
                 wsSd.Cell(row, 6).SetValue(sd.Price);
-                wsSd.Cell(row, 7).SetValue(sd.Image);
+                SetImageFormula(wsSd.Cell(row, 7), sd.Image);
                 wsSd.Cell(row, 8).SetValue(_util.ConvertToVnTime(sd.Createdat ?? DateTime.UtcNow));
                 wsSd.Cell(row, 9).SetValue(extraIdCsv);
                 row++;
@@ -215,18 +281,27 @@ namespace LaundryService.Api.Services
 
             /*************** SHEET 2 – ServiceCategories ****************/
             var wsCat = workbook.Worksheets.Add("ServiceCategories");
-            wsCat.Cell(1, 1).InsertTable(serviceCategories.Select(c => new {
+            wsCat.Cell(1, 1).InsertTable(serviceCategories.Select(c => new
+            {
                 c.Categoryid,
                 c.Name,
                 c.Icon,
                 c.Banner,           // Banner có thể null tuỳ DB
                 CreatedAt = _util.ConvertToVnTime(c.Createdat ?? DateTime.UtcNow)
             }));
+            int catLastRow = wsCat.LastRowUsed().RowNumber();
+            for (int r = 2; r <= catLastRow; r++)
+            {
+                SetImageFormula(wsCat.Cell(r, 3), wsCat.Cell(r, 3).GetString()); // Icon  (col 3)
+                SetImageFormula(wsCat.Cell(r, 4), wsCat.Cell(r, 4).GetString()); // Banner(col 4)
+            }
+
             wsCat.Columns().AdjustToContents();
 
             /*************** SHEET 3 – SubServices ****************/
             var wsSub = workbook.Worksheets.Add("SubServices");
-            wsSub.Cell(1, 1).InsertTable(subServices.Select(s => new {
+            wsSub.Cell(1, 1).InsertTable(subServices.Select(s => new
+            {
                 s.Subserviceid,
                 s.Categoryid,
                 s.Name,
@@ -238,7 +313,8 @@ namespace LaundryService.Api.Services
 
             /*************** SHEET 4 – Extras ****************/
             var wsExtra = workbook.Worksheets.Add("Extras");
-            wsExtra.Cell(1, 1).InsertTable(extras.Select(e => {
+            wsExtra.Cell(1, 1).InsertTable(extras.Select(e =>
+            {
                 var ec = extraCategories.FirstOrDefault(x => x.Extracategoryid == e.Extracategoryid);
                 return new
                 {
@@ -253,6 +329,12 @@ namespace LaundryService.Api.Services
                     CreatedAt = _util.ConvertToVnTime(e.Createdat ?? DateTime.UtcNow)
                 };
             }));
+            int exLastRow = wsExtra.LastRowUsed().RowNumber();
+            for (int r = 2; r <= exLastRow; r++)
+            {
+                SetImageFormula(wsExtra.Cell(r, 8), wsExtra.Cell(r, 8).GetString()); // Image (col 8)
+            }
+
             wsExtra.Columns().AdjustToContents();
 
             // 3) Trả về mảng bytes
