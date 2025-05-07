@@ -1,4 +1,5 @@
 using ClosedXML.Excel;
+using ClosedXML.Excel.Drawings;
 using ClosedXML.Graphics;
 using LaundryService.Domain.Entities;
 using LaundryService.Domain.Interfaces;
@@ -17,6 +18,7 @@ namespace LaundryService.Api.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
+        private static readonly HttpClient httpClient = new HttpClient();
 
         public ExcelsService(IUnitOfWork unitOfWork, IUtil util)
         {
@@ -30,6 +32,67 @@ namespace LaundryService.Api.Services
             headerRow.Style.Font.FontColor = XLColor.White;
             headerRow.Style.Font.Bold = true;
             headerRow.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        private static async Task EmbedImageInCellAsync(IXLCell cell, string url, HttpClient client)
+        {
+            if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out _))
+            {
+                // Xóa nội dung cũ nếu có và không có URL hợp lệ
+                cell.Clear(XLClearOptions.Contents);
+                // Bạn có thể đặt một giá trị placeholder nếu muốn, ví dụ: cell.Value = "No Image";
+                return;
+            }
+
+            try
+            {
+                byte[] imageBytes = await client.GetByteArrayAsync(url);
+                using (var ms = new MemoryStream(imageBytes))
+                {
+                    // Xóa nội dung text (ví dụ URL) khỏi ô trước khi chèn ảnh
+                    cell.Clear(XLClearOptions.Contents);
+
+                    var picture = cell.Worksheet.AddPicture(ms)
+                                        .MoveTo(cell); // Đặt góc trên trái của ảnh vào góc trên trái của ô
+
+                    // Đặt chiều cao dòng cố định
+                    cell.WorksheetRow().Height = 90;
+
+                    // Scale ảnh để vừa với chiều cao dòng (ví dụ: 85pt, để lại chút padding 2.5pt trên và dưới)
+                    const double desiredImageHeightPt = 85.0;
+                    if (picture.OriginalHeight > 0 && picture.OriginalWidth > 0) // Tránh chia cho 0
+                    {
+                        double scaleFactor = desiredImageHeightPt / picture.OriginalHeight;
+                        picture.Scale(scaleFactor); // Scale giữ tỷ lệ
+
+                        // Căn giữa ảnh theo chiều dọc trong ô (sau khi đã scale và set row height)
+                        double cellHeightPt = cell.WorksheetRow().Height; // Là 90
+                        if (picture.Height < cellHeightPt)
+                        {
+                            //picture.OffsetY = (int)((cellHeightPt - picture.Height) / 2);
+                        }
+                        // Căn giữa theo chiều ngang phức tạp hơn nếu không có kích thước cột chính xác bằng point.
+                        // Hiện tại ảnh sẽ căn trái trong ô.
+                    }
+                    // Đảm bảo ô được căn giữa (cho trường hợp có text lỗi hoặc placeholder)
+                    cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                    cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                }
+            }
+            catch (HttpRequestException)
+            {
+                cell.Clear(XLClearOptions.Contents);
+                cell.Value = "Tải ảnh lỗi";
+                cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            }
+            catch (Exception) // Các lỗi khác (ví dụ: ảnh hỏng, stream lỗi)
+            {
+                cell.Clear(XLClearOptions.Contents);
+                cell.Value = "Ảnh lỗi";
+                cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            }
         }
 
         private static void SetImageFormula(IXLCell cell, string url)
@@ -221,7 +284,7 @@ namespace LaundryService.Api.Services
                 wsMaster.Cell(mRow, 7).SetValue(sd.Name);
                 wsMaster.Cell(mRow, 8).SetValue(sd.Description);
                 wsMaster.Cell(mRow, 9).SetValue(sd.Price);
-                SetImageFormula(wsMaster.Cell(mRow, 10), sd.Image);
+                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 10), sd.Image, httpClient);
                 wsMaster.Cell(mRow, 11).SetValue(extrasNewLine);
                 wsMaster.Cell(mRow, 11).Style.Alignment.WrapText = true;   // xuống dòng hiển thị
                 mRow++;
