@@ -27,7 +27,7 @@ public partial class User
 
     public string? Phonenumber { get; set; }
 
-    public int Rewardpoints { get; set; }
+    public int? Rewardpoints { get; set; }
 
     public DateTime? Datecreated { get; set; }
 
