@@ -18,6 +18,8 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Address> Addresses { get; set; }
 
+    public virtual DbSet<Complaint> Complaints { get; set; }
+
     public virtual DbSet<Conversation> Conversations { get; set; }
 
     public virtual DbSet<Discountcode> Discountcodes { get; set; }
@@ -102,6 +104,44 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("addresses_userid_fkey");
+        });
+
+        modelBuilder.Entity<Complaint>(entity =>
+        {
+            entity.HasKey(e => e.Complaintid).HasName("complaints_pkey");
+
+            entity.ToTable("complaints");
+
+            entity.Property(e => e.Complaintid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("complaintid");
+            entity.Property(e => e.Assignedto).HasColumnName("assignedto");
+            entity.Property(e => e.Complaintdescription).HasColumnName("complaintdescription");
+            entity.Property(e => e.Complainttype).HasColumnName("complainttype");
+            entity.Property(e => e.Createdat)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("createdat");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Resolutiondetails).HasColumnName("resolutiondetails");
+            entity.Property(e => e.Resolvedat).HasColumnName("resolvedat");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'Pending'::text")
+                .HasColumnName("status");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+
+            entity.HasOne(d => d.AssignedtoNavigation).WithMany(p => p.ComplaintAssignedtoNavigations)
+                .HasForeignKey(d => d.Assignedto)
+                .HasConstraintName("complaints_assignedto_fkey");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Complaints)
+                .HasForeignKey(d => d.Orderid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("complaints_orderid_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ComplaintUsers)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("complaints_userid_fkey");
         });
 
         modelBuilder.Entity<Conversation>(entity =>
@@ -352,13 +392,13 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Deliverylongitude)
                 .HasPrecision(9, 6)
                 .HasColumnName("deliverylongitude");
-            entity.Property(e => e.Emergency).HasColumnName("emergency");
             entity.Property(e => e.Deliveryname).HasColumnName("deliveryname");
             entity.Property(e => e.Deliveryphone).HasColumnName("deliveryphone");
             entity.Property(e => e.Deliverytime).HasColumnName("deliverytime");
             entity.Property(e => e.Discount)
                 .HasPrecision(10)
                 .HasColumnName("discount");
+            entity.Property(e => e.Emergency).HasColumnName("emergency");
             entity.Property(e => e.Noteforotherprice).HasColumnName("noteforotherprice");
             entity.Property(e => e.Otherprice)
                 .HasPrecision(10)
@@ -520,11 +560,11 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Photoid)
                 .HasDefaultValueSql("uuid_generate_v4()")
                 .HasColumnName("photoid");
-            entity.Property(e => e.Photourl).HasColumnName("photourl");
-            entity.Property(e => e.Statushistoryid).HasColumnName("statushistoryid");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnName("createdat");
+            entity.Property(e => e.Photourl).HasColumnName("photourl");
+            entity.Property(e => e.Statushistoryid).HasColumnName("statushistoryid");
 
             entity.HasOne(d => d.Statushistory).WithMany(p => p.Orderphotos)
                 .HasForeignKey(d => d.Statushistoryid)

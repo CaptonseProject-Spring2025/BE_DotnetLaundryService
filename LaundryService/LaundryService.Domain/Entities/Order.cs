@@ -55,11 +55,13 @@ public partial class Order
 
     public decimal? Discount { get; set; }
 
-    public bool? Emergency { get; set; }
-
     public string? Currentstatus { get; set; }
 
     public DateTime? Createdat { get; set; }
+
+    public bool? Emergency { get; set; }
+
+    public virtual ICollection<Complaint> Complaints { get; set; } = new List<Complaint>();
 
     public virtual ICollection<Driverlocationhistory> Driverlocationhistories { get; set; } = new List<Driverlocationhistory>();
 

@@ -39,6 +39,10 @@ public partial class User
 
     public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();
 
+    public virtual ICollection<Complaint> ComplaintAssignedtoNavigations { get; set; } = new List<Complaint>();
+
+    public virtual ICollection<Complaint> ComplaintUsers { get; set; } = new List<Complaint>();
+
     public virtual ICollection<Conversation> ConversationUseroneNavigations { get; set; } = new List<Conversation>();
 
     public virtual ICollection<Conversation> ConversationUsertwoNavigations { get; set; } = new List<Conversation>();

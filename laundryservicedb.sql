@@ -220,6 +220,19 @@ CREATE TABLE Payments (
     UpdatedAt TIMESTAMP WITH TIME ZONE
 );
 
+CREATE TABLE Complaints (
+    ComplaintID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    OrderID TEXT NOT NULL REFERENCES Orders(OrderID), -- Liên kết với đơn hàng bị khiếu nại
+    UserID UUID NOT NULL REFERENCES Users(UserId), -- Người dùng tạo khiếu nại
+    ComplaintType TEXT, -- Loại khiếu nại (VD: 'DAMAGED_ITEM', 'WRONG_ITEM', 'POOR_QUALITY', 'LATE_DELIVERY', 'OTHER')
+    ComplaintDescription TEXT NOT NULL, -- Mô tả chi tiết của người dùng về vấn đề
+    Status TEXT NOT NULL DEFAULT 'Pending', -- E.g., 'Pending', 'In Progress', 'Resolved', 'Closed'
+    AssignedTo UUID REFERENCES Users(UserId), -- Staff được giao xử lý (nếu có)
+    ResolutionDetails TEXT NULL, -- Mô tả cách giải quyết (do staff ghi)
+    CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    ResolvedAt TIMESTAMP WITH TIME ZONE NULL -- Thời điểm giải quyết xong
+);
+
 CREATE TABLE DriverLocationHistory (
     HistoryID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     DriverID UUID NOT NULL REFERENCES Users(UserID),
