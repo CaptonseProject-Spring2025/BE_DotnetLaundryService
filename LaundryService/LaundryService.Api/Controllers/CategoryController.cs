@@ -198,5 +198,24 @@ namespace LaundryService.Api.Controllers
                 return NotFound(new { Message = ex.Message });
             }
         }
+
+        //[Authorize(Roles = "Admin")]
+        [HttpDelete("cascade/{id}")]
+        public async Task<IActionResult> DeleteCascade(Guid id)
+        {
+            try
+            {
+                await _serviceService.DeleteCategoryCascadeAsync(id);
+                return Ok(new { Message = "Service category and all related data deleted successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
     }
 }

@@ -19,5 +19,11 @@ namespace LaundryService.Domain.Interfaces.Services
 
         //Lấy thông tin chi tiết danh mục
         Task<CategoryDetailResponse> GetCategoryDetailsAsync(Guid id);
+
+
+        /// <summary>
+        /// Xóa 1 ServiceCategory và toàn bộ SubService / ServiceDetail / ServiceExtraMapping liên quan.
+        /// </summary>
+        Task<bool> DeleteCategoryCascadeAsync(Guid categoryId);
     }
 }

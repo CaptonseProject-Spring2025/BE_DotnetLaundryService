@@ -172,5 +172,82 @@ namespace LaundryService.Service
                 SubCategories = subCategories
             };
         }
+
+        /* ========== CASCADE DELETE ========== */
+        public async Task<bool> DeleteCategoryCascadeAsync(Guid categoryId)
+        {
+            // 1) Lấy ServiceCategory
+            var categoryRepo = _unitOfWork.Repository<Servicecategory>();
+            var category = await categoryRepo.GetAsync(c => c.Categoryid == categoryId);
+            if (category == null) throw new KeyNotFoundException("Service category not found.");
+
+            // 2) Bắt đầu transaction
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                /* ----------------------------------------------------------------
+                 * 2.1) XÓA ServiceDetail  ➜  ServiceExtraMapping  ➜  Image
+                 * ----------------------------------------------------------------*/
+                var subServiceRepo = _unitOfWork.Repository<Subservice>();
+                var detailRepo = _unitOfWork.Repository<Servicedetail>();
+                var mappingRepo = _unitOfWork.Repository<Serviceextramapping>();
+
+                // Lấy tất cả SubService thuộc category
+                var subServices = subServiceRepo.GetAll()
+                                                .Where(ss => ss.Categoryid == categoryId)
+                                                .ToList();
+
+                foreach (var sub in subServices)
+                {
+                    // Lấy ServiceDetail của SubService hiện tại
+                    var details = detailRepo.GetAll()
+                                            .Where(d => d.Subserviceid == sub.Subserviceid)
+                                            .ToList();
+
+                    foreach (var d in details)
+                    {
+                        // 2.1.1) Xóa ServiceExtraMapping
+                        var mappings = mappingRepo.GetAll()
+                                                  .Where(m => m.Serviceid == d.Serviceid)
+                                                  .ToList();
+                        if (mappings.Any())
+                            await mappingRepo.DeleteRangeAsync(mappings);
+
+                        // 2.1.2) Xóa ảnh ServiceDetail (nếu có)
+                        if (!string.IsNullOrEmpty(d.Image))
+                            await _fileStorageService.DeleteFileAsync(d.Image);
+
+                        // 2.1.3) Xóa ServiceDetail
+                        await detailRepo.DeleteAsync(d);
+                    }
+                }
+
+                /* ---------------------------------------------------
+                 * 2.2) XÓA SubService sau khi đã rỗng ServiceDetail
+                 * ---------------------------------------------------*/
+                if (subServices.Any())
+                    await _unitOfWork.Repository<Subservice>().DeleteRangeAsync(subServices);
+
+                /* -----------------------------------------------
+                 * 2.3) XÓA ảnh Icon & bản ghi ServiceCategory
+                 * -----------------------------------------------*/
+                if (!string.IsNullOrEmpty(category.Icon))
+                    await _fileStorageService.DeleteFileAsync(category.Icon);
+
+                await categoryRepo.DeleteAsync(category);
+
+                /* -------------------------------------------
+                 * 2.4) Lưu DB & Commit Transaction
+                 * -------------------------------------------*/
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+                return true;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;      // propagate cho controller xử lý
+            }
+        }
     }
 }
