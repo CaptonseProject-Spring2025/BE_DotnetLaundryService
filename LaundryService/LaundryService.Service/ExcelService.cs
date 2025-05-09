@@ -52,8 +52,7 @@ namespace LaundryService.Api.Services
                     // Xóa nội dung text (ví dụ URL) khỏi ô trước khi chèn ảnh
                     cell.Clear(XLClearOptions.Contents);
 
-                    var picture = cell.Worksheet.AddPicture(ms)
-                                        .MoveTo(cell); // Đặt góc trên trái của ảnh vào góc trên trái của ô
+                    var picture = cell.Worksheet.AddPicture(ms).MoveTo(cell); // Đặt góc trên trái của ảnh vào góc trên trái của ô
 
                     // Đặt chiều cao dòng cố định
                     cell.WorksheetRow().Height = 90;
@@ -276,8 +275,8 @@ namespace LaundryService.Api.Services
 
                 // Ghi dữ liệu
                 wsMaster.Cell(mRow, 1).SetValue(cate?.Name);
-                wsMaster.Cell(mRow, 2).SetValue(cate?.Icon);
-                wsMaster.Cell(mRow, 3).SetValue(cate?.Banner);
+                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 2), cate?.Icon, httpClient);
+                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 3), cate?.Banner, httpClient);
                 wsMaster.Cell(mRow, 4).SetValue(sub?.Name);
                 wsMaster.Cell(mRow, 5).SetValue(sub?.Description);
                 wsMaster.Cell(mRow, 6).SetValue(sub?.Mincompletetime);
@@ -297,82 +296,6 @@ namespace LaundryService.Api.Services
             var tblMaster = rngMaster.CreateTable();
             tblMaster.Theme = XLTableTheme.TableStyleLight9;
             tblMaster.ShowRowStripes = true;
-
-
-            /*************** SHEET 1 – ServiceDetails ****************/
-            var wsSd = workbook.Worksheets.Add("ServiceDetails");
-            wsSd.Cell(1, 1).SetValue("Tên Category");
-            wsSd.Cell(1, 2).SetValue("Tên SubCategory");
-            wsSd.Cell(1, 3).SetValue("ServiceId");
-            wsSd.Cell(1, 4).SetValue("Tên ServiceDetail");
-            wsSd.Cell(1, 5).SetValue("Mô tả");
-            wsSd.Cell(1, 6).SetValue("Giá");
-            wsSd.Cell(1, 7).SetValue("Ảnh");
-            wsSd.Cell(1, 8).SetValue("Ngày tạo");
-            wsSd.Cell(1, 9).SetValue("ExtraIds (phẩy)");
-            StyleHeader(wsSd.Row(1));
-
-            int row = 2;
-            foreach (var sd in serviceDetails)
-            {
-                var sub = subServices.FirstOrDefault(s => s.Subserviceid == sd.Subserviceid);
-                var cate = serviceCategories.FirstOrDefault(c => c.Categoryid == sub?.Categoryid);
-
-                // Danh sách ExtraIds
-                var extraIds = mappings.Where(m => m.Serviceid == sd.Serviceid)
-                                       .Select(m => m.Extraid.ToString())
-                                       .ToList();
-                var extraIdCsv = string.Join(",", extraIds);
-
-                wsSd.Cell(row, 1).SetValue(cate?.Name);
-                wsSd.Cell(row, 2).SetValue(sub?.Name);
-                wsSd.Cell(row, 3).SetValue(sd.Serviceid.ToString());
-                wsSd.Cell(row, 4).SetValue(sd.Name);
-                wsSd.Cell(row, 5).SetValue(sd.Description);
-                wsSd.Cell(row, 6).SetValue(sd.Price);
-                SetImageFormula(wsSd.Cell(row, 7), sd.Image);
-                wsSd.Cell(row, 8).SetValue(_util.ConvertToVnTime(sd.Createdat ?? DateTime.UtcNow));
-                wsSd.Cell(row, 9).SetValue(extraIdCsv);
-                row++;
-            }
-            wsSd.Columns().AdjustToContents();
-
-            var rngSd = wsSd.Range(1, 1, row - 1, 9);   // bao trọn vùng có dữ liệu
-            var tblSd = rngSd.CreateTable();            // biến range thành Table
-            tblSd.Theme = XLTableTheme.TableStyleLight9; // cùng theme với InsertTable mặc định
-            tblSd.ShowRowStripes = true;                  // kẻ sọc cho dễ nhìn
-
-            /*************** SHEET 2 – ServiceCategories ****************/
-            var wsCat = workbook.Worksheets.Add("ServiceCategories");
-            wsCat.Cell(1, 1).InsertTable(serviceCategories.Select(c => new
-            {
-                c.Categoryid,
-                c.Name,
-                c.Icon,
-                c.Banner,           // Banner có thể null tuỳ DB
-                CreatedAt = _util.ConvertToVnTime(c.Createdat ?? DateTime.UtcNow)
-            }));
-            int catLastRow = wsCat.LastRowUsed().RowNumber();
-            for (int r = 2; r <= catLastRow; r++)
-            {
-                SetImageFormula(wsCat.Cell(r, 3), wsCat.Cell(r, 3).GetString()); // Icon  (col 3)
-                SetImageFormula(wsCat.Cell(r, 4), wsCat.Cell(r, 4).GetString()); // Banner(col 4)
-            }
-
-            wsCat.Columns().AdjustToContents();
-
-            /*************** SHEET 3 – SubServices ****************/
-            var wsSub = workbook.Worksheets.Add("SubServices");
-            wsSub.Cell(1, 1).InsertTable(subServices.Select(s => new
-            {
-                s.Subserviceid,
-                s.Categoryid,
-                s.Name,
-                s.Description,
-                s.Mincompletetime,
-                CreatedAt = _util.ConvertToVnTime(s.Createdat ?? DateTime.UtcNow)
-            }));
-            wsSub.Columns().AdjustToContents();
 
             /*************** SHEET 4 – Extras ****************/
             var wsExtra = workbook.Worksheets.Add("Extras");
