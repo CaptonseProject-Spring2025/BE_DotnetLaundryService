@@ -3,6 +3,7 @@ using LaundryService.Api.Services;
 using LaundryService.Domain.Entities;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -61,5 +62,37 @@ namespace LaundryService.Api.Controllers
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         $"LaundryServices_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
         }
+
+        [HttpPost("import-laundry-services")]
+        //[Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ImportLaundryServices(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("Không có file được tải lên.");
+            }
+
+            if (Path.GetExtension(file.FileName).ToLowerInvariant() != ".xlsx")
+            {
+                return BadRequest("Chỉ chấp nhận file định dạng .xlsx.");
+            }
+
+            try
+            {
+                var resultMessage = await _excelService.ImportLaundryServicesFromExcel(file);
+                return Ok(new { success = true, message = resultMessage });
+            }
+            catch (ArgumentException ex) // Catch specific validation errors
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log the full exception server-side for debugging
+                Console.Error.WriteLine($"Import Error: {ex.ToString()}"); // Replace with actual logging
+                return StatusCode(500, new { success = false, message = $"Đã xảy ra lỗi trong quá trình import: {ex.Message}" });
+            }
+        }
+
     }
 }

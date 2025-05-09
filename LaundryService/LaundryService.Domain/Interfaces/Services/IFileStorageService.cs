@@ -15,5 +15,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task DeleteFileAsync(string fileUrl);
 
         Task<UploadMultipleFilesResult> UploadMultipleFilesAsync(IFormFileCollection files, string folderName);
+
+        Task<string> UploadStreamAsync(Stream stream, string folderName, string ext);
     }
 }

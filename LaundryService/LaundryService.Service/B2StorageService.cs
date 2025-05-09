@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using LaundryService.Dto.Responses;
+using MimeKit;
 
 namespace LaundryService.Service
 {
@@ -301,6 +302,21 @@ namespace LaundryService.Service
             }
 
             return fileUrl; // Return as is if it's already a key
+        }
+
+        public async Task<string> UploadStreamAsync(Stream stream, string folder, string ext)
+        {
+            var key = $"{folder}/{Guid.NewGuid()}{ext}";
+            var put = new PutObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = key,
+                InputStream = stream,
+                ContentType = MimeTypes.GetMimeType(ext),
+                CannedACL = S3CannedACL.PublicRead
+            };
+            await _s3Client.PutObjectAsync(put);
+            return $"{_baseUrl}/{key}";
         }
     }
 }

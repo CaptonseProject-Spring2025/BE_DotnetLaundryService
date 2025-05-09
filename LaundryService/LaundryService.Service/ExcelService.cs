@@ -4,8 +4,10 @@ using ClosedXML.Graphics;
 using LaundryService.Domain.Entities;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Requests;
 using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
+using Org.BouncyCastle.Asn1.Ocsp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,11 +22,13 @@ namespace LaundryService.Api.Services
         private readonly IUtil _util;
         private static readonly HttpClient httpClient = new HttpClient();
         private readonly Dictionary<string, byte[]> _categoryIconCache = new();
+        private readonly IFileStorageService _fileStorageService;
 
-        public ExcelsService(IUnitOfWork unitOfWork, IUtil util)
+        public ExcelsService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
+            _fileStorageService = fileStorageService;
         }
 
         private static void StyleHeader(IXLRow headerRow)
@@ -363,6 +367,247 @@ namespace LaundryService.Api.Services
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             return stream.ToArray();
+        }
+
+
+        public async Task<ImportLaundryResult> ImportLaundryServicesFromExcel(IFormFile f)
+        {
+            var rs = new ImportLaundryResult();
+
+            using var stream = new MemoryStream();
+            await f.CopyToAsync(stream);
+            using var wb = new XLWorkbook(stream);
+
+            var wsExtras = wb.Worksheet("Extras");
+            var wsMaster = wb.Worksheet("Master Sheet");
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // STEP 1 ‑ import EXTRA & EXTRA‑CATEGORY
+                var extrasDict = await ImportExtrasAsync(wsExtras, rs);
+                // STEP 2 ‑ import CATEGORY + SUBCATEGORY + SERVICE
+                await ImportMasterAsync(wsMaster, extrasDict, rs);
+
+                await _unitOfWork.CommitTransaction();
+                return rs;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        // STEP 1 – Extras
+        private async Task<Dictionary<string/*ExtraName*/, Guid/*ExtraId*/>> ImportExtrasAsync(IXLWorksheet ws, ImportLaundryResult rs)
+        {
+            var extraNameToId = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+            var rows = ws.RangeUsed().RowsUsed().Skip(1); // bỏ header
+
+            foreach (var row in rows)
+            {
+                var name = row.Cell(1).GetString().Trim();
+                var desc = row.Cell(2).GetString().Trim();
+                var price = row.Cell(3).GetDouble();
+                var catName = row.Cell(5).GetString().Trim();
+
+                if (string.IsNullOrEmpty(name) || price <= 0 || string.IsNullOrEmpty(catName))
+                { rs.ErrorRows.Add($"Extras!{row.RowNumber()}"); continue; }
+
+                // Extra‑Category
+                var ec = await _unitOfWork.Repository<Extracategory>()
+                         .GetAsync(c => c.Name == catName);
+                if (ec is null)
+                {
+                    ec = new Extracategory { Name = catName, Createdat = DateTime.UtcNow };
+                    await _unitOfWork.Repository<Extracategory>().InsertAsync(ec);
+                    rs.CategoriesInserted++;
+                }
+
+                // Check duplicate Extra
+                var extra = _unitOfWork.Repository<Extra>().GetAll()
+                             .FirstOrDefault(e => e.Name == name && e.Extracategoryid == ec.Extracategoryid);
+                if (extra is null)
+                {
+                    // Image
+                    var pic = row.Worksheet.Pictures
+                                .FirstOrDefault(p =>
+                                    p.TopLeftCell.Address.RowNumber == row.RowNumber() &&
+                                    p.TopLeftCell.Address.ColumnNumber == 4);
+                    string imgUrl = null;
+                    if (pic != null)
+                    {
+                        using var ms = new MemoryStream();
+                        pic.ImageStream.CopyTo(ms);
+                        ms.Position = 0;
+                        imgUrl = await _fileStorageService.UploadStreamAsync(ms, "extras-test", ".png");
+                    }
+
+                    extra = new Extra
+                    {
+                        Extracategoryid = ec.Extracategoryid,
+                        Name = name,
+                        Description = desc,
+                        Price = (decimal)price,
+                        Image = imgUrl,
+                        Createdat = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Repository<Extra>().InsertAsync(extra);
+                    rs.ExtrasInserted++;
+                }
+
+                extraNameToId[name] = extra.Extraid;
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+            return extraNameToId;
+        }
+
+        //STEP 2 – Master Sheet
+        private async Task ImportMasterAsync(
+            IXLWorksheet ws,
+            IReadOnlyDictionary<string, Guid> extraDict,
+            ImportLaundryResult rs)
+        {
+            var rows = ws.RangeUsed().RowsUsed().Skip(1);
+
+            // bộ nhớ tạm để không upload icon/banner trùng
+            var uploadedCategoryIcons = new Dictionary<string, string>(); // key: hash|url  value: B2 url
+            var uploadedCategoryBanners = new Dictionary<string, string>();
+
+            foreach (var row in rows)
+            {
+                var svName = row.Cell(1).GetString().Trim();
+                var svDesc = row.Cell(3).GetString().Trim();
+                var svPrice = row.Cell(4).GetDouble();
+                var catName = row.Cell(5).GetString().Trim();
+                var subName = row.Cell(8).GetString().Trim();
+
+                if (string.IsNullOrEmpty(svName) || svPrice <= 0
+                    || string.IsNullOrEmpty(catName) || string.IsNullOrEmpty(subName))
+                { rs.ErrorRows.Add($"Master!{row.RowNumber()}"); continue; }
+
+                /* ---------- CATEGORY ---------- */
+                var categoryRepo = _unitOfWork.Repository<Servicecategory>();
+                var cat = await categoryRepo.GetAsync(c => c.Name == catName);
+                if (cat is null)
+                {
+                    cat = new Servicecategory { Name = catName };
+                    // icon + banner
+                    var xlRow = row.WorksheetRow();
+                    cat.Icon = await UploadPictureOnce(xlRow, 6, "system-image-test", uploadedCategoryIcons);
+                    cat.Banner = await UploadPictureOnce(xlRow, 7, "system-image-test", uploadedCategoryBanners);
+
+                    await categoryRepo.InsertAsync(cat);
+                    rs.CategoriesInserted++;
+                }
+
+                /* ---------- SUBCATEGORY ---------- */
+                var subRepo = _unitOfWork.Repository<Subservice>();
+                var sub = subRepo.GetAll()
+                         .FirstOrDefault(s => s.Categoryid == cat.Categoryid && s.Name == subName);
+                if (sub is null)
+                {
+                    sub = new Subservice
+                    {
+                        Categoryid = cat.Categoryid,
+                        Name = subName,
+                        Description = row.Cell(9).GetString().Trim(),
+                        Mincompletetime = row.Cell(10).GetValue<int>(),
+                        Createdat = DateTime.UtcNow
+                    };
+                    await subRepo.InsertAsync(sub);
+                    rs.SubCategoriesInserted++;
+                }
+
+                /* ---------- SERVICE DETAIL ---------- */
+                // Tránh trùng tên service trong Sub
+                var svRepo = _unitOfWork.Repository<Servicedetail>();
+                var service = svRepo.GetAll()
+                             .FirstOrDefault(s => s.Subserviceid == sub.Subserviceid && s.Name == svName);
+                if (service is null)
+                {
+                    var pic = row.Worksheet.Pictures
+                                .FirstOrDefault(p =>
+                                    p.TopLeftCell.Address.RowNumber == row.RowNumber() &&
+                                    p.TopLeftCell.Address.ColumnNumber == 2);
+                    string imgUrl = null;
+                    if (pic != null)
+                    {
+                        using var ms = new MemoryStream();
+                        pic.ImageStream.CopyTo(ms); ms.Position = 0;
+                        imgUrl = await _fileStorageService.UploadStreamAsync(ms, "service-details-test", ".png");
+                    }
+
+                    service = new Servicedetail
+                    {
+                        Subserviceid = sub.Subserviceid,
+                        Name = svName,
+                        Description = svDesc,
+                        Price = (decimal)svPrice,
+                        Image = imgUrl,
+                        Createdat = DateTime.UtcNow
+                    };
+                    await svRepo.InsertAsync(service);
+                    rs.ServicesInserted++;
+                }
+
+                /* ---------- MAPPING EXTRAS ---------- */
+                var extraNames = row.Cell(11).GetString().Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(x => x.Trim())
+                                  .Distinct(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var exName in extraNames)
+                {
+                    if (extraDict.TryGetValue(exName, out var extraId))
+                    {
+                        var exists = _unitOfWork.Repository<Serviceextramapping>()
+                                     .GetAll()
+                                     .Any(m => m.Serviceid == service.Serviceid && m.Extraid == extraId);
+                        if (!exists)
+                        {
+                            await _unitOfWork.Repository<Serviceextramapping>()
+                                  .InsertAsync(new Serviceextramapping
+                                  {
+                                      Serviceid = service.Serviceid,
+                                      Extraid = extraId
+                                  });
+                            rs.ServiceExtraMapped++;
+                        }
+                    }
+                    else
+                    {
+                        rs.ErrorRows.Add($"ExtraName '{exName}' not found (row {row.RowNumber()})");
+                    }
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        //upload icon/banner chỉ một lần
+        private async Task<string?> UploadPictureOnce(
+        IXLRow row, int colIdx,
+        string folder,
+        IDictionary<string, string> cache)
+        {
+            var pic = row.Worksheet.Pictures
+            .FirstOrDefault(p =>
+                p.TopLeftCell.Address.RowNumber == row.RowNumber() &&
+                p.TopLeftCell.Address.ColumnNumber == colIdx);
+            if (pic == null) return null;
+
+            // hash tạm = chiều rộng+cao+bytes đầu
+            string key = $"{pic.OriginalWidth}-{pic.OriginalHeight}";
+            if (cache.TryGetValue(key, out var url))
+                return url;
+
+            using var ms = new MemoryStream();
+            pic.ImageStream.CopyTo(ms); ms.Position = 0;
+            url = await _fileStorageService.UploadStreamAsync(ms, folder, ".png");
+            cache[key] = url;
+            return url;
         }
     }
 }
