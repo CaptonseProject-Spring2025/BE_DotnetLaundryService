@@ -19,6 +19,7 @@ namespace LaundryService.Api.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
         private static readonly HttpClient httpClient = new HttpClient();
+        private readonly Dictionary<string, byte[]> _categoryIconCache = new();
 
         public ExcelsService(IUnitOfWork unitOfWork, IUtil util)
         {
@@ -89,6 +90,43 @@ namespace LaundryService.Api.Services
             {
                 cell.Clear(XLClearOptions.Contents);
                 cell.Value = "Ảnh lỗi";
+                cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+            }
+        }
+
+        private async Task EmbedCategoryIconAsync(IXLCell cell, string url)
+        {
+            if (string.IsNullOrWhiteSpace(url) ||
+                !Uri.TryCreate(url, UriKind.Absolute, out _))
+            {
+                cell.Clear(XLClearOptions.Contents);
+                return;
+            }
+
+            try
+            {
+                if (!_categoryIconCache.TryGetValue(url, out var bytes))
+                {
+                    // Lần đầu gặp URL này → tải và lưu cache
+                    bytes = await httpClient.GetByteArrayAsync(url);
+                    _categoryIconCache[url] = bytes;
+                }
+
+                using var ms = new MemoryStream(bytes);
+                var pic = cell.Worksheet.AddPicture(ms)
+                                        .MoveTo(cell)
+                                        .Scale(0.2);
+
+                cell.WorksheetRow().Height =
+                    Math.Max(cell.WorksheetRow().Height, pic.Height * 0.75);
+
+                cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+            }
+            catch
+            {
+                cell.Clear(XLClearOptions.Contents);
+                cell.Value = "IconErr";
                 cell.Style.Alignment.SetVertical(XLAlignmentVerticalValues.Center);
                 cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
             }
@@ -249,9 +287,9 @@ namespace LaundryService.Api.Services
 
             // Header
             string[] masterHeaders = {
+                "Service Name", "Service Image", "Service Description", "Service Price",
                 "Category Name", "Category Icon", "Category Banner",
                 "SubCategory Name", "SubCategory Description", "SubCategory Mincompletetime",
-                "Service Name", "Service Description", "Service Price", "Service Image",
                 "Extras"
             };
             for (int i = 0; i < masterHeaders.Length; i++)
@@ -274,16 +312,16 @@ namespace LaundryService.Api.Services
                 var extrasNewLine = string.Join("\n", extraNames);    // mỗi extra 1 dòng
 
                 // Ghi dữ liệu
-                wsMaster.Cell(mRow, 1).SetValue(cate?.Name);
-                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 2), cate?.Icon, httpClient);
-                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 3), cate?.Banner, httpClient);
-                wsMaster.Cell(mRow, 4).SetValue(sub?.Name);
-                wsMaster.Cell(mRow, 5).SetValue(sub?.Description);
-                wsMaster.Cell(mRow, 6).SetValue(sub?.Mincompletetime);
-                wsMaster.Cell(mRow, 7).SetValue(sd.Name);
-                wsMaster.Cell(mRow, 8).SetValue(sd.Description);
-                wsMaster.Cell(mRow, 9).SetValue(sd.Price);
-                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 10), sd.Image, httpClient);
+                wsMaster.Cell(mRow, 1).SetValue(sd.Name);
+                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 2), sd.Image, httpClient);
+                wsMaster.Cell(mRow, 3).SetValue(sd.Description);
+                wsMaster.Cell(mRow, 4).SetValue(sd.Price);
+                wsMaster.Cell(mRow, 5).SetValue(cate?.Name);
+                await EmbedCategoryIconAsync(wsMaster.Cell(mRow, 6), cate?.Icon);
+                await EmbedImageInCellAsync(wsMaster.Cell(mRow, 7), cate?.Banner, httpClient);
+                wsMaster.Cell(mRow, 8).SetValue(sub?.Name);
+                wsMaster.Cell(mRow, 9).SetValue(sub?.Description);
+                wsMaster.Cell(mRow, 10).SetValue(sub?.Mincompletetime);
                 wsMaster.Cell(mRow, 11).SetValue(extrasNewLine);
                 wsMaster.Cell(mRow, 11).Style.Alignment.WrapText = true;   // xuống dòng hiển thị
                 mRow++;
@@ -297,28 +335,26 @@ namespace LaundryService.Api.Services
             tblMaster.Theme = XLTableTheme.TableStyleLight9;
             tblMaster.ShowRowStripes = true;
 
-            /*************** SHEET 4 – Extras ****************/
+            /*************** SHEET 2 – Extras ****************/
             var wsExtra = workbook.Worksheets.Add("Extras");
             wsExtra.Cell(1, 1).InsertTable(extras.Select(e =>
             {
                 var ec = extraCategories.FirstOrDefault(x => x.Extracategoryid == e.Extracategoryid);
                 return new
                 {
-                    e.Extracategoryid,
-                    ExtraCategoryName = ec?.Name,
-                    ExtraCategoryCreate = _util.ConvertToVnTime(ec?.Createdat ?? DateTime.UtcNow),
-                    e.Extraid,
                     e.Name,
                     e.Description,
                     e.Price,
                     e.Image,
-                    CreatedAt = _util.ConvertToVnTime(e.Createdat ?? DateTime.UtcNow)
+                    CreatedAt = _util.ConvertToVnTime(e.Createdat ?? DateTime.UtcNow),
+                    ExtraCategoryName = ec?.Name,
+                    ExtraCategoryCreate = _util.ConvertToVnTime(ec?.Createdat ?? DateTime.UtcNow)
                 };
             }));
             int exLastRow = wsExtra.LastRowUsed().RowNumber();
             for (int r = 2; r <= exLastRow; r++)
             {
-                SetImageFormula(wsExtra.Cell(r, 8), wsExtra.Cell(r, 8).GetString()); // Image (col 8)
+                SetImageFormula(wsExtra.Cell(r, 4), wsExtra.Cell(r, 4).GetString()); // Image (col 4)
             }
 
             wsExtra.Columns().AdjustToContents();
