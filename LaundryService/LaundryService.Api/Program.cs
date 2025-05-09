@@ -83,6 +83,7 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
 builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService>();
+builder.Services.AddScoped<IComplaintService, ComplaintService>();
 
 
 builder.Services.AddSignalR(options =>
@@ -197,5 +198,6 @@ app.UseSwaggerUI(c =>
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub"); // Đăng ký SignalR Hub
 app.MapHub<TrackingHub>("/trackingHub");
+app.MapHub<ComplaintHub>("/complaintHub");
 
 app.Run();
