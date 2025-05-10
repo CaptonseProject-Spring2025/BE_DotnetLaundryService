@@ -43,6 +43,8 @@ namespace LaundryService.Api.Controllers
                     "ReceiveComplaintUpdate",
                     $"Đã có khiếu nại mới cho đơn hàng {orderId}");
 
+
+
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
             }
             catch (UnauthorizedAccessException ex)
@@ -70,8 +72,13 @@ namespace LaundryService.Api.Controllers
                 await _complaintService.CreateComplaintAsyncForAdminOrCustomerStaff(HttpContext, orderId, request.ComplaintDescription, request.ComplaintType);
 
                 await _hubContext.Clients.All.SendAsync(
-                    "ReceiveComplaintUpdate",
+                    "ReceiveComplaintNotication",
                     $"Đã có khiếu nại mới cho đơn hàng {orderId}");
+
+                var pendingComplaints = await _complaintService.GetPendingComplaintsAsync(HttpContext);
+                await _hubContext.Clients.All.SendAsync(
+               "ReceiveComplaintUpdate",
+               pendingComplaints);
 
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
             }
@@ -96,6 +103,9 @@ namespace LaundryService.Api.Controllers
             try
             {
                 var pendingComplaints = await _complaintService.GetPendingComplaintsAsync(HttpContext);
+                await _hubContext.Clients.All.SendAsync(
+                   "ReceiveComplaintUpdate",
+                   pendingComplaints);
                 return Ok(pendingComplaints);
             }
             catch (UnauthorizedAccessException ex)
@@ -120,6 +130,7 @@ namespace LaundryService.Api.Controllers
             try
             {
                 var complaintDetail = await _complaintService.GetComplaintDetailAsync(HttpContext, complaintId);
+
                 return Ok(complaintDetail);
             }
             catch (UnauthorizedAccessException ex)
@@ -188,7 +199,7 @@ namespace LaundryService.Api.Controllers
                 await _complaintService.CompleteComplaintAsync(HttpContext, complaintId, resolutionDetails);
 
                 await _hubContext.Clients.All.SendAsync(
-                    "ReceiveComplaintUpdate", 
+                    "ReceiveComplaintUpdate",
                     $"Khiếu nại {complaintId} đã hoàn thành và có trạng thái RESOLVED.");
 
                 return Ok(new { Message = "Khiếu nại đã được hoàn thành." });
