@@ -84,7 +84,7 @@ namespace LaundryService.Api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized(new { Message = ex.Message });
+                return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
