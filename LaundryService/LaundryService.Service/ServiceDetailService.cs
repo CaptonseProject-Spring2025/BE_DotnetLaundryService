@@ -156,16 +156,6 @@ namespace LaundryService.Service
                 throw new InvalidOperationException("Cannot delete service detail because it has related orders.");
             }
 
-            // Kiểm tra nếu có ràng buộc với Ratings
-            var hasRatings = _unitOfWork.Repository<Rating>()
-                .GetAll()
-                .Any(r => r.Serviceid == serviceId);
-
-            if (hasRatings)
-            {
-                throw new InvalidOperationException("Cannot delete service detail because it has associated ratings.");
-            }
-
             // Kiểm tra nếu có ràng buộc với ServiceExtraMapping
             var hasExtraMappings = _unitOfWork.Repository<Serviceextramapping>()
                 .GetAll()

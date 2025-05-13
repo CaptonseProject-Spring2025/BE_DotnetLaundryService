@@ -245,9 +245,8 @@ CREATE TABLE DriverLocationHistory (
 CREATE TABLE Ratings (
     RatingID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     UserID UUID NOT NULL REFERENCES Users(UserID), -- Ai đã đánh giá
-    ServiceID UUID NOT NULL REFERENCES ServiceDetails(ServiceID), -- Dịch vụ nào được đánh giá
     OrderID TEXT NOT NULL REFERENCES Orders(OrderID), -- Liên kết với đơn hàng đã sử dụng dịch vụ
-    Rating INT,-- CHECK (Rating BETWEEN 1 AND 5) NOT NULL, -- Điểm đánh giá từ 1 đến 5
+    Star INT,-- CHECK (Rating BETWEEN 1 AND 5) NOT NULL, -- Điểm đánh giá từ 1 đến 5
     Review TEXT, -- Nhận xét của người dùng
     CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW() -- Ngày đánh giá
 );
@@ -300,6 +299,20 @@ CREATE TABLE RewardTransactions (
     OptionID UUID REFERENCES RewardRedemptionOptions(OptionID),  -- Áp dụng nếu là giao dịch đổi điểm
     TransactionDate TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     Note TEXT
+);
+
+CREATE TABLE Areas (
+	AreaID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	Name TEXT NOT NULL,
+    Districts TEXT[],
+    AreaType TEXT NOT NULL -- CHECK (Purpose IN ('ShippingFee', 'Driver'))
+);
+
+CREATE TABLE BranchAddress (
+	BrachID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+	AddressDetail TEXT,
+	Latitude DECIMAL(9,6),
+	Longitude DECIMAL(9,6)
 );
 
 --INSERT DATA

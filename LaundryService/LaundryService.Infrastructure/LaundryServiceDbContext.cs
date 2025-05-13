@@ -18,6 +18,10 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Address> Addresses { get; set; }
 
+    public virtual DbSet<Area> Areas { get; set; }
+
+    public virtual DbSet<Branchaddress> Branchaddresses { get; set; }
+
     public virtual DbSet<Complaint> Complaints { get; set; }
 
     public virtual DbSet<Conversation> Conversations { get; set; }
@@ -104,6 +108,38 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("addresses_userid_fkey");
+        });
+
+        modelBuilder.Entity<Area>(entity =>
+        {
+            entity.HasKey(e => e.Areaid).HasName("areas_pkey");
+
+            entity.ToTable("areas");
+
+            entity.Property(e => e.Areaid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("areaid");
+            entity.Property(e => e.Areatype).HasColumnName("areatype");
+            entity.Property(e => e.Districts).HasColumnName("districts");
+            entity.Property(e => e.Name).HasColumnName("name");
+        });
+
+        modelBuilder.Entity<Branchaddress>(entity =>
+        {
+            entity.HasKey(e => e.Brachid).HasName("branchaddress_pkey");
+
+            entity.ToTable("branchaddress");
+
+            entity.Property(e => e.Brachid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("brachid");
+            entity.Property(e => e.Addressdetail).HasColumnName("addressdetail");
+            entity.Property(e => e.Latitude)
+                .HasPrecision(9, 6)
+                .HasColumnName("latitude");
+            entity.Property(e => e.Longitude)
+                .HasPrecision(9, 6)
+                .HasColumnName("longitude");
         });
 
         modelBuilder.Entity<Complaint>(entity =>
@@ -672,20 +708,14 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasColumnName("createdat");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
-            entity.Property(e => e.Rating1).HasColumnName("rating");
             entity.Property(e => e.Review).HasColumnName("review");
-            entity.Property(e => e.Serviceid).HasColumnName("serviceid");
+            entity.Property(e => e.Star).HasColumnName("star");
             entity.Property(e => e.Userid).HasColumnName("userid");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Ratings)
                 .HasForeignKey(d => d.Orderid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ratings_orderid_fkey");
-
-            entity.HasOne(d => d.Service).WithMany(p => p.Ratings)
-                .HasForeignKey(d => d.Serviceid)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("ratings_serviceid_fkey");
 
             entity.HasOne(d => d.User).WithMany(p => p.Ratings)
                 .HasForeignKey(d => d.Userid)
