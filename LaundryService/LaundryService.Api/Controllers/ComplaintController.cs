@@ -40,9 +40,13 @@ namespace LaundryService.Api.Controllers
                 await _complaintService.CreateComplaintAsyncForCustomer(HttpContext, orderId, request.ComplaintDescription, request.ComplaintType);
 
                 await _hubContext.Clients.All.SendAsync(
-                    "ReceiveComplaintUpdate",
-                    $"Đã có khiếu nại mới cho đơn hàng {orderId}");
+                   "ReceiveComplaintNotication",
+                   $"Đã có khiếu nại mới cho đơn hàng {orderId}");
 
+                var pendingComplaints = await _complaintService.GetPendingComplaintsAsync(HttpContext);
+                await _hubContext.Clients.All.SendAsync(
+               "ReceiveComplaintUpdate",
+               pendingComplaints);
 
 
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
