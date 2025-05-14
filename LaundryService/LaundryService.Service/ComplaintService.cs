@@ -30,12 +30,17 @@ namespace LaundryService.Service
             var order = await _unitOfWork.Repository<Order>().GetAsync(o => o.Orderid == orderId);
             if (order == null)
             {
-                throw new UnauthorizedAccessException("Đơn hàng không tồn tại.");
+                throw new KeyNotFoundException("Đơn hàng không tồn tại.");
             }
 
             if (order.Userid != customerId)
             {
                 throw new UnauthorizedAccessException("Đơn hàng này không thuộc quyền sở hữu của bạn. Bạn không thể tạo khiếu nại cho đơn hàng này.");
+            }
+
+            if (order.Currentstatus != OrderStatusEnum.DELIVERED.ToString())
+            {
+                throw new InvalidOperationException("Chỉ có đơn hàng đã giao mới được phép khiếu nại.");
             }
 
             if (order.Currentstatus == OrderStatusEnum.COMPLAINT.ToString())
@@ -90,7 +95,90 @@ namespace LaundryService.Service
             }
         }
 
+        public async Task<List<UserComplaintResponse>> GetComplaintsForCustomerAsync(HttpContext httpContext)
+        {
+            var customerId = _util.GetCurrentUserIdOrThrow(httpContext);
 
+            var complaints = await _unitOfWork.Repository<Complaint>()
+                .GetAll()
+                .Where(c => c.Userid == customerId)
+                .OrderByDescending(c => c.Createdat)
+                .ToListAsync();
+
+            return complaints.Select(c => new UserComplaintResponse
+            {
+                ComplaintId = c.Complaintid,
+                OrderId = c.Orderid,
+                ComplaintType = c.Complainttype,
+                Status = c.Status,
+                CreatedAt = c.Createdat ?? DateTime.MinValue
+            }).ToList();
+        }
+
+        public async Task<UserComplaintDetailResponse> GetComplaintDetailForCustomerAsync(HttpContext httpContext, Guid complaintId)
+        {
+            var customerId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            var complaint = await _unitOfWork.Repository<Complaint>()
+                .GetAll()
+                .Where(c => c.Complaintid == complaintId && c.Userid == customerId)
+                .FirstOrDefaultAsync();
+
+            if (complaint == null)
+            {
+                throw new UnauthorizedAccessException("Bạn không có quyền xem chi tiết khiếu nại này.");
+            }
+
+            return new UserComplaintDetailResponse
+            {
+                OrderId = complaint.Orderid,
+                ComplaintType = complaint.Complainttype,
+                ComplaintDescription = complaint.Complaintdescription,
+                Status = complaint.Status,
+                ResolutionDetails = complaint.Resolutiondetails,
+                CreatedAt = complaint.Createdat ?? DateTime.MinValue,
+                ResolvedAt = complaint.Resolvedat ?? DateTime.MinValue
+            };
+        }
+
+        public async Task CancelComplaintAsyncForCustomer(HttpContext httpContext, Guid complaintId)
+        {
+            var customerId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            var complaint = await _unitOfWork.Repository<Complaint>()
+                .GetAsync(c => c.Complaintid == complaintId);
+            if (complaint == null)
+                throw new KeyNotFoundException("Không tìm thấy khiếu nại.");
+
+            if (complaint.Userid != customerId)
+                throw new UnauthorizedAccessException("Bạn không có quyền hủy khiếu nại này.");
+
+            if (complaint.Status != ComplaintStatusEnum.PENDING.ToString())
+                throw new InvalidOperationException("Chỉ khi khiếu nại ở trạng thái PENDING mới được hủy.");
+
+            var order = await _unitOfWork.Repository<Order>()
+                .GetAsync(o => o.Orderid == complaint.Orderid);
+            if (order == null)
+                throw new KeyNotFoundException("Đơn hàng liên quan không tồn tại.");
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                complaint.Status = ComplaintStatusEnum.CANCELLED.ToString();
+                await _unitOfWork.Repository<Complaint>().UpdateAsync(complaint);
+
+                order.Currentstatus = OrderStatusEnum.DELIVERED.ToString();
+                await _unitOfWork.Repository<Order>().UpdateAsync(order);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
 
         public async Task CreateComplaintAsyncForAdminOrCustomerStaff(HttpContext httpContext, string orderId, string complaintDescription, string complaintType)
         {
@@ -99,7 +187,7 @@ namespace LaundryService.Service
             var order = await _unitOfWork.Repository<Order>().GetAsync(o => o.Orderid == orderId);
             if (order == null)
             {
-                throw new UnauthorizedAccessException("Đơn hàng không tồn tại.");
+                throw new KeyNotFoundException("Đơn hàng không tồn tại.");
             }
 
             if (order.Currentstatus == OrderStatusEnum.COMPLAINT.ToString())
@@ -156,7 +244,6 @@ namespace LaundryService.Service
             }
         }
 
-
         public async Task<List<ComplaintResponse>> GetPendingComplaintsAsync(HttpContext httpContext)
         {
             if (!httpContext.User.IsInRole("Admin") && !httpContext.User.IsInRole("CustomerStaff"))
@@ -167,6 +254,7 @@ namespace LaundryService.Service
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
                 .Where(c => c.Status == ComplaintStatusEnum.PENDING.ToString())
+                .OrderBy(c => c.Createdat)
                 .Include(c => c.User)
                 .ToListAsync();
 
@@ -180,9 +268,6 @@ namespace LaundryService.Service
                 CreatedAt = c.Createdat ?? DateTime.MinValue
             }).ToList();
         }
-
-
-
 
         public async Task<ComplaintDetailResponse> GetComplaintDetailAsync(HttpContext httpContext, Guid complaintId)
         {
@@ -220,8 +305,6 @@ namespace LaundryService.Service
                 ResolvedAt = complaint.Resolvedat ?? DateTime.MinValue
             };
         }
-
-
 
         public async Task AcceptComplaintAsync(HttpContext httpContext, Guid complaintId)
         {
@@ -302,6 +385,7 @@ namespace LaundryService.Service
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
                 .Where(c => c.Status == ComplaintStatusEnum.IN_PROGRESS.ToString() && c.Assignedto == staffId)
+                .OrderByDescending(c => c.Createdat)
                 .Include(c => c.User)
                 .ToListAsync();
 
@@ -323,6 +407,7 @@ namespace LaundryService.Service
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
                 .Where(c => c.Status == ComplaintStatusEnum.RESOLVED.ToString() && c.Assignedto == staffId)
+                .OrderByDescending(c => c.Createdat)
                 .Include(c => c.User)
                 .ToListAsync();
 
@@ -342,6 +427,7 @@ namespace LaundryService.Service
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
                 .Where(c => c.Status == ComplaintStatusEnum.IN_PROGRESS.ToString())
+                .OrderByDescending(c => c.Createdat)
                 .Include(c => c.User)
                 .Include(c => c.AssignedtoNavigation)
                 .ToListAsync();
@@ -363,6 +449,7 @@ namespace LaundryService.Service
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll() 
                 .Where(c => c.Status == ComplaintStatusEnum.RESOLVED.ToString())
+                .OrderByDescending(c => c.Createdat)
                 .Include(c => c.User) 
                 .Include(c => c.AssignedtoNavigation) 
                 .ToListAsync();

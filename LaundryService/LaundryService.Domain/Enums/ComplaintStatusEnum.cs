@@ -10,6 +10,7 @@ namespace LaundryService.Domain.Enums
     {
         PENDING,
         IN_PROGRESS,
-        RESOLVED
+        RESOLVED,
+        CANCELLED
     }
 }

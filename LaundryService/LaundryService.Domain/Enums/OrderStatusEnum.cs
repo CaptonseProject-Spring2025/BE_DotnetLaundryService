@@ -32,7 +32,8 @@ namespace LaundryService.Domain.Enums
         DELIVERYFAILED = 14,
         
         DELIVERED = 15,
-        CANCELLED = 16,
-        COMPLAINT = 17
+        COMPLETED = 16,
+        CANCELLED = 17,
+        COMPLAINT = 18
     }
 }
