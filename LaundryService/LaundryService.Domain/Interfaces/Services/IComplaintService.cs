@@ -7,6 +7,9 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IComplaintService
     {
         Task CreateComplaintAsyncForCustomer(HttpContext httpContext, string orderId, string complaintDescription, string complaintType);
+        Task<List<UserComplaintResponse>> GetComplaintsForCustomerAsync(HttpContext httpContext);
+        Task<UserComplaintDetailResponse> GetComplaintDetailForCustomerAsync(HttpContext httpContext, Guid complaintId);
+        Task CancelComplaintAsyncForCustomer(HttpContext httpContext, Guid complaintId);
         Task CreateComplaintAsyncForAdminOrCustomerStaff(HttpContext httpContext, string orderId, string complaintDescription, string complaintType);
         Task<List<ComplaintResponse>> GetPendingComplaintsAsync(HttpContext httpContext);
         Task<ComplaintDetailResponse> GetComplaintDetailAsync(HttpContext httpContext, Guid complaintId);

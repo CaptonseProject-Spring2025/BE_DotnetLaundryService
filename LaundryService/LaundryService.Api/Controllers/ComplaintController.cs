@@ -51,13 +51,106 @@ namespace LaundryService.Api.Controllers
 
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
             }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi tạo khiếu nại", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách các đơn khiếu nại của người dùng
+        /// </summary>
+        /// <returns>Danh sách khiếu nại của người dùng</returns>
+        /// <remarks>
+        /// **User** chỉ có thể lấy các khiếu nại của chính họ.
+        /// </remarks>
+        [HttpGet("my-complaints")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> GetMyComplaints()
+        {
+            try
+            {
+                var complaints = await _complaintService.GetComplaintsForCustomerAsync(HttpContext);
+
+                return Ok(complaints);
+            }
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(new { Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Có lỗi xảy ra khi tạo khiếu nại", Error = ex.Message });
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi truy xuất danh sách khiếu nại", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy chi tiết khiếu nại của người dùng
+        /// </summary>
+        /// <param name="complaintId">ID của khiếu nại cần xem chi tiết</param>
+        /// <returns>Thông tin chi tiết khiếu nại</returns>
+        /// <remarks>
+        /// **Customer** chỉ có thể xem chi tiết khiếu nại của chính họ.
+        /// </remarks>
+        [HttpGet("my-complaints/{complaintId}")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> GetComplaintDetailForUser(Guid complaintId)
+        {
+            try
+            {
+                var complaintDetail = await _complaintService.GetComplaintDetailForCustomerAsync(HttpContext, complaintId);
+
+                return Ok(complaintDetail);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi truy xuất chi tiết khiếu nại", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Customer hủy khiếu nại (chỉ khi ở trạng thái PENDING)
+        /// </summary>
+        [HttpPut("complaints/{complaintId}/cancel")]
+        [Authorize(Roles = "Customer")]
+        public async Task<IActionResult> CancelComplaintForCustomer(Guid complaintId)
+        {
+            try
+            {
+                await _complaintService.CancelComplaintAsyncForCustomer(HttpContext, complaintId);
+                return Ok(new { Message = "Hủy khiếu nại thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Có lỗi xảy ra khi hủy khiếu nại", Error = ex.Message });
             }
         }
 
@@ -86,7 +179,15 @@ namespace LaundryService.Api.Controllers
 
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
             }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
             catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { Message = ex.Message });
             }
