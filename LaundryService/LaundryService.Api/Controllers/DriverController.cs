@@ -12,14 +12,16 @@ namespace LaundryService.Api.Controllers
     [Authorize(Roles = "Driver")]
     public class DriverController : BaseApiController
     {
+        private readonly IDriverService _driverService;
         private readonly IOrderService _orderService;
         private readonly IAddressService _addressService;
         private readonly IOrderAssignmentHistoryService _orderAssignmentHistoryService;
         private readonly IFirebaseNotificationService _firebaseNotificationService;
         private readonly INotificationService _notificationService;
 
-        public DriverController(IOrderService orderService, IAddressService addressService, IOrderAssignmentHistoryService orderAssignmentHistoryService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService)
+        public DriverController(IDriverService driverService, IOrderService orderService, IAddressService addressService, IOrderAssignmentHistoryService orderAssignmentHistoryService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService)
         {
+            _driverService = driverService;
             _orderService = orderService;
             _addressService = addressService;
             _orderAssignmentHistoryService = orderAssignmentHistoryService;
@@ -62,7 +64,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.StartOrderPickupAsync(HttpContext, orderId);
+                await _driverService.StartOrderPickupAsync(HttpContext, orderId);
 
                 var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
 
@@ -149,7 +151,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.ConfirmOrderPickedUpAsync(HttpContext, orderId, notes);
+                await _driverService.ConfirmOrderPickedUpAsync(HttpContext, orderId, notes);
 
                 var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
 
@@ -226,7 +228,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.ConfirmOrderPickupSuccessAsync(HttpContext, orderId);
+                await _driverService.ConfirmOrderPickupSuccessAsync(HttpContext, orderId);
                 return Ok(new { Message = "Tài xế đã nhận hàng về thành công." });
             }
             catch (ApplicationException ex)
@@ -287,7 +289,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.CancelAssignedPickupAsync(HttpContext, orderId, reason);
+                await _driverService.CancelAssignedPickupAsync(HttpContext, orderId, reason);
                 return Ok(new { Message = "Đã huỷ nhận đơn hàng thành công." });
             }
             catch (ApplicationException ex)
@@ -338,7 +340,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.StartOrderDeliveryAsync(HttpContext, orderId);
+                await _driverService.StartOrderDeliveryAsync(HttpContext, orderId);
 
                 var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
 
@@ -422,7 +424,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.ConfirmOrderDeliveredAsync(HttpContext, orderId, notes);
+                await _driverService.ConfirmOrderDeliveredAsync(HttpContext, orderId, notes);
                 return Ok(new { Message = "Tài xế đã xác nhận giao hàng thành công (DELIVERED)." });
             }
             catch (ApplicationException ex)
@@ -471,7 +473,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.ConfirmOrderDeliverySuccessAsync(HttpContext, orderId);
+                await _driverService.ConfirmOrderDeliverySuccessAsync(HttpContext, orderId);
 
                 var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
 
@@ -563,7 +565,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                await _orderService.CancelAssignedDeliveryAsync(HttpContext, orderId, reason);
+                await _driverService.CancelAssignedDeliveryAsync(HttpContext, orderId, reason);
                 return Ok(new { Message = "Đã huỷ giao đơn hàng thành công." });
             }
             catch (ApplicationException ex)
