@@ -84,6 +84,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddHostedService<AssignmentAutoFailService>();
 builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
+builder.Services.AddScoped<IRatingService, RatingService>();
 
 
 builder.Services.AddSignalR(options =>
