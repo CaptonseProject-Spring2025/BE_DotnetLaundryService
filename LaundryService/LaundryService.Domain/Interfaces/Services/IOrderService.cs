@@ -41,27 +41,10 @@ namespace LaundryService.Domain.Interfaces.Services
         Task CancelProcessingAsync(HttpContext httpContext, Guid assignmentId, string note);
 
         Task<CartResponse> UpdateCartItemAsync(HttpContext httpContext, UpdateCartItemRequest request);
-
         Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
 
         Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
-
-        Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
-
-        Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes);
-
-        Task ConfirmOrderPickupSuccessAsync(HttpContext httpContext, string orderId);
-
-        Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason);
-
-        Task StartOrderDeliveryAsync(HttpContext httpContext, string orderId);
-
-        Task ConfirmOrderDeliveredAsync(HttpContext httpContext, string orderId, string notes);
-
-        Task ConfirmOrderDeliverySuccessAsync(HttpContext httpContext, string orderId);
-
-        Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason);
     }
 }
