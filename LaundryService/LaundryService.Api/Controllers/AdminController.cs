@@ -403,6 +403,13 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        ///     Cập nhật thông tin khu vực theo ID.
+        /// </summary>
+        /// <param name="areaId"></param>
+        /// <param name="name"></param>
+        /// <param name="districts"></param>
+        /// <returns></returns>
         [HttpPut("areas/{areaId}")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> UpdateAreaById(Guid areaId, string name, List<string> districts)
@@ -426,6 +433,11 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        ///     Xóa khu vực theo ID.
+        /// </summary>
+        /// <param name="areaId"></param>
+        /// <returns></returns>
         [HttpDelete("areas/{areaId}")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> DeleteAreaById(Guid areaId)
@@ -449,6 +461,11 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        ///     Tạo mới địa chỉ cho Store (Branch).
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [HttpPost("branchaddress")]
         [ProducesResponseType(typeof(Branchaddress), 200)]
         public async Task<IActionResult> AddBranchAddress([FromBody] AddBranchAddressRequest request)
@@ -473,6 +490,10 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        ///     Lấy địa chỉ của Store (Branch).
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("branchaddress")]
         [ProducesResponseType(typeof(Branchaddress), 200)]
         public async Task<IActionResult> GetBranchAddress()
@@ -492,6 +513,12 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        ///     Cập nhât địa chỉ của Store (Branch).
+        /// </summary>
+        /// <param name="branchId"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [HttpPut("branchaddress/{branchId}")]
         [ProducesResponseType(typeof(Branchaddress), 200)]
         public async Task<IActionResult> UpdateBranchAddress(Guid branchId, [FromBody] UpdateBranchAddressRequest request)
