@@ -86,5 +86,18 @@ namespace LaundryService.Service
 
             return await Task.FromResult(areas);   // Linq ToObjects ⇒ không cần EF async
         }
+
+        public async Task DeleteAreaByIdAsync(Guid areaId)
+        {
+            if (areaId == Guid.Empty)
+                throw new ArgumentException("AreaId is required.");
+
+            var area = await _unitOfWork.Repository<Area>().FindAsync(areaId);
+            if (area == null)
+                throw new KeyNotFoundException($"Area with ID {areaId} not found.");
+
+            await _unitOfWork.Repository<Area>().DeleteAsync(area, saveChanges: false);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

@@ -401,5 +401,28 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        [HttpDelete("areas/{areaId}")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> DeleteAreaById(Guid areaId)
+        {
+            try
+            {
+                await _areaService.DeleteAreaByIdAsync(areaId);
+                return Ok(new { Message = "Xóa khu vực thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
     }
 }

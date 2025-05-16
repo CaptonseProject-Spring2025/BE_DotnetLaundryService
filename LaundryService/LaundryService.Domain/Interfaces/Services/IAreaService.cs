@@ -18,5 +18,7 @@ namespace LaundryService.Domain.Interfaces.Services
         /// Lấy danh sách Area theo AreaType, sắp xếp theo Name.
         /// </summary>
         Task<List<AreaItem>> GetAreasByTypeAsync(string areaType);
+
+        Task DeleteAreaByIdAsync(Guid areaId);
     }
 }
