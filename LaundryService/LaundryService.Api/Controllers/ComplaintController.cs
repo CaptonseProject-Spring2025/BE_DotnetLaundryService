@@ -43,10 +43,10 @@ namespace LaundryService.Api.Controllers
                    "ReceiveComplaintNotication",
                    $"Đã có khiếu nại mới cho đơn hàng {orderId}");
 
-               // var pendingComplaints = await _complaintService.GetPendingComplaintsAsync(HttpContext);
-               // await _hubContext.Clients.All.SendAsync(
-               //"ReceiveComplaintUpdate",
-               //pendingComplaints);
+                var pendingComplaints = await _complaintService.GetPendingComplaintsAsync(HttpContext);
+                await _hubContext.Clients.All.SendAsync(
+               "ReceiveComplaintUpdate",
+               pendingComplaints);
 
 
                 return Ok(new { Message = "Tạo khiếu nại thành công." });
@@ -127,7 +127,7 @@ namespace LaundryService.Api.Controllers
         /// <summary>
         /// Customer hủy khiếu nại (chỉ khi ở trạng thái PENDING)
         /// </summary>
-        [HttpPut("complaints/{complaintId}/cancel")]
+        [HttpPut("{complaintId}/cancel")]
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> CancelComplaintForCustomer(Guid complaintId)
         {

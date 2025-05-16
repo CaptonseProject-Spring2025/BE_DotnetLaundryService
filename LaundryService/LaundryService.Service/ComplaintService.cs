@@ -246,10 +246,6 @@ namespace LaundryService.Service
 
         public async Task<List<ComplaintResponse>> GetPendingComplaintsAsync(HttpContext httpContext)
         {
-            if (!httpContext.User.IsInRole("Admin") && !httpContext.User.IsInRole("CustomerStaff"))
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền truy cập dữ liệu này.");
-            }
 
             var complaints = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
@@ -271,10 +267,6 @@ namespace LaundryService.Service
 
         public async Task<ComplaintDetailResponse> GetComplaintDetailAsync(HttpContext httpContext, Guid complaintId)
         {
-            if (!httpContext.User.IsInRole("Admin") && !httpContext.User.IsInRole("CustomerStaff"))
-            {
-                throw new UnauthorizedAccessException("Bạn không có quyền truy cập dữ liệu này.");
-            }
 
             var complaint = await _unitOfWork.Repository<Complaint>()
                 .GetAll()
