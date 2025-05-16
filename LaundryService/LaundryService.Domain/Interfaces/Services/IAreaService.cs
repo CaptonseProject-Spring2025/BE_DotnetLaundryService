@@ -13,5 +13,10 @@ namespace LaundryService.Domain.Interfaces.Services
         /// Thêm mới hoặc thay thế toàn bộ Area theo AreaType.
         /// </summary>
         Task AddOrReplaceAreasAsync(AddAreasRequest request);
+
+        /// <summary>
+        /// Lấy danh sách Area theo AreaType, sắp xếp theo Name.
+        /// </summary>
+        Task<List<AreaItem>> GetAreasByTypeAsync(string areaType);
     }
 }

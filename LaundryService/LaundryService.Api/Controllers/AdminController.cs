@@ -370,5 +370,35 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Lấy danh sách Khu vực theo AreaType, sắp xếp theo Name.
+        /// </summary>
+        /// <param name="areaType">Giá trị AreaType (ShippingFee | Driver ...)</param>
+        /// <returns>Danh sách <see cref="AreaItem"/></returns>
+        /// <remarks>
+        /// **Response codes**  
+        /// - 200: Thành công  
+        /// - 400: Thiếu / sai areaType  
+        /// - 500: Lỗi server
+        /// </remarks>
+        [HttpGet("areas")]
+        [ProducesResponseType(typeof(List<AreaItem>), 200)]
+        public async Task<IActionResult> GetAreas([FromQuery] string areaType)
+        {
+            try
+            {
+                var result = await _areaService.GetAreasByTypeAsync(areaType);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
     }
 }

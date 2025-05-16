@@ -67,5 +67,24 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<List<AreaItem>> GetAreasByTypeAsync(string areaType)
+        {
+            if (string.IsNullOrWhiteSpace(areaType))
+                throw new ArgumentException("AreaType is required.");
+
+            var areas = _unitOfWork.Repository<Area>()
+                                   .GetAll()
+                                   .Where(a => a.Areatype == areaType.Trim())
+                                   .OrderBy(a => a.Name)
+                                   .Select(a => new AreaItem
+                                   {
+                                       Name = a.Name,
+                                       Districts = a.Districts ?? new List<string>()
+                                   })
+                                   .ToList();
+
+            return await Task.FromResult(areas);   // Linq ToObjects ⇒ không cần EF async
+        }
     }
 }
