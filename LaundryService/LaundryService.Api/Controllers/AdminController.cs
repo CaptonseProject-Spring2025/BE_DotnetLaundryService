@@ -383,6 +383,7 @@ namespace LaundryService.Api.Controllers
         /// - 500: Lỗi server
         /// </remarks>
         [HttpGet("areas")]
+        [AllowAnonymous]
         [ProducesResponseType(typeof(List<AreaItem>), 200)]
         public async Task<IActionResult> GetAreas([FromQuery] string areaType)
         {
