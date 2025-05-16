@@ -22,14 +22,12 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
-        private readonly IConfiguration _configuration;
         private readonly IMapboxService _mapboxService;
 
-        public OrderService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, IMapboxService mapboxService)
+        public OrderService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
-            _configuration = configuration;
             _mapboxService = mapboxService;
         }
 

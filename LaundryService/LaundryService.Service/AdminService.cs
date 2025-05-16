@@ -19,82 +19,70 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
-        private readonly IConfiguration _configuration;
         private readonly IMapboxService _mapboxService;
         private readonly IFileStorageService _fileStorageService;
 
-        public AdminService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, IMapboxService mapboxService, IFileStorageService fileStorageService)
+        public AdminService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService, IFileStorageService fileStorageService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
-            _configuration = configuration;
             _mapboxService = mapboxService;
             _fileStorageService = fileStorageService;
         }
 
         public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
         {
-            // B1: Lấy danh sách Orders có status = "CONFIRMED"
+            /* ---------- 1. Lấy Order CONFIRMED ---------- */
             var orders = _unitOfWork.Repository<Order>()
                 .GetAll()
                 .Where(o => o.Currentstatus == "CONFIRMED")
                 .Include(o => o.User) // để lấy UserInfo
                 .OrderBy(o => o.Createdat) // sắp xếp theo CreatedAt
                 .ToList();
-            // B2: Đọc config "Areas" từ appsettings
-            //     "Areas": {
-            //        "Area1": [ "1", "3", "4", "Tân Bình", ... ],
-            //        "Area2": [ ... ],
-            //        "Area3": [ ... ]
-            //     }
-            var area1 = _configuration.GetSection("Areas:Area1").Get<string[]>() ?? Array.Empty<string>();
-            var area2 = _configuration.GetSection("Areas:Area2").Get<string[]>() ?? Array.Empty<string>();
-            var area3 = _configuration.GetSection("Areas:Area3").Get<string[]>() ?? Array.Empty<string>();
 
-            // B3: Lấy toạ độ "AddressDetail" từ appsettings để tính distance
-            //    "AddressDetail": {
-            //      "Address": "...",
-            //      "Latitude": 10.809939,
-            //      "Longitude": 106.664737
-            //    }
-            var addressSection = _configuration.GetSection("AddressDetail");
-            decimal refLat = addressSection.GetValue<decimal>("Latitude");
-            decimal refLon = addressSection.GetValue<decimal>("Longitude");
+            /* ---------- 2. Lấy danh sách Area (Driver) ---------- */
+            var driverAreas = _unitOfWork.Repository<Area>()
+                                         .GetAll()
+                                         .Where(a => a.Areatype.ToUpper() == "DRIVER")
+                                         .ToList();
 
-            // Tạo dictionary { "Area1": new List<ConfirmedOrderInfo>(), "Area2":..., "Area3":...}
-            var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>()
-            {
-                { "Area1", new List<ConfirmedOrderInfo>() },
-                { "Area2", new List<ConfirmedOrderInfo>() },
-                { "Area3", new List<ConfirmedOrderInfo>() },
-                // Trường hợp quận không nằm trong 3 area => tuỳ bạn, có thể cho "Outside" hay "Unknown"
-            };
+            /* Build tra cứu: district  ➜  areaName
+               Vì dữ liệu bảo đảm 1‐1 nên có thể dùng ToDictionary thẳng. */
+            var districtToArea = driverAreas
+                                 .Where(a => a.Districts != null)                   // bỏ khu vực chưa khai Districts
+                                 .SelectMany(a => a.Districts!
+                                                   .Select(d => new { District = d, AreaName = a.Name }))
+                                 .ToDictionary(
+                                     x => x.District,                              // key   = tên quận
+                                     x => x.AreaName,                              // value = tên khu vực
+                                     StringComparer.OrdinalIgnoreCase);            // so sánh không phân biệt hoa thường
 
-            // B4: Duyệt qua Orders -> gọi mapboxService để lấy district
+            /* ---------- 3. Lấy lat/lon trung tâm ---------- */
+            var branchAddress = _unitOfWork.Repository<Branchaddress>().GetAll().FirstOrDefault();
+            decimal refLat = branchAddress.Latitude ?? 0;
+            decimal refLon = branchAddress.Longitude ?? 0;
+
+            /* ---------- 4. Gom nhóm ---------- */
+            // Dictionary<AreaName, List<ConfirmedOrderInfo>>
+            var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var order in orders)
             {
-                var pickupLat = order.Pickuplatitude ?? 0;
-                var pickupLon = order.Pickuplongitude ?? 0;
+                var lat = order.Pickuplatitude ?? 0;
+                var lon = order.Pickuplongitude ?? 0;
 
-                // Gọi mapboxService để lấy tên quận
-                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(pickupLat, pickupLon);
-                district = district?.Trim() ?? ""; // để phòng null
+                // Mapbox => tên quận
+                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(lat, lon);
+                district = district?.Trim() ?? string.Empty;
 
-                // Xác định area
-                var areaName = "Unknown";
-                // Kiểm tra district có nằm trong "Area1" ?
-                if (area1.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area1";
-                else if (area2.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area2";
-                else if (area3.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area3";
+                // Tìm Area tương ứng
+                var areaName = districtToArea.TryGetValue(district, out var a) ? a : "Unknown";
 
-                // Tính distance so với lat/lon trong appsettings
-                double distance = _mapboxService.CalculateDistance(pickupLat, pickupLon, refLat, refLon);
+                // Tính khoảng cách
+                double distance = _mapboxService.CalculateDistance(lat, lon, refLat, refLon);
 
-                // Tạo object ConfirmedOrderInfo
-                var orderInfo = new ConfirmedOrderInfo
+                /* Build ConfirmedOrderInfo */
+                var info = new ConfirmedOrderInfo
                 {
                     OrderId = order.Orderid,
                     UserInfo = new UserInfoDto
@@ -108,44 +96,29 @@ namespace LaundryService.Service
                     Distance = distance,
                     PickupAddressDetail = order.Pickupaddressdetail,
                     PickupDescription = order.Pickupdescription,
-                    PickupLatitude = pickupLat,
-                    PickupLongitude = pickupLon,
+                    PickupLatitude = lat,
+                    PickupLongitude = lon,
                     PickupTime = order.Pickuptime,
                     CreatedAt = order.Createdat ?? DateTime.UtcNow,
                     TotalPrice = order.Totalprice
                 };
 
-                // Thêm vào list tương ứng
                 if (!areaDict.ContainsKey(areaName))
-                {
                     areaDict[areaName] = new List<ConfirmedOrderInfo>();
-                }
-                areaDict[areaName].Add(orderInfo);
+
+                areaDict[areaName].Add(info);
             }
 
-            // B5: Tạo list kết quả -> group theo Area
-            // Mỗi key trong areaDict -> 1 AreaOrdersResponse
-            // Sắp xếp trong cùng 1 khu vực theo CreatedAt
-            var result = new List<AreaOrdersResponse>();
-            foreach (var kv in areaDict)
-            {
-                // Sắp xếp kv.Value (danh sách ConfirmedOrderInfo) theo CreatedAt
-                var sortedOrders = kv.Value
-                    .OrderBy(o => o.CreatedAt)
-                    .ToList();
-
-                // Bỏ qua group rỗng? Tùy: 
-                // - Nếu muốn hiển thị group rỗng => vẫn add
-                // - Nếu không => check if (sortedOrders.Any()) ...
-                if (sortedOrders.Any())
+            /* ---------- 5. Trả kết quả ---------- */
+            var result = areaDict
+                .Where(kv => kv.Value.Any())           // bỏ nhóm rỗng
+                .Select(kv => new AreaOrdersResponse
                 {
-                    result.Add(new AreaOrdersResponse
-                    {
-                        Area = kv.Key,
-                        Orders = sortedOrders
-                    });
-                }
-            }
+                    Area = kv.Key,
+                    Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
+                })
+                .OrderBy(r => r.Area)                  // sắp Area theo tên (nếu muốn)
+                .ToList();
 
             return result;
         }
@@ -245,66 +218,62 @@ namespace LaundryService.Service
 
         public async Task<List<AreaOrdersResponse>> GetQualityCheckedOrdersByAreaAsync()
         {
-            // B1: Lấy các Orders => Currentstatus = "QUALITY_CHECKED"
+            /* ---------- 1. Lấy Order có CurrentStatus = QUALITY_CHECKED ---------- */
             var statusQC = OrderStatusEnum.QUALITY_CHECKED.ToString();
             var orders = _unitOfWork.Repository<Order>()
-                .GetAll()
-                .Where(o => o.Currentstatus == statusQC)
-                .Include(o => o.User) // lấy user
-                .OrderBy(o => o.Createdat) // tạm sắp xếp theo CreatedAt (để lát nữa nhóm theo khu)
-                .ToList();
+                                    .GetAll()
+                                    .Where(o => o.Currentstatus == statusQC)
+                                    .Include(o => o.User)
+                                    .OrderBy(o => o.Createdat)   // tạm sắp xếp theo CreatedAt (để lát nữa nhóm theo khu)
+                                    .ToList();
 
-            // B2: Lấy config "Areas" từ settings
-            var area1 = _configuration.GetSection("Areas:Area1").Get<string[]>() ?? Array.Empty<string>();
-            var area2 = _configuration.GetSection("Areas:Area2").Get<string[]>() ?? Array.Empty<string>();
-            var area3 = _configuration.GetSection("Areas:Area3").Get<string[]>() ?? Array.Empty<string>();
+            /* ---------- 2. Lấy danh sách Area (Driver) từ DB ---------- */
+            var driverAreas = _unitOfWork.Repository<Area>()
+                                         .GetAll()
+                                         .Where(a => a.Areatype.ToUpper() == "DRIVER")
+                                         .ToList();
 
-            // B3: Lấy config "AddressDetail" (để tính distance)
-            var addressSection = _configuration.GetSection("AddressDetail");
-            decimal refLat = addressSection.GetValue<decimal>("Latitude");
-            decimal refLon = addressSection.GetValue<decimal>("Longitude");
+            // Build tra cứu:  tên quận  ->  tên khu vực
+            var districtToArea = driverAreas
+                .Where(a => a.Districts != null && a.Districts.Count > 0)
+                .SelectMany(a => a.Districts!
+                                  .Select(d => new { District = d, AreaName = a.Name }))
+                .ToDictionary(
+                    x => x.District,
+                    x => x.AreaName,
+                    StringComparer.OrdinalIgnoreCase);       // bỏ phân biệt hoa thường
 
-            // Tạo dictionary group area
-            var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>()
-            {
-                { "Area1", new List<ConfirmedOrderInfo>() },
-                { "Area2", new List<ConfirmedOrderInfo>() },
-                { "Area3", new List<ConfirmedOrderInfo>() }
-                // Hoặc để sau if "Unknown"
-            };
+            /* ---------- 3. Tọa độ chi nhánh để tính distance ---------- */
+            var branchAddress = _unitOfWork.Repository<Branchaddress>().GetAll().FirstOrDefault();
+            decimal refLat = branchAddress.Latitude ?? 0;
+            decimal refLon = branchAddress.Longitude ?? 0;
 
-            // B4: Với mỗi order => gọi mapboxService để lấy district => xác định area
+            /* ---------- 4. Gom nhóm đơn theo khu vực ---------- */
+            var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var order in orders)
             {
-                var pickupLat = order.Pickuplatitude ?? 0;
-                var pickupLon = order.Pickuplongitude ?? 0;
+                var lat = order.Pickuplatitude ?? 0;
+                var lon = order.Pickuplongitude ?? 0;
 
-                // 4a) Gọi mapboxService => lấy district
-                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(pickupLat, pickupLon);
-                district = district?.Trim() ?? "";
+                // 4a) Mapbox -> tên quận
+                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(lat, lon);
+                district = district?.Trim() ?? string.Empty;
 
-                // 4b) Xác định area
-                var areaName = "Unknown";
-                if (area1.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area1";
-                else if (area2.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area2";
-                else if (area3.Contains(district, StringComparer.OrdinalIgnoreCase))
-                    areaName = "Area3";
+                // 4b) Xác định tên khu vực
+                var areaName = districtToArea.TryGetValue(district, out var a) ? a : "Unknown";
 
-                // 4c) Tính distance
-                double distance = _mapboxService.CalculateDistance(pickupLat, pickupLon, refLat, refLon);
+                // 4c) Khoảng cách tới chi nhánh
+                double distance = _mapboxService.CalculateDistance(lat, lon, refLat, refLon);
 
-                // 4d) Chuyển CreatedAt, PickupTime sang giờ VN (nếu cần)
+                // 4d) Chuyển thời gian sang giờ VN
                 var createdAtVn = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow);
-                DateTime? pickupTimeVn = null;
-                if (order.Pickuptime.HasValue)
-                {
-                    pickupTimeVn = _util.ConvertToVnTime(order.Pickuptime.Value);
-                }
+                DateTime? pickupTimeVn = order.Pickuptime.HasValue
+                                         ? _util.ConvertToVnTime(order.Pickuptime.Value)
+                                         : null;
 
-                // 4e) Tạo object ConfirmedOrderInfo
-                var orderInfo = new ConfirmedOrderInfo
+                // 4e) Tạo model
+                var info = new ConfirmedOrderInfo
                 {
                     OrderId = order.Orderid,
                     UserInfo = new UserInfoDto
@@ -318,40 +287,29 @@ namespace LaundryService.Service
                     Distance = distance,
                     PickupAddressDetail = order.Pickupaddressdetail,
                     PickupDescription = order.Pickupdescription,
-                    PickupLatitude = pickupLat,
-                    PickupLongitude = pickupLon,
+                    PickupLatitude = lat,
+                    PickupLongitude = lon,
                     PickupTime = pickupTimeVn,
-                    // Sử dụng thời gian đã convert về VN
                     CreatedAt = createdAtVn,
                     TotalPrice = order.Totalprice
                 };
 
-                // 4f) Thêm vào dictionary
                 if (!areaDict.ContainsKey(areaName))
-                {
                     areaDict[areaName] = new List<ConfirmedOrderInfo>();
-                }
-                areaDict[areaName].Add(orderInfo);
+
+                areaDict[areaName].Add(info);
             }
 
-            // B5: Tạo danh sách kết quả
-            var result = new List<AreaOrdersResponse>();
-            foreach (var kv in areaDict)
-            {
-                var listOrders = kv.Value
-                    .OrderBy(o => o.CreatedAt) // sắp xếp theo CreatedAt (trong cùng khu vực)
-                    .ToList();
-
-                // Nếu muốn bỏ qua area rỗng => check if (listOrders.Any())
-                if (listOrders.Any())
+            /* ---------- 5. Chuẩn bị kết quả ---------- */
+            var result = areaDict
+                .Where(kv => kv.Value.Any())                     // bỏ nhóm rỗng
+                .Select(kv => new AreaOrdersResponse
                 {
-                    result.Add(new AreaOrdersResponse
-                    {
-                        Area = kv.Key,
-                        Orders = listOrders
-                    });
-                }
-            }
+                    Area = kv.Key,
+                    Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
+                })
+                .OrderBy(r => r.Area)                            // sắp xếp theo tên khu vực
+                .ToList();
 
             return result;
         }
