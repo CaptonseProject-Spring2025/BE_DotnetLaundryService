@@ -2,6 +2,7 @@
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
+using LaundryService.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,14 +15,16 @@ namespace LaundryService.Api.Controllers
     public class AdminController : BaseApiController
     {
         private readonly IAdminService _adminService;
+        private readonly IAreaService _areaService;
         private readonly IFirebaseNotificationService _firebaseNotificationService;
         private readonly INotificationService _notificationService;
 
-        public AdminController(IAdminService adminService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService) // Inject IOrderService
+        public AdminController(IAdminService adminService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService, IAreaService areaService) // Inject IOrderService
         {
             _adminService = adminService;
             _firebaseNotificationService = firebaseNotificationService;
             _notificationService = notificationService;
+            _areaService = areaService;
         }
 
         /// <summary>
@@ -334,6 +337,37 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Thêm hoặc cập nhật danh sách khu vực (Area) theo loại AreaType.
+        /// </summary>
+        /// <param name="request">
+        ///     Đối tượng <see cref="AddAreasRequest"/> chứa thông tin cần cập nhật:
+        ///     <br/>
+        ///     - <c>AreaType</c>: Loại khu vực cần thêm hoặc cập nhật (chỉ nhận "ShippingFee" hoặc "Driver").<br/>
+        ///     - <c>Areas</c>: Danh sách các khu vực, mỗi khu vực gồm tên và danh sách quận.
+        /// </param>
+        /// <returns>
+        ///     Trả về kết quả thành công hoặc lỗi trong quá trình xử lý.
+        /// </returns>
+        [HttpPost("areas")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> AddOrReplaceAreas([FromBody] AddAreasRequest request)
+        {
+            try
+            {
+                await _areaService.AddOrReplaceAreasAsync(request);
+                return Ok(new { Message = "Cập nhật danh sách Khu vực thành công." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
     }
