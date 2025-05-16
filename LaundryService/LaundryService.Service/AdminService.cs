@@ -529,6 +529,17 @@ namespace LaundryService.Service
                                      .DeleteAsync(ah, saveChanges: false);
                 }
 
+                // 5) Xoá Complaints
+                var complaints = _unitOfWork.Repository<Complaint>()
+                    .GetAll()
+                    .Where(com => com.Orderid == orderId)
+                    .ToList();
+                foreach (var com in complaints)
+                {
+                    await _unitOfWork.Repository<Complaint>()
+                                     .DeleteAsync(com, saveChanges: false);
+                }
+
                 // 6) Xoá Payments
                 var payments = _unitOfWork.Repository<Payment>()
                     .GetAll()
@@ -676,6 +687,17 @@ namespace LaundryService.Service
                     {
                         await _unitOfWork.Repository<Orderassignmenthistory>()
                                          .DeleteAsync(ah, saveChanges: false);
+                    }
+
+                    // 5) Xoá Complaints
+                    var complaints = _unitOfWork.Repository<Complaint>()
+                        .GetAll()
+                        .Where(com => com.Orderid == orderId)
+                        .ToList();
+                    foreach (var com in complaints)
+                    {
+                        await _unitOfWork.Repository<Complaint>()
+                                         .DeleteAsync(com, saveChanges: false);
                     }
 
                     // 6) Xoá Payments

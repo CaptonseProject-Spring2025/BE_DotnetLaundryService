@@ -515,6 +515,39 @@ namespace LaundryService.Service
 
                 await Task.WhenAll(uploadTasks);
 
+                /************   GHI NHẬN THANH TOÁN TIỀN MẶT  ************/
+                var paymentRepo = _unitOfWork.Repository<Payment>();
+
+                // 2) Đã có payment cho đơn này chưa?
+                bool paymentExisted = paymentRepo.GetAll().Any(p => p.Orderid == orderId);
+
+                if (!paymentExisted)
+                {
+                    // 3) Lấy PaymentMethodId của “Cash”
+                    Guid cashMethodId = _unitOfWork.Repository<Paymentmethod>()
+                                                   .GetAll()
+                                                   .Where(pm => pm.Name.ToLower() == "cash")
+                                                   .Select(pm => pm.Paymentmethodid)
+                                                   .FirstOrDefault();
+
+                    if (cashMethodId == Guid.Empty)
+                        throw new ApplicationException("Không tìm thấy phương thức thanh toán 'Cash' trong bảng Paymentmethods.");
+
+                    // 4) Tạo bản ghi Payment
+                    var payment = new Payment
+                    {
+                        Paymentid = Guid.NewGuid(),
+                        Orderid = orderId,
+                        Paymentdate = DateTime.UtcNow,
+                        Amount = order.Totalprice ?? 0m,
+                        Paymentmethodid = cashMethodId,
+                        Paymentstatus = "PAID",
+                        Createdat = DateTime.UtcNow
+                    };
+
+                    await paymentRepo.InsertAsync(payment, saveChanges: false);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
             }
