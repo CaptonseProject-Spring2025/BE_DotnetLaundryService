@@ -1,4 +1,5 @@
-﻿using LaundryService.Domain.Enums;
+﻿using LaundryService.Domain.Entities;
+using LaundryService.Domain.Enums;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
@@ -384,13 +385,36 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [HttpGet("areas")]
         [AllowAnonymous]
-        [ProducesResponseType(typeof(List<AreaItem>), 200)]
+        [ProducesResponseType(typeof(List<AreaItemResponse>), 200)]
         public async Task<IActionResult> GetAreas([FromQuery] string areaType)
         {
             try
             {
                 var result = await _areaService.GetAreasByTypeAsync(areaType);
                 return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("areas/{areaId}")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> UpdateAreaById(Guid areaId, string name, List<string> districts)
+        {
+            try
+            {
+                await _areaService.UpdateAreaByIdAsync(areaId, name, districts);
+                return Ok(new { Message = "Cập nhật khu vực thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
             }
             catch (ArgumentException ex)
             {
@@ -414,6 +438,68 @@ namespace LaundryService.Api.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("branchaddress")]
+        [ProducesResponseType(typeof(Branchaddress), 200)]
+        public async Task<IActionResult> AddBranchAddress([FromBody] AddBranchAddressRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { Message = "Invalid input data", Errors = ModelState });
+                }
+
+                var result = await _areaService.AddBranchAddressAsync(request);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("branchaddress")]
+        [ProducesResponseType(typeof(Branchaddress), 200)]
+        public async Task<IActionResult> GetBranchAddress()
+        {
+            try
+            {
+                var result = await _areaService.GetBranchAddressAsync();
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("branchaddress/{branchId}")]
+        [ProducesResponseType(typeof(Branchaddress), 200)]
+        public async Task<IActionResult> UpdateBranchAddress(Guid branchId, [FromBody] UpdateBranchAddressRequest request)
+        {
+            try
+            {
+                var result = await _areaService.UpdateBranchAddressAsync(branchId, request);
+                return Ok(result);
             }
             catch (ArgumentException ex)
             {
