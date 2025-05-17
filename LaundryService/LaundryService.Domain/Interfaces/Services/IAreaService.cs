@@ -27,7 +27,7 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<Branchaddress> AddBranchAddressAsync(AddBranchAddressRequest request);
 
-        Task<Branchaddress> GetBranchAddressAsync();
+        Task<List<Branchaddress>> GetBranchAddressAsync();
 
         Task<Branchaddress> UpdateBranchAddressAsync(Guid brachId, UpdateBranchAddressRequest request);
     }

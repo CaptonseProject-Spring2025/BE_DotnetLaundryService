@@ -141,12 +141,12 @@ namespace LaundryService.Service
             return branchAddress;
         }
 
-        public async Task<Branchaddress> GetBranchAddressAsync()
+        public async Task<List<Branchaddress>> GetBranchAddressAsync()
         {
-            var branchAddress = await _unitOfWork.Repository<Branchaddress>().GetAll().FirstOrDefaultAsync();
+            var branchAddress = await _unitOfWork.Repository<Branchaddress>().GetAllAsync();
             if (branchAddress == null)
                 throw new KeyNotFoundException("Branch address not found.");
-            return branchAddress;
+            return branchAddress.ToList();
         }
 
         public async Task<Branchaddress> UpdateBranchAddressAsync(Guid brachId, UpdateBranchAddressRequest request)
