@@ -270,6 +270,7 @@ namespace LaundryService.Service
                 .GetAll()
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Service)
+                        .ThenInclude(sd => sd.Subservice)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Orderextras)
                     .ThenInclude(oe => oe.Extra)
@@ -278,6 +279,8 @@ namespace LaundryService.Service
             if (order == null) throw new KeyNotFoundException("No cart found.");
 
             decimal total = 0;
+            int? maxMinCompleteTime = null;
+            string? maxSubServiceName = null;
             var cartResponse = new CartResponse { OrderId = order.Orderid };
 
             foreach (var item in order.Orderitems)
@@ -318,9 +321,23 @@ namespace LaundryService.Service
                     Extras = extraResponses,
                     SubTotal = subTotal
                 });
+
+                // ----- Tính MinCompleteTime lớn nhất -----
+                var sub = service?.Subservice;
+                if (sub?.Mincompletetime != null)
+                {
+                    if (maxMinCompleteTime == null || sub.Mincompletetime > maxMinCompleteTime)
+                    {
+                        maxMinCompleteTime = sub.Mincompletetime;
+                        maxSubServiceName = sub.Name;
+                    }
+                }
             }
 
             cartResponse.EstimatedTotal = total;
+            cartResponse.MinCompleteTime = maxMinCompleteTime;
+            cartResponse.SubServiceName = maxSubServiceName;
+
             return cartResponse;
         }
 

@@ -11,6 +11,13 @@ namespace LaundryService.Dto.Responses
         public string OrderId { get; set; }
         public List<CartItemResponse> Items { get; set; } = new List<CartItemResponse>();
 
+
+        //Tên Sub-Service có MinCompleteTime lớn nhất trong giỏ hàng
+        public string? SubServiceName { get; set; }
+
+        // Giá trị MinCompleteTime lớn nhất (giờ)
+        public int? MinCompleteTime { get; set; }
+
         // Tổng tạm tính của cả giỏ
         public decimal EstimatedTotal { get; set; }
     }
