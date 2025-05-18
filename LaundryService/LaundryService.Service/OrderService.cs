@@ -271,9 +271,10 @@ namespace LaundryService.Service
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Service)
                         .ThenInclude(sd => sd.Subservice)
+                            .ThenInclude(si => si.Category)
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Orderextras)
-                    .ThenInclude(oe => oe.Extra)
+                        .ThenInclude(oe => oe.Extra)
                 .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
 
             if (order == null) throw new KeyNotFoundException("No cart found.");
@@ -328,7 +329,7 @@ namespace LaundryService.Service
                     if (maxMinCompleteTime == null || sub.Mincompletetime > maxMinCompleteTime)
                     {
                         maxMinCompleteTime = sub.Mincompletetime;
-                        maxServiceName = sub.Name;
+                        maxServiceName = sub.Category != null ? $"{sub.Category.Name} ({sub.Name})" : "Unknown";
                     }
                 }
             }
@@ -336,6 +337,29 @@ namespace LaundryService.Service
             cartResponse.EstimatedTotal = total;
             cartResponse.MinCompleteTime = maxMinCompleteTime;
             cartResponse.ServiceName = maxServiceName;
+
+            // ---- Trả pickup/delivery time ----
+            var nowVn = _util.ConvertToVnTime(DateTime.UtcNow);
+
+            // Đặt khung giờ phục vụ: 09:00–21:00 VN
+            var openingTime = new DateTime(nowVn.Year, nowVn.Month, nowVn.Day, 9, 0, 0);
+            var closingTime = new DateTime(nowVn.Year, nowVn.Month, nowVn.Day, 21, 0, 0);
+
+            if (nowVn < openingTime || nowVn >= closingTime)
+            {
+                // Đặt đơn ngoài giờ, PickupTime là 09:00 sáng hôm sau
+                var nextDayOpening = openingTime.AddDays(nowVn >= closingTime ? 1 : 0);
+                if (nowVn < openingTime)
+                    nextDayOpening = openingTime; // hôm nay
+                cartResponse.PickupTime = nextDayOpening;
+                cartResponse.DeliveryTime = nextDayOpening.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
+            }
+            else
+            {
+                // Đặt đơn trong khung 9:00–21:00 VN, PickupTime là ngay bây giờ
+                cartResponse.PickupTime = nowVn;
+                cartResponse.DeliveryTime = nowVn.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
+            }
 
             return cartResponse;
         }

@@ -8,7 +8,12 @@ namespace LaundryService.Dto.Responses
 {
     public class CartResponse
     {
+        public DateTime PickupTime { get; set; }
+
+        public DateTime DeliveryTime { get; set; }
+
         public string OrderId { get; set; }
+
         public List<CartItemResponse> Items { get; set; } = new List<CartItemResponse>();
 
 

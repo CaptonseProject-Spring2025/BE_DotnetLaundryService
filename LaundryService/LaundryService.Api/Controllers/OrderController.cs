@@ -112,7 +112,7 @@ namespace LaundryService.Api.Controllers
         /// 2) Tìm Order có `Currentstatus == "INCART"` cho user này. 
         /// 
         /// **Lưu ý:**
-        /// - Trả thêm subServiceName và MinCompleteTime lớn nhất trong giỏ hàng (tính bằng giờ, cái này lưu lại dùng cho api tính phí ship).
+        /// - Trả thêm ServiceName và MinCompleteTime lớn nhất trong giỏ hàng (tính bằng giờ, cái này lưu lại dùng cho api tính phí ship).
         /// 
         /// **Response codes**:
         /// - **200**: Trả về giỏ hàng
