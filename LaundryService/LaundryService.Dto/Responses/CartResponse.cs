@@ -13,7 +13,7 @@ namespace LaundryService.Dto.Responses
 
 
         //Tên Sub-Service có MinCompleteTime lớn nhất trong giỏ hàng
-        public string? SubServiceName { get; set; }
+        public string? ServiceName { get; set; }
 
         // Giá trị MinCompleteTime lớn nhất (giờ)
         public int? MinCompleteTime { get; set; }

@@ -280,7 +280,7 @@ namespace LaundryService.Service
 
             decimal total = 0;
             int? maxMinCompleteTime = null;
-            string? maxSubServiceName = null;
+            string? maxServiceName = null;
             var cartResponse = new CartResponse { OrderId = order.Orderid };
 
             foreach (var item in order.Orderitems)
@@ -296,12 +296,11 @@ namespace LaundryService.Service
                 foreach (var oe in item.Orderextras)
                 {
                     var extraPrice = oe.Extra?.Price ?? 0;
-                    var extraName = oe.Extra?.Name ?? "Unknown Extra";
 
                     extraResponses.Add(new CartExtraResponse
                     {
                         ExtraId = oe.Extraid,
-                        ExtraName = extraName,
+                        ExtraName = oe.Extra?.Name ?? "Unknown Extra",
                         ExtraPrice = extraPrice
                     });
 
@@ -329,14 +328,14 @@ namespace LaundryService.Service
                     if (maxMinCompleteTime == null || sub.Mincompletetime > maxMinCompleteTime)
                     {
                         maxMinCompleteTime = sub.Mincompletetime;
-                        maxSubServiceName = sub.Name;
+                        maxServiceName = sub.Name;
                     }
                 }
             }
 
             cartResponse.EstimatedTotal = total;
             cartResponse.MinCompleteTime = maxMinCompleteTime;
-            cartResponse.SubServiceName = maxSubServiceName;
+            cartResponse.ServiceName = maxServiceName;
 
             return cartResponse;
         }

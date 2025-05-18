@@ -111,6 +111,9 @@ namespace LaundryService.Api.Controllers
         /// 1) Lấy userId từ token.  
         /// 2) Tìm Order có `Currentstatus == "INCART"` cho user này. 
         /// 
+        /// **Lưu ý:**
+        /// - Trả thêm subServiceName và MinCompleteTime lớn nhất trong giỏ hàng (tính bằng giờ, cái này lưu lại dùng cho api tính phí ship).
+        /// 
         /// **Response codes**:
         /// - **200**: Trả về giỏ hàng
         /// - **404**: Không tìm thấy cart (user chưa thêm gì)
