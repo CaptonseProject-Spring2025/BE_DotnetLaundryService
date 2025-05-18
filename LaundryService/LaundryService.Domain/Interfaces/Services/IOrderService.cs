@@ -46,5 +46,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
 
         Task<string> GetOrderIdByAssignmentAsync(Guid assignmentId);
+
+        Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CalculateShippingFeeRequest request);
     }
 }

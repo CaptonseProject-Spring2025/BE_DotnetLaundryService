@@ -158,6 +158,88 @@ namespace LaundryService.Service
         //============================
 
 
+        // Tính phí ship cho đơn hàng
+        public async Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CalculateShippingFeeRequest req)
+        {
+            // Lấy giờ VN để khớp với nghiệp vụ (dùng hàm util sẵn có)
+            var nowVn = _util.ConvertToVnTime(DateTime.UtcNow);
+
+            if (req.PickupTime < nowVn.AddMinutes(-10))
+                throw new ApplicationException("pickupTime không hợp lệ (đã quá 10 phút).");
+
+            var diffProcess = req.DeliveryTime - req.PickupTime;
+            if (diffProcess.TotalHours < req.MinCompleteTime)
+            {
+                var unit = req.MinCompleteTime >= 24 ? "ngày" : "giờ";
+                var min = req.MinCompleteTime / (unit == "ngày" ? 24 : 1);
+                throw new ApplicationException(
+                    $"Thời gian xử lý không đủ vì món đồ {req.ServiceName} có thời gian xử lý tối thiểu là {min} {unit}.");
+            }
+
+            // Kiểm tra địa chỉ pickup/delivery có tồn tại không
+            var addressRepo = _unitOfWork.Repository<Address>();
+            var pickupAddr = await addressRepo.FindAsync(req.PickupAddressId)
+                             ?? throw new KeyNotFoundException("Pickup address not found.");
+            var deliveryAddr = await addressRepo.FindAsync(req.DeliveryAddressId)
+                             ?? throw new KeyNotFoundException("Delivery address not found.");
+
+            /* ---------- 1. Tính ApplicableFee ---------- */
+            var diffToNow = req.DeliveryTime - nowVn;
+
+            decimal applicableFee = 0m;
+            if (diffToNow.TotalHours < 22)
+                applicableFee = req.EstimatedTotal * 0.75m;
+            else if (diffToNow.TotalHours < 46)
+                applicableFee = req.EstimatedTotal * 0.5m;
+            else if (diffToNow.TotalHours < 70)
+                applicableFee = req.EstimatedTotal * 0.15m;
+
+            /* ---------- 2. Lấy tọa độ & District ---------- */
+            var pickupDistrict = await _mapboxService.GetDistrictFromCoordinatesAsync(
+                                    pickupAddr.Latitude ?? 0, pickupAddr.Longitude ?? 0)
+                                ?? "Unknown";
+            var deliveryDistrict = await _mapboxService.GetDistrictFromCoordinatesAsync(
+                                    deliveryAddr.Latitude ?? 0, deliveryAddr.Longitude ?? 0)
+                                ?? "Unknown";
+
+            /* ---------- 3. Tra cứu Area ShippingFee ---------- */
+            var shippingAreas = _unitOfWork.Repository<Area>()
+                                .GetAll()
+                                .Where(a => a.Areatype.Equals("ShippingFee", StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+
+            var districtToArea = shippingAreas
+                .Where(a => a.Districts != null)
+                .SelectMany(a => a.Districts!.Select(d => new { d, a.Name }))
+                .ToDictionary(x => x.d, x => x.Name, StringComparer.OrdinalIgnoreCase);
+
+            string pickupAreaName = districtToArea.TryGetValue(pickupDistrict, out var pa) ? pa : "Unknown";
+            string deliveryAreaName = districtToArea.TryGetValue(deliveryDistrict, out var da) ? da : "Unknown";
+
+            decimal CalcLegFee(string areaName)
+                => areaName switch
+                {
+                    "Khu vực 1" => 30_000m,
+                    "Khu vực 2" => 40_000m,
+                    "Khu vực 3" => 50_000m,
+                    _ => 50_000m               // default cao nhất
+                };
+
+            decimal shippingFee = CalcLegFee(pickupAreaName) + CalcLegFee(deliveryAreaName);
+
+            /* ---------- 4. Giảm phí ship theo EstimatedTotal ---------- */
+            if (req.EstimatedTotal >= 1_000_000m)
+                shippingFee = 0;
+            else if (req.EstimatedTotal >= 350_000m)
+                shippingFee *= 0.5m;
+
+            return new CalculateShippingFeeResponse
+            {
+                ShippingFee = shippingFee,
+                ApplicableFee = Math.Round(applicableFee, 0)   // làm tròn 0 đ nếu muốn
+            };
+        }
+
         public async Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request)
         {
             var userId = _util.GetCurrentUserIdOrThrow(httpContext);

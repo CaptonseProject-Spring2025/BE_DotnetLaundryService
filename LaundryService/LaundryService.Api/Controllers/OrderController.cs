@@ -4,6 +4,7 @@ using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
 using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
+using LaundryService.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,34 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 // Log ra logger nào đó
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Tính phí ship cho đơn hàng dựa trên địa chỉ lấy và trả đồ, thời gian lấy và trả đồ.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("shipping-fee")]
+        [ProducesResponseType(typeof(CalculateShippingFeeResponse), 200)]
+        public async Task<IActionResult> CalculateShippingFee([FromBody] CalculateShippingFeeRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var userId = _util.GetCurrentUserIdOrThrow(HttpContext);
+                var result = await _orderService.CalculateShippingFeeAsync(request);
+                return Ok(result);
+            }
+            catch (ApplicationException ex) { return BadRequest(new { Message = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(new { Message = ex.Message }); }
+            catch (Exception ex)
+            {
+                // log …
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
