@@ -184,14 +184,12 @@ namespace LaundryService.Service
                              ?? throw new KeyNotFoundException("Delivery address not found.");
 
             /* ---------- 1. Tính ApplicableFee ---------- */
-            var diffToNow = req.DeliveryTime - nowVn;
-
             decimal applicableFee = 0m;
-            if (diffToNow.TotalHours < 22)
+            if (diffProcess.TotalHours < 22)
                 applicableFee = req.EstimatedTotal * 0.75m;
-            else if (diffToNow.TotalHours < 46)
+            else if (diffProcess.TotalHours < 46)
                 applicableFee = req.EstimatedTotal * 0.5m;
-            else if (diffToNow.TotalHours < 70)
+            else if (diffProcess.TotalHours < 70)
                 applicableFee = req.EstimatedTotal * 0.15m;
 
             /* ---------- 2. Lấy tọa độ & District ---------- */
@@ -205,7 +203,7 @@ namespace LaundryService.Service
             /* ---------- 3. Tra cứu Area ShippingFee ---------- */
             var shippingAreas = _unitOfWork.Repository<Area>()
                                 .GetAll()
-                                .Where(a => a.Areatype.Equals("ShippingFee", StringComparison.OrdinalIgnoreCase))
+                                .Where(a => a.Areatype.ToUpper() == "SHIPPINGFEE")
                                 .ToList();
 
             var districtToArea = shippingAreas
