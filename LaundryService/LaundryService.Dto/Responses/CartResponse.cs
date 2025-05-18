@@ -8,6 +8,8 @@ namespace LaundryService.Dto.Responses
 {
     public class CartResponse
     {
+        public AddressCartResponse? addressCartResponse { get; set; }
+
         public DateTime PickupTime { get; set; }
 
         public DateTime DeliveryTime { get; set; }
@@ -16,15 +18,17 @@ namespace LaundryService.Dto.Responses
 
         public List<CartItemResponse> Items { get; set; } = new List<CartItemResponse>();
 
+        // Tổng tạm tính của cả giỏ
+        public decimal EstimatedTotal { get; set; }
+
+        public decimal ShippingFee { get; set; }
 
         //Tên Sub-Service có MinCompleteTime lớn nhất trong giỏ hàng
         public string? ServiceName { get; set; }
-
+        
         // Giá trị MinCompleteTime lớn nhất (giờ)
         public int? MinCompleteTime { get; set; }
 
-        // Tổng tạm tính của cả giỏ
-        public decimal EstimatedTotal { get; set; }
     }
 
     public class CartItemResponse
@@ -49,5 +53,15 @@ namespace LaundryService.Dto.Responses
         public Guid ExtraId { get; set; }
         public string ExtraName { get; set; }
         public decimal ExtraPrice { get; set; }
+    }
+
+    public class AddressCartResponse
+    {
+        public Guid AddressId { get; set; }
+        public string? ContactName { get; set; }
+        public string? ContactPhone { get; set; }
+        public string? AddressLabel { get; set; }
+        public string? DetailAddress { get; set; }
+        public string? Description { get; set; }
     }
 }

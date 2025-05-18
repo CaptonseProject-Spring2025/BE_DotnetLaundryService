@@ -418,7 +418,7 @@ namespace LaundryService.Service
             cartResponse.MinCompleteTime = maxMinCompleteTime;
             cartResponse.ServiceName = maxServiceName;
 
-            // ---- Trả pickup/delivery time ----
+            // ------ Trả pickup/delivery time ------
             var nowVn = _util.ConvertToVnTime(DateTime.UtcNow);
 
             // Đặt khung giờ phục vụ: 09:00–21:00 VN
@@ -440,6 +440,67 @@ namespace LaundryService.Service
                 cartResponse.PickupTime = nowVn;
                 cartResponse.DeliveryTime = nowVn.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
             }
+
+            /* ---------- Lấy địa chỉ ưu tiên của User ---------- */
+            var addresses = _unitOfWork.Repository<Address>()
+                            .GetAll()
+                            .Where(a => a.Userid == userId)
+                            .ToList();
+
+            Address? selectedAddr = addresses
+                .FirstOrDefault(a => (a.Addresslabel ?? "")
+                .Equals("Nhà riêng", StringComparison.OrdinalIgnoreCase))
+                ?? addresses.FirstOrDefault();
+
+            decimal shippingFee = 0m;
+
+            if (selectedAddr != null)
+            {
+                cartResponse.addressCartResponse = new AddressCartResponse
+                {
+                    AddressId = selectedAddr.Addressid,
+                    ContactName = selectedAddr.Contactname,
+                    ContactPhone = selectedAddr.Contactphone,
+                    AddressLabel = selectedAddr.Addresslabel,
+                    DetailAddress = selectedAddr.Detailaddress,
+                    Description = selectedAddr.Description
+                };
+
+                /* ----- 3. Tính ShippingFee dựa trên Area ----- */
+                var district = await _mapboxService.GetDistrictFromCoordinatesAsync(
+                                   selectedAddr.Latitude ?? 0, selectedAddr.Longitude ?? 0)
+                               ?? "Unknown";
+
+                var shippingAreas = _unitOfWork.Repository<Area>()
+                                    .GetAll()
+                                    .Where(a => a.Areatype.ToUpper() == "SHIPPINGFEE")
+                                    .ToList();                         // LINQ-to-SQL an toàn
+
+                var districtToArea = shippingAreas
+                    .Where(a => a.Districts != null)
+                    .SelectMany(a => a.Districts!.Select(d => new { d, a.Name }))
+                    .ToDictionary(x => x.d, x => x.Name, StringComparer.OrdinalIgnoreCase);
+
+                var areaName = districtToArea.TryGetValue(district, out var an) ? an : "Unknown";
+
+                decimal CalcLegFee(string name) => name switch
+                {
+                    "Khu vực 1" => 30_000m,
+                    "Khu vực 2" => 40_000m,
+                    "Khu vực 3" => 50_000m,
+                    _ => 50_000m
+                };
+
+                // Hai chiều (nhận & giao) cùng 1 khu vực
+                shippingFee = CalcLegFee(areaName) * 2;
+
+                // Giảm theo EstimatedTotal
+                if (total >= 1_000_000m) shippingFee = 0;
+                else if (total >= 350_000m) shippingFee *= 0.5m;
+            }
+            /* Nếu user chưa có địa chỉ → shippingFee mặc định = 0 & addressCartResponse = null */
+
+            cartResponse.ShippingFee = shippingFee;
 
             return cartResponse;
         }
