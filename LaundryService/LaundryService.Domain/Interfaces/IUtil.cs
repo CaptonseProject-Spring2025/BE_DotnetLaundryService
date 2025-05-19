@@ -14,6 +14,8 @@ namespace LaundryService.Domain.Interfaces
 
         DateTime ConvertToVnTime(DateTime utcDateTime);
 
+        DateTime ConvertVnDateTimeToUtc(DateTime vnDateTime);
+
         string GenerateOrderId();
     }
 }

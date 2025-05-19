@@ -572,8 +572,8 @@ namespace LaundryService.Service
                 order.Deliverylongitude = deliveryAddress.Longitude;
 
                 // 4) Gán thời gian pickup/delivery
-                order.Pickuptime = request.Pickuptime;
-                order.Deliverytime = request.Deliverytime;
+                order.Pickuptime = _util.ConvertVnDateTimeToUtc(request.Pickuptime);
+                order.Deliverytime = _util.ConvertVnDateTimeToUtc(request.Deliverytime);
 
                 // 5) Cập nhật giá cho các OrderItem và OrderExtra
                 decimal basePriceSum = 0m;
@@ -639,19 +639,10 @@ namespace LaundryService.Service
                 // Update Order
                 await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
 
-                // Tạo OrderId mới cho đơn hàng
-                var newId = _util.GenerateOrderId();
-                // Cập nhật PK
-                order.Orderid = newId;
-                foreach (var oi in order.Orderitems) oi.Orderid = newId;
-                // Chỉ cần gọi Update cho bộ con nếu chưa Tracked:
-                // EF sẽ phát nhiều lệnh UPDATE, tất cả cùng 1 transaction nên không lỗi FK.
-                await _unitOfWork.Repository<Orderitem>().UpdateRangeAsync(order.Orderitems, false);
-
                 // 8) Tạo OrderStatusHistory: "PENDING"
                 var newStatusHistory = new Orderstatushistory
                 {
-                    Orderid = newId,
+                    Orderid = order.Orderid,
                     Status = "PENDING",
                     Statusdescription = "Đặt hàng thành công, chờ xác nhận",
                     Notes = request.Note,
@@ -665,7 +656,7 @@ namespace LaundryService.Service
                 await _unitOfWork.CommitTransaction();
 
                 // Trả về OrderId
-                return newId;
+                return order.Orderid;
             }
             catch
             {

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
@@ -31,6 +32,16 @@ namespace LaundryService.Infrastructure
             // Cách 2: Sử dụng TimeZoneInfo 
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
             return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, timeZone);
+        }
+
+        // Hàm Convert String Giờ Việt Nam sang DateTime UTC
+        public DateTime ConvertVnDateTimeToUtc(DateTime vnDateTime)
+        {
+            // vnDateTime.Kind có thể là Unspecified hoặc Local, nhưng chúng ta coi nó là giờ VN
+            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+            // Nếu Kind != Unspecified thì chuyển thành Unspecified để không auto chuyển Local->UTC
+            vnDateTime = DateTime.SpecifyKind(vnDateTime, DateTimeKind.Unspecified);
+            return TimeZoneInfo.ConvertTimeToUtc(vnDateTime, vnTimeZone);
         }
 
         // Hàm tạo mã đơn hàng ngẫu nhiên

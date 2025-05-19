@@ -251,9 +251,9 @@ namespace LaundryService.Api.Controllers
             {
                 return Unauthorized(new { Message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "An unexpected error occurred." });
+                return StatusCode(500, new { Message = $"An unexpected error occurred. {ex.Message}" });
             }
         }
 

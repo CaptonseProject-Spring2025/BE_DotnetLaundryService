@@ -315,6 +315,14 @@ CREATE TABLE BranchAddress (
 	Longitude DECIMAL(9,6)
 );
 
+-- Thay đổi OrderID ở bảng Orders thì ở bảng OrderItems tự thay đổi
+ALTER TABLE OrderItems
+    DROP CONSTRAINT orderitems_orderid_fkey,
+    ADD  CONSTRAINT orderitems_orderid_fkey
+        FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+        ON UPDATE CASCADE
+        ON DELETE NO ACTION;
+
 --INSERT DATA
 INSERT INTO public.users (userid, fullname, email, emailconfirmed, password, status, role, avatar, dob, gender, phonenumber, rewardpoints, datecreated, datemodified, refreshtoken, refreshtokenexpirytime) VALUES ('2b5e5454-ea28-4adf-beee-75592628cf1c', 'Customer', NULL, false, '$2a$11$LscyzeiyebAjF7KXf8IZ1eW9EZHTQi.XIGGakiMZi/4NwWoK4aEB6', 'Active', 'Customer', NULL, '2025-02-27', 'Male', '0789789789', 0, '2025-02-27 13:21:51.62545+00', NULL, '$2a$11$vZKQYple9RHYDGLDxK8W7.CDSboIC5cpEHvEHI21DqpbDYu8pdAYm', '2025-03-09 05:30:54.971189+00');
 INSERT INTO public.users (userid, fullname, email, emailconfirmed, password, status, role, avatar, dob, gender, phonenumber, rewardpoints, datecreated, datemodified, refreshtoken, refreshtokenexpirytime) VALUES ('315e9260-2f19-4de5-8d5a-ce76c7ad0a6e', 'Truong', 'bfdgdfgdf@gmail.com', false, '$2a$11$TTvbDKA0JuuM.DCY7.kMzO3F2U0TY5.EQ77XzZPJ4ST0X/niZdu5m', 'Active', 'Customer', 'https://laundryservicebucket.s3.ca-east-006.backblazeb2.com/user-avatars/770dde07-4555-4e21-ba18-79f1bff9eb8f.jpeg', '2019-03-10', 'Male', '0385145207', 0, '2025-03-20 06:35:16.174483+00', '2025-03-20 08:57:08.998312+00', '$2a$11$xlh1Bj1R6Zo4zw1S/j3/6u3xofRUs98QovpEBeu/xKRXiocZomCSi', '2025-03-27 08:56:44.898592+00');
