@@ -555,7 +555,6 @@ namespace LaundryService.Service
                 }
 
                 // 3) Gán các thông tin Pickup/Delivery vào Order
-                order.Orderid = _util.GenerateOrderId(); // Tạo OrderId mới
                 order.Pickuplabel = pickupAddress.Addresslabel;
                 order.Pickupname = pickupAddress.Contactname;
                 order.Pickupphone = pickupAddress.Contactphone;
@@ -640,10 +639,19 @@ namespace LaundryService.Service
                 // Update Order
                 await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
 
+                // Tạo OrderId mới cho đơn hàng
+                var newId = _util.GenerateOrderId();
+                // Cập nhật PK
+                order.Orderid = newId;
+                foreach (var oi in order.Orderitems) oi.Orderid = newId;
+                // Chỉ cần gọi Update cho bộ con nếu chưa Tracked:
+                // EF sẽ phát nhiều lệnh UPDATE, tất cả cùng 1 transaction nên không lỗi FK.
+                await _unitOfWork.Repository<Orderitem>().UpdateRangeAsync(order.Orderitems, false);
+
                 // 8) Tạo OrderStatusHistory: "PENDING"
                 var newStatusHistory = new Orderstatushistory
                 {
-                    Orderid = order.Orderid,
+                    Orderid = newId,
                     Status = "PENDING",
                     Statusdescription = "Đặt hàng thành công, chờ xác nhận",
                     Notes = request.Note,
@@ -657,7 +665,7 @@ namespace LaundryService.Service
                 await _unitOfWork.CommitTransaction();
 
                 // Trả về OrderId
-                return order.Orderid;
+                return newId;
             }
             catch
             {
