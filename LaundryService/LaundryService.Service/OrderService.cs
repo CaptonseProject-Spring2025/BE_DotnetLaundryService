@@ -432,13 +432,20 @@ namespace LaundryService.Service
                 if (nowVn < openingTime)
                     nextDayOpening = openingTime; // hôm nay
                 cartResponse.PickupTime = nextDayOpening;
-                cartResponse.DeliveryTime = nextDayOpening.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
             }
             else
             {
                 // Đặt đơn trong khung 9:00–21:00 VN, PickupTime là ngay bây giờ
                 cartResponse.PickupTime = nowVn;
-                cartResponse.DeliveryTime = nowVn.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
+            }
+
+            if (maxMinCompleteTime < 72)
+            {
+                cartResponse.DeliveryTime = cartResponse.PickupTime.AddDays(3);
+            }
+            else
+            {
+                cartResponse.DeliveryTime = cartResponse.PickupTime.AddHours(maxMinCompleteTime ?? 0); // cộng thêm thời gian hoàn thành
             }
 
             /* ---------- Lấy địa chỉ ưu tiên của User ---------- */
@@ -548,6 +555,7 @@ namespace LaundryService.Service
                 }
 
                 // 3) Gán các thông tin Pickup/Delivery vào Order
+                order.Orderid = _util.GenerateOrderId(); // Tạo OrderId mới
                 order.Pickuplabel = pickupAddress.Addresslabel;
                 order.Pickupname = pickupAddress.Contactname;
                 order.Pickupphone = pickupAddress.Contactphone;
