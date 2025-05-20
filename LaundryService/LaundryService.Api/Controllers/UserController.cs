@@ -255,7 +255,7 @@ namespace LaundryService.Api.Controllers
         /// </remarks>
         [Authorize(Roles = "Admin")]
         [HttpPost("create")]
-        //[ProducesResponseType(typeof(UserDetailResponse), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(UserDetailResponse), (int)HttpStatusCode.OK)]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.BadRequest)]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.InternalServerError)]
         public async Task<IActionResult> CreateUser([FromForm] CreateUserRequest request)
@@ -274,6 +274,26 @@ namespace LaundryService.Api.Controllers
             catch (ApplicationException ex)
             {
                 return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("reward-points-history")]
+        [ProducesResponseType(typeof(List<RewardHistoryResponse>), (int)HttpStatusCode.OK)]
+        public async Task<IActionResult> GetRewardHistory()
+        {
+            try
+            {
+                var rewardHistory = await _userService.GetRewardHistoryAsync(HttpContext);
+                return Ok(rewardHistory);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
             }
             catch (Exception ex)
             {

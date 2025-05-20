@@ -23,5 +23,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize);
 
         Task<UserDetailResponse> CreateUserAsync(CreateUserRequest request);
+
+        Task<List<RewardHistoryResponse>> GetRewardHistoryAsync(HttpContext httpContext);
     }
 }

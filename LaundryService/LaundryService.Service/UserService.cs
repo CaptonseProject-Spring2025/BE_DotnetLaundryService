@@ -13,6 +13,7 @@ using System.Security.Claims;
 using LaundryService.Dto.Pagination;
 using LaundryService.Infrastructure;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.EntityFrameworkCore;
 
 namespace LaundryService.Service
 {
@@ -269,6 +270,30 @@ namespace LaundryService.Service
             };
 
             return response;
+        }
+
+        public async Task<List<RewardHistoryResponse>> GetRewardHistoryAsync(HttpContext httpContext)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+            var user = await _unitOfWork.Repository<User>().GetAsync(u => u.Userid == userId);
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User not found.");
+            }
+            var rewardHistory = await _unitOfWork.Repository<Rewardhistory>().GetAll()
+                .Where(r => r.Userid == userId)
+                .Select(r => new RewardHistoryResponse
+                {
+                    Rewardhistoryid = r.Rewardhistoryid,
+                    Orderid = r.Orderid,
+                    Ordername = r.Ordername,
+                    Points = r.Points,
+                    Datecreated = r.Datecreated != null ? _util.ConvertToVnTime(r.Datecreated.Value) : null
+                })
+                .OrderByDescending(r => r.Datecreated)
+                .ToListAsync();
+
+            return rewardHistory;
         }
     }
 }
