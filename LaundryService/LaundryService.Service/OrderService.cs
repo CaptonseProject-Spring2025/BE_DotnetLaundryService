@@ -1515,10 +1515,12 @@ namespace LaundryService.Service
                 /* ---------- 1. Lấy Order ---------- */
                 var order = _unitOfWork.Repository<Order>()
                             .GetAll()
-                            .FirstOrDefault(o => o.Orderid == orderId);
-
-                if (order == null)
-                    throw new KeyNotFoundException("Order not found.");
+                            .Include(o => o.Orderitems)
+                                .ThenInclude(oi => oi.Service)
+                                    .ThenInclude(s => s.Subservice)
+                                        .ThenInclude(ss => ss.Category)
+                            .FirstOrDefault(o => o.Orderid == orderId)
+                            ?? throw new KeyNotFoundException("Order not found.");
 
                 if (order.Currentstatus != OrderStatusEnum.DELIVERED.ToString())
                     throw new ApplicationException("Order is not in DELIVERED status.");

@@ -282,16 +282,23 @@ namespace LaundryService.Service
             }
             var rewardHistory = await _unitOfWork.Repository<Rewardhistory>().GetAll()
                 .Where(r => r.Userid == userId)
+                .OrderByDescending(r => r.Datecreated)
                 .Select(r => new RewardHistoryResponse
                 {
                     Rewardhistoryid = r.Rewardhistoryid,
                     Orderid = r.Orderid,
                     Ordername = r.Ordername,
                     Points = r.Points,
-                    Datecreated = r.Datecreated != null ? _util.ConvertToVnTime(r.Datecreated.Value) : null
+                    Datecreated = r.Datecreated
                 })
-                .OrderByDescending(r => r.Datecreated)
                 .ToListAsync();
+
+            // Convert sang giờ VN sau khi đã lấy ra khỏi DB (trên memory)
+            foreach (var item in rewardHistory)
+            {
+                if (item.Datecreated != null)
+                    item.Datecreated = _util.ConvertToVnTime(item.Datecreated.Value);
+            }
 
             return rewardHistory;
         }

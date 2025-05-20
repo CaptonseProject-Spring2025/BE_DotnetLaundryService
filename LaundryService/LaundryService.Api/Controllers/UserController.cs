@@ -281,6 +281,10 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy danh sách lịch sử tích điểm thưởng của user
+        /// </summary>
+        /// <returns></returns>
         [Authorize]
         [HttpGet("reward-points-history")]
         [ProducesResponseType(typeof(List<RewardHistoryResponse>), (int)HttpStatusCode.OK)]
