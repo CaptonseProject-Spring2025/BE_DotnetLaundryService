@@ -37,6 +37,8 @@ public partial class User
 
     public DateTime? Refreshtokenexpirytime { get; set; }
 
+    public virtual ICollection<Absentdriver> Absentdrivers { get; set; } = new List<Absentdriver>();
+
     public virtual ICollection<Address> Addresses { get; set; } = new List<Address>();
 
     public virtual ICollection<Complaint> ComplaintAssignedtoNavigations { get; set; } = new List<Complaint>();
@@ -61,7 +63,11 @@ public partial class User
 
     public virtual ICollection<Orderstatushistory> Orderstatushistories { get; set; } = new List<Orderstatushistory>();
 
+    public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
+
     public virtual ICollection<Rating> Ratings { get; set; } = new List<Rating>();
+
+    public virtual ICollection<Rewardhistory> Rewardhistories { get; set; } = new List<Rewardhistory>();
 
     public virtual ICollection<Rewardtransaction> Rewardtransactions { get; set; } = new List<Rewardtransaction>();
 }

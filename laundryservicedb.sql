@@ -216,6 +216,8 @@ CREATE TABLE Payments (
     PaymentStatus TEXT,--CHECK (PaymentStatus IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')) DEFAULT 'PENDING',
     TransactionID TEXT,      -- Mã giao dịch (đối với thanh toán online)
     PaymentMetadata JSONB,   -- Lưu trữ thêm dữ liệu phản hồi từ cổng thanh toán (token, mã xác thực, response JSON, v.v.)
+    CollectedBy UUID REFERENCES Users(UserId),
+    IsReturnedToAdmin BOOLEAN NOT NULL DEFAULT FALSE,
     CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UpdatedAt TIMESTAMP WITH TIME ZONE
 );
@@ -313,6 +315,26 @@ CREATE TABLE BranchAddress (
 	AddressDetail TEXT,
 	Latitude DECIMAL(9,6),
 	Longitude DECIMAL(9,6)
+);
+
+-- Tạo bảng AbsentDriver
+CREATE TABLE AbsentDriver (
+    AbsentID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    DriverID UUID NOT NULL REFERENCES Users(UserId),
+    DateAbsent DATE NOT NULL,
+    AbsentFrom TIMESTAMP WITH TIME ZONE NOT NULL,
+    AbsentTo   TIMESTAMP WITH TIME ZONE NOT NULL,
+    DateCreated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Tạo bảng RewardHistory
+CREATE TABLE RewardHistory (
+    RewardHistoryID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    UserID UUID NOT NULL REFERENCES Users(UserId),
+    OrderID TEXT REFERENCES Orders(OrderID),
+    OrderName TEXT,
+    Points INT NOT NULL,
+    DateCreated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Thay đổi OrderID ở bảng Orders thì ở bảng OrderItems tự thay đổi

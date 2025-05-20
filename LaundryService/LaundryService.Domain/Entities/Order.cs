@@ -77,5 +77,7 @@ public partial class Order
 
     public virtual ICollection<Rating> Ratings { get; set; } = new List<Rating>();
 
+    public virtual ICollection<Rewardhistory> Rewardhistories { get; set; } = new List<Rewardhistory>();
+
     public virtual User User { get; set; } = null!;
 }

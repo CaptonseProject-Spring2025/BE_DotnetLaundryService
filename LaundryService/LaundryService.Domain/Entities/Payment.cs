@@ -25,6 +25,12 @@ public partial class Payment
 
     public DateTime? Updatedat { get; set; }
 
+    public Guid? Collectedby { get; set; }
+
+    public bool Isreturnedtoadmin { get; set; }
+
+    public virtual User? CollectedbyNavigation { get; set; }
+
     public virtual Order Order { get; set; } = null!;
 
     public virtual Paymentmethod Paymentmethod { get; set; } = null!;

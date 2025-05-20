@@ -16,6 +16,8 @@ public partial class LaundryServiceDbContext : DbContext
     {
     }
 
+    public virtual DbSet<Absentdriver> Absentdrivers { get; set; }
+
     public virtual DbSet<Address> Addresses { get; set; }
 
     public virtual DbSet<Area> Areas { get; set; }
@@ -60,6 +62,8 @@ public partial class LaundryServiceDbContext : DbContext
 
     public virtual DbSet<Rating> Ratings { get; set; }
 
+    public virtual DbSet<Rewardhistory> Rewardhistories { get; set; }
+
     public virtual DbSet<Rewardredemptionoption> Rewardredemptionoptions { get; set; }
 
     public virtual DbSet<Rewardtransaction> Rewardtransactions { get; set; }
@@ -77,6 +81,29 @@ public partial class LaundryServiceDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("uuid-ossp");
+
+        modelBuilder.Entity<Absentdriver>(entity =>
+        {
+            entity.HasKey(e => e.Absentid).HasName("absentdriver_pkey");
+
+            entity.ToTable("absentdriver");
+
+            entity.Property(e => e.Absentid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("absentid");
+            entity.Property(e => e.Absentfrom).HasColumnName("absentfrom");
+            entity.Property(e => e.Absentto).HasColumnName("absentto");
+            entity.Property(e => e.Dateabsent).HasColumnName("dateabsent");
+            entity.Property(e => e.Datecreated)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("datecreated");
+            entity.Property(e => e.Driverid).HasColumnName("driverid");
+
+            entity.HasOne(d => d.Driver).WithMany(p => p.Absentdrivers)
+                .HasForeignKey(d => d.Driverid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("absentdriver_driverid_fkey");
+        });
 
         modelBuilder.Entity<Address>(entity =>
         {
@@ -648,9 +675,13 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Amount)
                 .HasPrecision(10)
                 .HasColumnName("amount");
+            entity.Property(e => e.Collectedby).HasColumnName("collectedby");
             entity.Property(e => e.Createdat)
                 .HasDefaultValueSql("now()")
                 .HasColumnName("createdat");
+            entity.Property(e => e.Isreturnedtoadmin)
+                .HasDefaultValue(false)
+                .HasColumnName("isreturnedtoadmin");
             entity.Property(e => e.Orderid).HasColumnName("orderid");
             entity.Property(e => e.Paymentdate)
                 .HasDefaultValueSql("now()")
@@ -662,6 +693,10 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Paymentstatus).HasColumnName("paymentstatus");
             entity.Property(e => e.Transactionid).HasColumnName("transactionid");
             entity.Property(e => e.Updatedat).HasColumnName("updatedat");
+
+            entity.HasOne(d => d.CollectedbyNavigation).WithMany(p => p.Payments)
+                .HasForeignKey(d => d.Collectedby)
+                .HasConstraintName("payments_collectedby_fkey");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.Orderid)
@@ -721,6 +756,33 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasForeignKey(d => d.Userid)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ratings_userid_fkey");
+        });
+
+        modelBuilder.Entity<Rewardhistory>(entity =>
+        {
+            entity.HasKey(e => e.Rewardhistoryid).HasName("rewardhistory_pkey");
+
+            entity.ToTable("rewardhistory");
+
+            entity.Property(e => e.Rewardhistoryid)
+                .HasDefaultValueSql("uuid_generate_v4()")
+                .HasColumnName("rewardhistoryid");
+            entity.Property(e => e.Datecreated)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("datecreated");
+            entity.Property(e => e.Orderid).HasColumnName("orderid");
+            entity.Property(e => e.Ordername).HasColumnName("ordername");
+            entity.Property(e => e.Points).HasColumnName("points");
+            entity.Property(e => e.Userid).HasColumnName("userid");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Rewardhistories)
+                .HasForeignKey(d => d.Orderid)
+                .HasConstraintName("rewardhistory_orderid_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Rewardhistories)
+                .HasForeignKey(d => d.Userid)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("rewardhistory_userid_fkey");
         });
 
         modelBuilder.Entity<Rewardredemptionoption>(entity =>
