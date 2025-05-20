@@ -970,8 +970,8 @@ namespace LaundryService.Service
                 DeliveryLatitude = order.Deliverylatitude,
                 DeliveryLongitude = order.Deliverylongitude,
 
-                PickupTime = order.Pickuptime,
-                DeliveryTime = order.Deliverytime,
+                PickupTime = _util.ConvertToVnTime(order.Pickuptime ?? DateTime.UtcNow),
+                DeliveryTime = _util.ConvertToVnTime(order.Deliverytime ?? DateTime.UtcNow),
                 CreatedAt = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
             };
 
@@ -1501,5 +1501,71 @@ namespace LaundryService.Service
             return assignment.Orderid; // Chính là mã đơn như 250407GC1PHG
         }
 
+        public async Task<int> CompleteOrderAsync(HttpContext httpContext, string orderId)
+        {
+            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                /* ---------- 1. Lấy Order ---------- */
+                var order = _unitOfWork.Repository<Order>()
+                            .GetAll()
+                            .FirstOrDefault(o => o.Orderid == orderId);
+
+                if (order == null)
+                    throw new KeyNotFoundException("Order not found.");
+
+                if (order.Currentstatus != OrderStatusEnum.DELIVERED.ToString())
+                    throw new ApplicationException("Order is not in DELIVERED status.");
+
+                /* ---------- 3. Cập nhật Order ---------- */
+                order.Currentstatus = OrderStatusEnum.COMPLETED.ToString();
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                /* ---------- 4. Thêm OrderStatusHistory ---------- */
+                var history = new Orderstatushistory
+                {
+                    Statushistoryid = Guid.NewGuid(),
+                    Orderid = orderId,
+                    Status = OrderStatusEnum.COMPLETED.ToString(),
+                    Statusdescription = "Đơn hàng đã hoàn thành",
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                /* ---------- 5. Cộng RewardPoints ---------- */
+                // Công thức: chi tiêu = totalprice + discount - applicablefee - shippingfee
+                decimal spend = (order.Totalprice ?? 0)
+                              + (order.Discount ?? 0)
+                              - (order.Applicablefee ?? 0)
+                              - (order.Shippingfee ?? 0);
+
+                if (spend < 0) spend = 0;                    // an toàn
+
+                // Quy đổi điểm: 10.000 → 1 điểm, làm tròn 5.000 lên
+                int points = (int)Math.Floor((spend + 5000) / 10000);
+
+                if (points > 0)
+                {
+                    var user = await _unitOfWork.Repository<User>().FindAsync(userId);
+
+                    user.Rewardpoints = user.Rewardpoints + points;
+                    await _unitOfWork.Repository<User>().UpdateAsync(user, saveChanges: false);
+                }
+
+                /* ---------- 6. Commit ---------- */
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+
+                return points; // Trả về số điểm cộng thêm cho user
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }

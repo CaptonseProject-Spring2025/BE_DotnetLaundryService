@@ -574,5 +574,25 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>Người dùng xác nhận đã nhận hàng thành công.</summary>
+        [Authorize]
+        [HttpPost("{orderId}/complete")]
+        public async Task<IActionResult> CompleteOrder(string orderId)
+        {
+            try
+            {
+                var point = await _orderService.CompleteOrderAsync(HttpContext, orderId);
+                return Ok(new { Message = $"Chúc mừng bạn đã được cộng thêm {point} điểm." });
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(new { Message = ex.Message }); }
+            catch (ApplicationException ex) { return BadRequest(new { Message = ex.Message }); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
     }
 }
