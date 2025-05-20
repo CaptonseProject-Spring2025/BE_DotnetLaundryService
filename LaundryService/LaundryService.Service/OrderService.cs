@@ -9,6 +9,7 @@ using LaundryService.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,12 +24,14 @@ namespace LaundryService.Service
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
         private readonly IMapboxService _mapboxService;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService)
+        public OrderService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService, ILogger<OrderService> logger)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _mapboxService = mapboxService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -162,14 +165,12 @@ namespace LaundryService.Service
         public async Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CalculateShippingFeeRequest req)
         {
             // Lấy giờ VN để khớp với nghiệp vụ (dùng hàm util sẵn có)
-            var nowVn = _util.ConvertToVnTime(DateTime.UtcNow);
-            var pkTime = DateTime.Parse(req.PickupTime.ToString(), null, System.Globalization.DateTimeStyles.RoundtripKind);
-            var dlTime = DateTime.Parse(req.DeliveryTime.ToString(), null, System.Globalization.DateTimeStyles.RoundtripKind);
+            var nowVn = DateTime.UtcNow;
 
-            if (pkTime < nowVn.AddMinutes(-10))
+            if (req.PickupTime < nowVn.AddMinutes(-10))
                 throw new ApplicationException("pickupTime không hợp lệ (đã quá 10 phút).");
 
-            var diffProcess = dlTime - pkTime;
+            var diffProcess = req.DeliveryTime - req.PickupTime;
             if (diffProcess.TotalHours < req.MinCompleteTime)
             {
                 var unit = req.MinCompleteTime >= 24 ? "ngày" : "giờ";
