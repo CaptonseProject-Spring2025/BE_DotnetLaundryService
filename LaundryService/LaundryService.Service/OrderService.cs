@@ -163,8 +163,8 @@ namespace LaundryService.Service
         {
             // Lấy giờ VN để khớp với nghiệp vụ (dùng hàm util sẵn có)
             var nowVn = _util.ConvertToVnTime(DateTime.UtcNow);
-            var pkTime = _util.ConvertToVnTime(_util.ConvertVnDateTimeToUtc(req.PickupTime));
-            var dlTime = _util.ConvertToVnTime(_util.ConvertVnDateTimeToUtc(req.DeliveryTime));
+            var pkTime = DateTime.Parse(req.PickupTime.ToString(), null, System.Globalization.DateTimeStyles.RoundtripKind);
+            var dlTime = DateTime.Parse(req.DeliveryTime.ToString(), null, System.Globalization.DateTimeStyles.RoundtripKind);
 
             if (pkTime < nowVn.AddMinutes(-10))
                 throw new ApplicationException("pickupTime không hợp lệ (đã quá 10 phút).");
