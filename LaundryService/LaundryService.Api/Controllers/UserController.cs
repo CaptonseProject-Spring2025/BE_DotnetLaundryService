@@ -58,6 +58,23 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>Tìm user theo số điện thoại.</summary>
+        /// <param name="phone">Số điện thoại cần tìm (chính xác).</param>
+        [Authorize]                                              // tuỳ bảo mật
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(UserDetailResponse), 200)]
+        public async Task<IActionResult> SearchByPhone([FromQuery] string phone)
+        {
+            try
+            {
+                var user = await _userService.GetUserByPhoneAsync(phone);
+                return Ok(user);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+            catch (ArgumentException ex) { return BadRequest(new { Message = ex.Message }); }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
+        }
+
         /// <summary>
         /// Kiểm tra xem một số điện thoại (phone) có tồn tại trên hệ thống không
         /// </summary>
@@ -192,7 +209,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách Users với bộ lọc Role (tùy chọn) và phân trang
+        /// (Admin, CustomerStaff) Lấy danh sách Users với bộ lọc Role (tùy chọn) và phân trang
         /// </summary>
         /// <param name="role">Role của User (Admin/Customer/Staff). Nếu rỗng => lấy tất cả</param>
         /// <param name="page">Trang hiện tại (mặc định = 1)</param>
@@ -206,7 +223,7 @@ namespace LaundryService.Api.Controllers
         /// - **401**: Chưa đăng nhập hoặc không phải Admin
         /// - **500**: Lỗi server
         /// </remarks>
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,CustomerStaff")]
         [HttpGet]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.OK)]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.Unauthorized)]
@@ -229,7 +246,7 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// Admin tạo mới 1 user (Fullname, Email, Password, Role, Avatar, Dob, Gender, PhoneNumber, RewardPoints)
+        /// (Admin, CustomerStaff) Tạo mới 1 user (Fullname, Email, Password, Role, Avatar, Dob, Gender, PhoneNumber, RewardPoints)
         /// </summary>
         /// <param name="request">
         /// Dữ liệu tạo user:
@@ -253,7 +270,7 @@ namespace LaundryService.Api.Controllers
         /// - **400**: Số điện thoại/Email đã tồn tại hoặc dữ liệu không hợp lệ
         /// - **500**: Lỗi server
         /// </remarks>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,CustomerStaff")]
         [HttpPost("create")]
         [ProducesResponseType(typeof(UserDetailResponse), (int)HttpStatusCode.OK)]
         //[ProducesResponseType(typeof(object), (int)HttpStatusCode.BadRequest)]

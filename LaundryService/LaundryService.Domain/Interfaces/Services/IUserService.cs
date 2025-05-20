@@ -20,6 +20,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<bool> CheckPhoneNumberExistsAsync(string phoneNumber);
 
+        Task<UserDetailResponse> GetUserByPhoneAsync(string phone);
+
         Task<PaginationResult<UserDetailResponse>> GetUsersAsync(HttpContext httpContext, string? role, int page, int pageSize);
 
         Task<UserDetailResponse> CreateUserAsync(CreateUserRequest request);

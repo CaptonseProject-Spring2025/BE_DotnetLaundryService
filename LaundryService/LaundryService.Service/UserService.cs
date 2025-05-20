@@ -57,6 +57,34 @@ namespace LaundryService.Service
             };
         }
 
+        public async Task<UserDetailResponse> GetUserByPhoneAsync(string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                throw new ArgumentException("Phone number is required.");
+
+            var user = await _unitOfWork.Repository<User>()
+                         .GetAsync(u => u.Phonenumber == phone);
+
+            if (user == null)
+                throw new KeyNotFoundException("User not found.");
+
+            return new UserDetailResponse
+            {
+                UserId = user.Userid,
+                FullName = user.Fullname,
+                PhoneNumber = user.Phonenumber,
+                Email = user.Email,
+                Role = user.Role,
+                Status = user.Status,
+                Avatar = user.Avatar,
+                Dob = user.Dob,
+                Gender = user.Gender,
+                RewardPoints = user.Rewardpoints,
+                DateCreated = user.Datecreated != null ? _util.ConvertToVnTime(user.Datecreated.Value) : null,
+                DateModified = user.Datemodified != null ? _util.ConvertToVnTime(user.Datemodified.Value) : null
+            };
+        }
+
         public async Task<UserDetailResponse> UpdateUserProfileAsync(UpdateUserProfileRequest request)
         {
             // Tìm user theo UserId
