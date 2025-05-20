@@ -542,7 +542,9 @@ namespace LaundryService.Service
                         Amount = order.Totalprice ?? 0m,
                         Paymentmethodid = cashMethodId,
                         Paymentstatus = "PAID",
-                        Createdat = DateTime.UtcNow
+                        Createdat = DateTime.UtcNow,
+                        Collectedby = userId,
+                        Isreturnedtoadmin = false
                     };
 
                     await paymentRepo.InsertAsync(payment, saveChanges: false);

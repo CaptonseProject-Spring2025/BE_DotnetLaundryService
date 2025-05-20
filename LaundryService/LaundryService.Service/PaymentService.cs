@@ -576,6 +576,7 @@ namespace LaundryService.Service
                 // Cập nhật Payment
                 payment.Paymentstatus = finalStatus;
                 payment.Updatedat = DateTime.UtcNow;
+                payment.Isreturnedtoadmin = true;
 
                 await paymentRepo.UpdateAsync(payment, saveChanges: false);
 

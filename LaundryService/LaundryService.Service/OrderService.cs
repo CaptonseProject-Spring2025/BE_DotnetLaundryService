@@ -165,7 +165,7 @@ namespace LaundryService.Service
         public async Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CalculateShippingFeeRequest req)
         {
             // Lấy giờ VN để khớp với nghiệp vụ (dùng hàm util sẵn có)
-            var nowVn = DateTime.UtcNow;
+            var nowVn = DateTime.UtcNow.AddHours(7);
 
             if (req.PickupTime < nowVn.AddMinutes(-10))
                 throw new ApplicationException("pickupTime không hợp lệ (đã quá 10 phút).");
@@ -1558,6 +1558,27 @@ namespace LaundryService.Service
                     user.Rewardpoints = user.Rewardpoints + points;
                     await _unitOfWork.Repository<User>().UpdateAsync(user, saveChanges: false);
                 }
+
+                // get category name từ Orderitems
+                var categoryNames = order.Orderitems
+                    .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+
+                // Gộp thành 1 chuỗi, vd: "Giặt giày, Giặt sấy"
+                var orderName = string.Join(", ", categoryNames);
+
+                var rewardHistory = new Rewardhistory()
+                {
+                    Rewardhistoryid = Guid.NewGuid(),
+                    Userid = userId,
+                    Orderid = orderId,
+                    Ordername = orderName,
+                    Points = points,
+                    Datecreated = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Rewardhistory>().InsertAsync(rewardHistory, saveChanges: false);
 
                 /* ---------- 6. Commit ---------- */
                 await _unitOfWork.SaveChangesAsync();
