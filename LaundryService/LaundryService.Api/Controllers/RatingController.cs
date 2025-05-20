@@ -86,7 +86,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                var summary = await _ratingService.GetAverageStarAsync(HttpContext);
+                var summary = await _ratingService.GetRatingSummaryAsync(HttpContext);
                 return Ok(summary);
             }
             catch (Exception ex)

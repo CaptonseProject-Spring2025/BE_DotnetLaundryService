@@ -88,18 +88,16 @@ namespace LaundryService.Service
                 .ToList();
         }
 
-        public async Task<StarSummaryResponse> GetAverageStarAsync(HttpContext httpContext)
+        public async Task<StarSummaryResponse> GetRatingSummaryAsync(HttpContext httpContext)
         {
             var repo = _unitOfWork.Repository<Rating>().GetAll();
-
+            var totalRatings = await repo.CountAsync();
             var totalReviews = await repo
                 .Where(r => !string.IsNullOrWhiteSpace(r.Review))
                 .CountAsync();
-
             var starValues = repo
                 .Where(r => r.Star.HasValue)
                 .Select(r => r.Star.Value);
-
             var starCount = await starValues.CountAsync();
             var average = starCount == 0
                 ? 0
@@ -107,6 +105,7 @@ namespace LaundryService.Service
 
             return new StarSummaryResponse
             {
+                TotalRatings = totalRatings,
                 TotalReviews = totalReviews,
                 AverageStar = average
             };
@@ -121,11 +120,10 @@ namespace LaundryService.Service
             var allQuery = _unitOfWork.Repository<Rating>()
                 .GetAll()
                 .Where(r => r.Createdat >= start && r.Createdat < end);
-
+            var totalRatings = await allQuery.CountAsync();
             var totalReviews = await allQuery
                 .Where(r => !string.IsNullOrWhiteSpace(r.Review))
                 .CountAsync();
-
             var starValues = allQuery
                 .Where(r => r.Star.HasValue)
                 .Select(r => r.Star.Value);
@@ -139,6 +137,7 @@ namespace LaundryService.Service
             {
                 PeriodStart = start,
                 PeriodEnd = end,
+                TotalRatings = totalRatings,
                 TotalReviews = totalReviews,
                 AverageStar = averageStar
             };
@@ -155,6 +154,7 @@ namespace LaundryService.Service
                 .GetAll()
                 .Where(r => r.Createdat >= start && r.Createdat < end);
 
+            var totalRatings = await allQuery.CountAsync();
             var totalReviews = await allQuery
                 .Where(r => !string.IsNullOrWhiteSpace(r.Review))
                 .CountAsync();
@@ -172,6 +172,7 @@ namespace LaundryService.Service
             {
                 PeriodStart = start,
                 PeriodEnd = end,
+                TotalRatings = totalRatings,
                 TotalReviews = totalReviews,
                 AverageStar = averageStar
             };
@@ -189,6 +190,7 @@ namespace LaundryService.Service
                 .GetAll()
                 .Where(r => r.Createdat >= start && r.Createdat < end);
 
+            var totalRatings = await allQuery.CountAsync();
             var totalReviews = await allQuery
                 .Where(r => !string.IsNullOrWhiteSpace(r.Review))
                 .CountAsync();
@@ -206,6 +208,7 @@ namespace LaundryService.Service
             {
                 PeriodStart = start,
                 PeriodEnd = end,
+                TotalRatings = totalRatings,
                 TotalReviews = totalReviews,
                 AverageStar = averageStar
             };
