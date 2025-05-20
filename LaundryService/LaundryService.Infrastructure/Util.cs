@@ -34,7 +34,7 @@ namespace LaundryService.Infrastructure
             return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, timeZone);
         }
 
-        // Hàm Convert String Giờ Việt Nam sang DateTime UTC
+        // Hàm Convert Giờ Việt Nam sang DateTime UTC
         public DateTime ConvertVnDateTimeToUtc(DateTime vnDateTime)
         {
             // vnDateTime.Kind có thể là Unspecified hoặc Local, nhưng chúng ta coi nó là giờ VN
