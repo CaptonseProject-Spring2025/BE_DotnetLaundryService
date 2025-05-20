@@ -12,7 +12,7 @@ namespace LaundryService.Domain.Interfaces.Services
     {
         Task CreateRatingAsync(HttpContext httpContext, string orderId, int? starRating, string? review);
         Task<List<AdminRatingResponse>> GetAllRatingsForAdminAsync(HttpContext httpContext);
-        Task<StarSummaryResponse> GetAverageStarAsync(HttpContext httpContext);
+        Task<StarSummaryResponse> GetRatingSummaryAsync(HttpContext httpContext);
         Task<RatingStatisticsResponse> GetDailyStatisticsAsync(HttpContext httpContext, DateTime date);
         Task<RatingStatisticsResponse> GetWeeklyStatisticsAsync(HttpContext httpContext, DateTime dateInWeek);
         Task<RatingStatisticsResponse> GetMonthlyStatisticsAsync(HttpContext httpContext, int year, int month);

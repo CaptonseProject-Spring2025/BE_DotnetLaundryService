@@ -12,6 +12,8 @@ namespace LaundryService.Dto.Responses
 
             public DateTime PeriodEnd { get; set; }
 
+            public int TotalRatings { get; set; }
+
             public double AverageStar { get; set; }
 
             public int TotalReviews { get; set; }
