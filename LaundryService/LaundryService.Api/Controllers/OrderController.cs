@@ -575,7 +575,7 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        /// <summary>Người dùng xác nhận đã nhận hàng thành công.</summary>
+        /// <summary>Người dùng xác nhận đã nhận hàng thành công và tích điểm cho người dùng.</summary>
         [Authorize]
         [HttpPost("{orderId}/complete")]
         public async Task<IActionResult> CompleteOrder(string orderId)

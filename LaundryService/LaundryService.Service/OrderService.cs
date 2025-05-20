@@ -508,6 +508,7 @@ namespace LaundryService.Service
             /* Nếu user chưa có địa chỉ → shippingFee mặc định = 0 & addressCartResponse = null */
 
             cartResponse.ShippingFee = shippingFee;
+            cartResponse.ApplicableFee = 0m;
 
             return cartResponse;
         }

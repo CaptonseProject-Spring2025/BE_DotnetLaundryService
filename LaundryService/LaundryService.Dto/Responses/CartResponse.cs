@@ -23,6 +23,8 @@ namespace LaundryService.Dto.Responses
 
         public decimal ShippingFee { get; set; }
 
+        public decimal ApplicableFee { get; set; }
+
         //Tên Sub-Service có MinCompleteTime lớn nhất trong giỏ hàng
         public string? ServiceName { get; set; }
         
