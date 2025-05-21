@@ -480,5 +480,116 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Cập nhật một mục trong giỏ hàng (cart), bao gồm số lượng và danh sách extras.
+        /// </summary>
+        /// <param name="userId">Id của người dùng mà CustomerStaff muốn cập nhật giỏ hàng.</param>
+        /// <param name="request">
+        ///     <see cref="UpdateCartItemRequest"/> gồm:
+        ///     - <c>OrderItemId</c>: ID của mục giỏ hàng cần cập nhật (bắt buộc)  
+        ///     - <c>Quantity</c>: Số lượng mới (bắt buộc). Nếu bằng 0 thì sẽ xóa mục này.  
+        ///     - <c>ExtraIds</c>: Danh sách ID của các Extra (có thể rỗng)
+        /// </param>
+        /// <returns>
+        ///     Trả về <see cref="CartResponse"/> sau khi cập nhật:
+        ///     - <c>OrderId</c>, <c>Items</c>, <c>EstimatedTotal</c>
+        /// </returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - <c>200</c>: Cập nhật giỏ hàng thành công, trả về cart mới
+        /// - <c>400</c>: Lỗi logic hoặc dữ liệu đầu vào không hợp lệ
+        /// - <c>401</c>: Không có quyền truy cập
+        /// - <c>404</c>: Không tìm thấy OrderItem hoặc giỏ hàng không còn
+        /// - <c>500</c>: Lỗi hệ thống
+        /// </remarks>
+        [Authorize]
+        [HttpPut("cart")]
+        [ProducesResponseType(typeof(CartResponse), 200)]
+        public async Task<IActionResult> UpdateCartItem(Guid userId, [FromBody] UpdateCartItemRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var updatedCart = await _orderService.UpdateCartItemAsync(userId, request);
+                return Ok(updatedCart);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Nếu orderItem không tồn tại, hoặc giỏ hàng không còn => NotFound
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log nếu cần
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// CustomerStaff tạo đơn hàng cho khách hàng.
+        /// </summary>
+        /// <param name="userId"> Id của khách hàng </param>
+        /// <param name="request">
+        ///     <see cref="PlaceOrderRequest"/> gồm:
+        ///     - <c>DeliveryAddressId</c>: Guid địa chỉ trả đồ (của user)  
+        ///     - <c>Deliverytime</c>: Thời gian user mong muốn trả đồ (tùy chọn)  
+        ///     - <c>Shippingfee</c>, <c>Shippingdiscount</c>, <c>Applicablefee</c>, <c>Discount</c>, <c>Total</c>: Các chi phí liên quan, tổng tạm tính  
+        ///     - <c>Note</c>: Ghi chú (tùy chọn)  
+        ///     - <c>Createdat</c>: Thời gian cập nhật status (tùy chọn, mặc định = UtcNow)
+        /// </param>
+        /// <remarks>
+        /// **Yêu cầu**: Đã đăng nhập (có JWT).
+        ///
+        /// **Response codes**:
+        /// - **200**: Đặt hàng thành công, chuyển trạng thái => "CHECKING"
+        /// - **400**: Lỗi logic (tổng tiền không khớp, v.v.)
+        /// - **401**: Chưa đăng nhập hoặc token không hợp lệ
+        /// - **404**: Không tìm thấy order INCART hoặc không tìm thấy địa chỉ
+        /// - **500**: Lỗi server
+        /// </remarks>
+        [HttpPost("place-order")]
+        [ProducesResponseType(typeof(string), 200)]
+        public async Task<IActionResult> PlaceOrder(Guid userId, [FromBody] CusStaffPlaceOrderRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var orderId = await _orderService.CusStaffPlaceOrderAsync(HttpContext, userId, request);
+                                
+                return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                // Lỗi logic (tổng tiền không khớp, v.v.)
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred. {ex.Message}" });
+            }
+        }
     }
 }

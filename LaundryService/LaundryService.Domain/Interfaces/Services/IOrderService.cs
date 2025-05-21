@@ -45,6 +45,10 @@ namespace LaundryService.Domain.Interfaces.Services
         // --------------------- CUSTOMER STAFF ------------------
         Task<CartResponse> GetCartAsync(Guid userId);
 
+        Task<CartResponse> UpdateCartItemAsync(Guid userId, UpdateCartItemRequest request);
+
+        Task<string> CusStaffPlaceOrderAsync(HttpContext httpContext, Guid userId, CusStaffPlaceOrderRequest request);
+
         Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
 
         Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
