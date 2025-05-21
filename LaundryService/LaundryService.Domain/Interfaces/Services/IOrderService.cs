@@ -24,23 +24,12 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<PaginationResult<UserOrderResponse>> GetAllOrdersAsync(HttpContext httpContext, string? status, int page, int pageSize);
 
-        Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
-
         Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, string orderId);
 
         Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, string orderId);
 
-        Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize);
-
-        Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
-
-        Task ConfirmOrderAsync(HttpContext httpContext, string orderId, string notes);
-
-        Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes);
-
-        Task CancelProcessingAsync(HttpContext httpContext, Guid assignmentId, string note);
-
         Task<CartResponse> UpdateCartItemAsync(HttpContext httpContext, UpdateCartItemRequest request);
+
         Task<Guid> GetCustomerIdByOrderAsync(string orderId);
 
         Task<Guid> GetCustomerIdByAssignmentAsync(Guid assignmentId);
@@ -51,5 +40,23 @@ namespace LaundryService.Domain.Interfaces.Services
 
         /// <summary>Người dùng xác nhận đã nhận hàng thành công.</summary>
         Task<int> CompleteOrderAsync(HttpContext httpContext, string orderId);
+
+
+        // --------------------- CUSTOMER STAFF ------------------
+        Task<CartResponse> GetCartAsync(Guid userId);
+
+        Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
+
+        Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
+
+        Task ConfirmOrderAsync(HttpContext httpContext, string orderId, string notes);
+
+        Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize);
+
+        Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes);
+
+        Task CancelProcessingAsync(HttpContext httpContext, Guid assignmentId, string note);
+
+        Task StaffAddToCartAsync(Guid userId, AddToCartRequest request);
     }
 }

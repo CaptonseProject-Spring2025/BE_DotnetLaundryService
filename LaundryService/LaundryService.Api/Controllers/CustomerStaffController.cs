@@ -1,6 +1,7 @@
 ﻿using LaundryService.Domain.Enums;
 using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Pagination;
+using LaundryService.Dto.Requests;
 using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -400,5 +401,84 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// CustomerStaff thêm sản phẩm vào giỏ hàng của một khách hàng khác.
+        /// </summary>
+        /// <param name="userId">Id của người dùng mà CustomerStaff muốn thêm sản phẩm vào giỏ hàng.</param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("add-to-cart")]
+        public async Task<IActionResult> AddToCart(Guid userId, [FromBody] AddToCartRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _orderService.StaffAddToCartAsync(userId, request);
+                return Ok(new { Message = "Add to cart successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Log ra logger nào đó
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy giỏ hàng (cart) hiện tại của user – Order trạng thái "INCART"
+        /// </summary>
+        /// <param name="userId">Id của người dùng mà CustomerStaff muốn lấy giỏ hàng.</param>
+        /// <returns>
+        ///     Trả về <see cref="CartResponse"/> gồm:
+        ///     - <c>OrderId</c>  
+        ///     - <c>Items</c>: danh sách các CartItemResponse  
+        ///         - Mỗi item có <c>ServiceName</c>, <c>ServicePrice</c>, <c>Quantity</c>, Extras, <c>SubTotal</c>
+        ///     - <c>EstimatedTotal</c>: tổng tạm tính của cart
+        /// </returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - **200**: Trả về giỏ hàng
+        /// - **404**: Không tìm thấy cart (user chưa thêm gì)
+        /// - **401**: Chưa đăng nhập hoặc token không hợp lệ
+        /// - **500**: Lỗi server
+        /// </remarks>
+        [HttpGet("cart")]
+        [ProducesResponseType(typeof(CartResponse), 200)]
+        public async Task<IActionResult> GetCart(Guid userId)
+        {
+            try
+            {
+                var result = await _orderService.GetCartAsync(userId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Không tìm thấy cart => 404
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // UserId không hợp lệ => 401
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                // Lỗi khác => 500
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
     }
 }

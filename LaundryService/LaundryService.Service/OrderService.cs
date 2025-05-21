@@ -1,4 +1,5 @@
-﻿using LaundryService.Domain.Entities;
+﻿using DocumentFormat.OpenXml.Office2016.Drawing.Charts;
+using LaundryService.Domain.Entities;
 using LaundryService.Domain.Enums;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
@@ -241,10 +242,27 @@ namespace LaundryService.Service
             };
         }
 
+        /// <summary> Người dùng thêm sản phẩm vào giỏ hàng </summary>
         public async Task AddToCartAsync(HttpContext httpContext, AddToCartRequest request)
         {
             var userId = _util.GetCurrentUserIdOrThrow(httpContext);
 
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                await AddToCartNoTransactionAsync(userId, request);
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        /// <summary>CustomerStaff thêm sản phẩm vào giỏ hàng </summary>
+        public async Task StaffAddToCartAsync(Guid userId, AddToCartRequest request)
+        {
             await _unitOfWork.BeginTransaction();
             try
             {
@@ -347,8 +365,11 @@ namespace LaundryService.Service
 
         public async Task<CartResponse> GetCartAsync(HttpContext httpContext)
         {
-            var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+            return await GetCartAsync(_util.GetCurrentUserIdOrThrow(httpContext));
+        }
 
+        public async Task<CartResponse> GetCartAsync(Guid userId)
+        {
             var order = _unitOfWork.Repository<Order>()
                 .GetAll()
                 .Include(o => o.Orderitems)
