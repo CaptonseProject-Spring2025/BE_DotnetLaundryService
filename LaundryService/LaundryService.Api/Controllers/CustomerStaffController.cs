@@ -11,7 +11,7 @@ namespace LaundryService.Api.Controllers
 {
     [ApiController]
     [Route("api/customer-staff")]
-    [Authorize(Roles = "CustomerStaff")]
+    [Authorize(Roles = "Admin,CustomerStaff")]
     public class CustomerStaffController : BaseApiController
     {
         private readonly IOrderService _orderService;
