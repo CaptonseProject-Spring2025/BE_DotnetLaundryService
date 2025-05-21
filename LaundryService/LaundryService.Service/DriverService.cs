@@ -17,12 +17,14 @@ namespace LaundryService.Service
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
         private readonly IFileStorageService _fileStorageService;
+        private readonly IOrderJobService _jobService;
 
-        public DriverService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService)
+        public DriverService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService, IOrderJobService jobService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _fileStorageService = fileStorageService;
+            _jobService = jobService;
         }
 
         public async Task StartOrderPickupAsync(HttpContext httpContext, string orderId)
@@ -497,6 +499,8 @@ namespace LaundryService.Service
                 };
 
                 await statusHistoryRepo.InsertAsync(history, saveChanges: false);
+
+                _jobService.ScheduleAutoComplete(orderId, DateTime.UtcNow);
 
                 //Upload ảnh song song và lưu vào Orderphoto
                 var uploadTasks = files.Select(async file =>

@@ -27,13 +27,15 @@ namespace LaundryService.Service
         private readonly IUtil _util;
         private readonly IMapboxService _mapboxService;
         private readonly ILogger<OrderService> _logger;
+        private readonly IOrderJobService _jobService;
 
-        public OrderService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService, ILogger<OrderService> logger)
+        public OrderService(IUnitOfWork unitOfWork, IUtil util, IMapboxService mapboxService, ILogger<OrderService> logger, IOrderJobService jobService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _mapboxService = mapboxService;
             _logger = logger;
+            _jobService = jobService;
         }
 
         /// <summary>
@@ -1744,6 +1746,8 @@ namespace LaundryService.Service
                     Datecreated = DateTime.UtcNow
                 };
                 await _unitOfWork.Repository<Rewardhistory>().InsertAsync(rewardHistory, saveChanges: false);
+
+                _jobService.CancelAutoComplete(orderId);
 
                 /* ---------- 6. Commit ---------- */
                 await _unitOfWork.SaveChangesAsync();

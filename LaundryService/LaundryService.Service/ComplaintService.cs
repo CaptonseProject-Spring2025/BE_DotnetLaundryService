@@ -16,11 +16,13 @@ namespace LaundryService.Service
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
+        private readonly IOrderJobService _jobService;
 
-        public ComplaintService(IUnitOfWork unitOfWork, IUtil util)
+        public ComplaintService(IUnitOfWork unitOfWork, IUtil util, IOrderJobService jobService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
+            _jobService = jobService;
         }
 
         public async Task CreateComplaintAsyncForCustomer(HttpContext httpContext, string orderId, string complaintDescription, string complaintType)
@@ -85,6 +87,8 @@ namespace LaundryService.Service
                 };
                 await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(orderStatusHistory);
                 await _unitOfWork.SaveChangesAsync();
+
+                _jobService.CancelAutoComplete(orderId);
 
                 await _unitOfWork.CommitTransaction();
             }

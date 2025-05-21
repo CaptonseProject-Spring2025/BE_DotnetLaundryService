@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml.Presentation;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using Hangfire;
 using LaundryService.Api.Extensions;
 using LaundryService.Api.Hub;
 using LaundryService.Api.Services;
@@ -81,12 +82,17 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddHostedService<AssignmentAutoFailService>();
 builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService>();
 builder.Services.AddScoped<IComplaintService, ComplaintService>();
 builder.Services.AddScoped<IRatingService, RatingService>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<IAreaService, AreaService>();
+builder.Services.AddScoped<IOrderJobService, OrderJobService>();
+
+builder.Services.AddTransient<OrderAutoCompleteWorker>();   // job class
+
+builder.Services.AddHostedService<AssignmentAutoFailService>();
+builder.Services.AddHangfireServices(builder.Configuration);
 
 builder.Services.AddSignalR(options =>
 {
@@ -187,8 +193,14 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("AllowAll");
 
-app.UseAuthentication();
+app.UseAuthentication();    // <─ gán HttpContext.User
 app.UseAuthorization();
+
+// Hiện dashboard (chỉ Admin)
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireCustomAuthFilter() }   // tuỳ bạn, dưới gợi ý
+});
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
