@@ -197,10 +197,11 @@ app.UseAuthentication();    // <─ gán HttpContext.User
 app.UseAuthorization();
 
 // Hiện dashboard (chỉ Admin)
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
-{
-    Authorization = new[] { new HangfireCustomAuthFilter() }   // tuỳ bạn, dưới gợi ý
-});
+app.UseHangfireDashboard("/hangfire"); // Đường dẫn đến dashboard Hangfire
+//app.UseHangfireDashboard("/hangfire", new DashboardOptions
+//{
+//    Authorization = new[] { new HangfireCustomAuthFilter(builder.Configuration["Jwt:Key"]) }   // tuỳ bạn, dưới gợi ý
+//});
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
