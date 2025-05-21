@@ -196,8 +196,21 @@ app.UseCors("AllowAll");
 app.UseAuthentication();    // <─ gán HttpContext.User
 app.UseAuthorization();
 
+// Chỉ ẩn danh cho /hangfire
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/hangfire"), appBuilder =>
+{
+    // Bỏ qua Authentication/Authorization cho /hangfire
+    appBuilder.Use((ctx, next) =>
+    {
+        // Xóa user để vào được dashboard
+        ctx.User = new System.Security.Claims.ClaimsPrincipal();
+        return next();
+    });
+    appBuilder.UseHangfireDashboard("/hangfire");
+});
+
 // Hiện dashboard (chỉ Admin)
-app.UseHangfireDashboard("/hangfire"); // Đường dẫn đến dashboard Hangfire
+//app.UseHangfireDashboard("/hangfire"); // Đường dẫn đến dashboard Hangfire
 //app.UseHangfireDashboard("/hangfire", new DashboardOptions
 //{
 //    Authorization = new[] { new HangfireCustomAuthFilter(builder.Configuration["Jwt:Key"]) }   // tuỳ bạn, dưới gợi ý
