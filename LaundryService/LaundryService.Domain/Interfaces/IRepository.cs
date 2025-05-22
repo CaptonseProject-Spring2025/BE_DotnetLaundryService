@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,5 +71,10 @@ namespace LaundryService.Domain.Interfaces
         Task<T?> GetAsync(Expression<Func<T, bool>> predicate);
 
         IQueryable<T> GetAll();
+
+        Task<int> ExecuteUpdateAsync(
+                Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setPropertyCalls,
+                Expression<Func<T, bool>>? filter = null,
+                CancellationToken ct = default);
     }
 }

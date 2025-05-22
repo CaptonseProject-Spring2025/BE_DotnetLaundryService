@@ -1,5 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -156,6 +157,27 @@ namespace LaundryService.Infrastructure
         public IQueryable<T> GetAll()
         {
             return Entities.AsQueryable();
+        }
+
+        /// <summary>
+        /// Bulk-update 1 hoặc nhiều cột bằng lệnh UPDATE … SET …
+        /// (EF Core 7+ chuyển thẳng xuống SQL, không load entity lên bộ nhớ)
+        /// </summary>
+        /// <param name="setPropertyCalls">
+        ///     lambda khai báo các cột cần gán,
+        ///     ví dụ: <c>p =&gt; p.SetProperty(e =&gt; e.AutoCompleteJobId, jobId)</c>
+        /// </param>
+        /// <param name="filter">
+        ///     điều kiện WHERE; nếu <c>null</c> sẽ áp dụng cho toàn bộ DbSet.
+        /// </param>
+        /// <remarks>Trả về số dòng bị ảnh hưởng.</remarks>
+        public async Task<int> ExecuteUpdateAsync(
+                Expression<Func<SetPropertyCalls<T>, SetPropertyCalls<T>>> setPropertyCalls,
+                Expression<Func<T, bool>>? filter = null,
+                CancellationToken ct = default)
+        {
+            IQueryable<T> query = filter is null ? Entities : Entities.Where(filter);
+            return await query.ExecuteUpdateAsync(setPropertyCalls, ct);
         }
     }
 }

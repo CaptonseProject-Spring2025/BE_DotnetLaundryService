@@ -397,20 +397,20 @@ namespace LaundryService.Service
                     throw new UnauthorizedAccessException("Bạn không được giao thực hiện đơn giao hàng này hoặc trạng thái công việc không hợp lệ.");
 
                 //Lấy danh sách các đơn tài xế được gán ở trạng thái ASSIGNED_DELIVERY
-                //var assignedOrderIds = assignmentRepo
-                //    .GetAll()
-                //    .Where(a => a.Assignedto == userId && a.Status == statusAssignedDelivery)
-                //    .Select(a => a.Orderid)
-                //    .ToList();
+                var assignedOrderIds = assignmentRepo
+                    .GetAll()
+                    .Where(a => a.Assignedto == userId && a.Status == statusAssignedDelivery)
+                    .Select(a => a.Orderid)
+                    .ToList();
 
-                ////Kiểm tra nếu có đơn nào đang ở trạng thái DELIVERING
-                //var uncompletedOrder = orderRepo
-                //    .GetAll()
-                //    .Any(o => assignedOrderIds.Contains(o.Orderid)
-                //              && o.Currentstatus == statusDelivering);
+                //Kiểm tra nếu có đơn nào đang ở trạng thái DELIVERING
+                var uncompletedOrder = orderRepo
+                    .GetAll()
+                    .Any(o => assignedOrderIds.Contains(o.Orderid)
+                              && o.Currentstatus == statusDelivering);
 
-                //if (uncompletedOrder)
-                //    throw new InvalidOperationException("Bạn chưa hoàn thành đơn giao hàng trước đó.");
+                if (uncompletedOrder)
+                    throw new InvalidOperationException("Bạn chưa hoàn thành đơn giao hàng trước đó.");
 
                 //Cập nhật trạng thái đơn hàng
                 order.Currentstatus = statusDelivering;
@@ -484,11 +484,6 @@ namespace LaundryService.Service
 
                 //Cập nhật trạng thái đơn hàng
                 order.Currentstatus = statusDelivered;
-
-                var jobId = _jobService.ScheduleAutoComplete(orderId, DateTime.UtcNow);
-                // lưu jobId tới bảng Order để huỷ sau này
-                order.AutoCompleteJobId = jobId;
-
                 await orderRepo.UpdateAsync(order, saveChanges: false);
 
                 //Ghi nhận lịch sử trạng thái
@@ -565,6 +560,14 @@ namespace LaundryService.Service
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
+
+            /* ===== Schedule job & lưu JobId (ngoài transaction) ===== */
+            var jobId = _jobService.ScheduleAutoComplete(orderId, DateTime.UtcNow);
+
+            await _unitOfWork.Repository<Order>()     // dùng Repo đã có extension
+                             .ExecuteUpdateAsync(
+                                 set => set.SetProperty(o => o.AutoCompleteJobId, jobId),
+                                 o => o.Orderid == orderId);
         }
 
         public async Task ConfirmOrderDeliverySuccessAsync(HttpContext httpContext, string orderId)

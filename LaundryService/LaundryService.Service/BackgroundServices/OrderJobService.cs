@@ -20,7 +20,7 @@ namespace LaundryService.Service.BackgroundServices
             // delay đúng 48 giờ:
             var jobId = _bg.Schedule<OrderAutoCompleteWorker>(
                             x => x.ExecuteAsync(orderId),
-                            deliveredAtUtc.AddHours(1) - DateTime.UtcNow);
+                            deliveredAtUtc.AddHours(48) - DateTime.UtcNow);
 
             return jobId;                 // lưu lại nếu cần huỷ
         }
