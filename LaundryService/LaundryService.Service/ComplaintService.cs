@@ -73,6 +73,10 @@ namespace LaundryService.Service
                 await _unitOfWork.SaveChangesAsync();
 
                 order.Currentstatus = OrderStatusEnum.COMPLAINT.ToString();
+
+                // Lưu jobId để lát nữa huỷ
+                var jobId = order.AutoCompleteJobId;
+
                 await _unitOfWork.Repository<Order>().UpdateAsync(order);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -88,9 +92,11 @@ namespace LaundryService.Service
                 await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(orderStatusHistory);
                 await _unitOfWork.SaveChangesAsync();
 
-                _jobService.CancelAutoComplete(orderId);
-
                 await _unitOfWork.CommitTransaction();
+
+                // Huỷ background-job (ngoài transaction DB)
+                if (!string.IsNullOrEmpty(jobId))
+                    _jobService.CancelAutoComplete(jobId);
             }
             catch (Exception ex)
             {

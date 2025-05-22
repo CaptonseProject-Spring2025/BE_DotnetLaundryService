@@ -8,7 +8,7 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IOrderJobService
     {
-        void ScheduleAutoComplete(string orderId, DateTime deliveredAtUtc);
+        string ScheduleAutoComplete(string orderId, DateTime deliveredAtUtc);
         void CancelAutoComplete(string orderId);
     }
 }

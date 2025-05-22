@@ -61,6 +61,8 @@ public partial class Order
 
     public bool? Emergency { get; set; }
 
+    public string? AutoCompleteJobId { get; set; }
+
     public virtual ICollection<Complaint> Complaints { get; set; } = new List<Complaint>();
 
     public virtual ICollection<Driverlocationhistory> Driverlocationhistories { get; set; } = new List<Driverlocationhistory>();

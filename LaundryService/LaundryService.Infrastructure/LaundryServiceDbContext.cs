@@ -488,6 +488,7 @@ public partial class LaundryServiceDbContext : DbContext
                 .HasPrecision(10)
                 .HasColumnName("totalprice");
             entity.Property(e => e.Userid).HasColumnName("userid");
+            entity.Property(e => e.AutoCompleteJobId).HasColumnName("autocompletejobid");
 
             entity.HasOne(d => d.User).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.Userid)

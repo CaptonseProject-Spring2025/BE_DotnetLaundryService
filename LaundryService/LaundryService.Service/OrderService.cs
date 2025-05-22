@@ -1747,11 +1747,16 @@ namespace LaundryService.Service
                 };
                 await _unitOfWork.Repository<Rewardhistory>().InsertAsync(rewardHistory, saveChanges: false);
 
-                _jobService.CancelAutoComplete(orderId);
+                // Lưu jobId để lát nữa huỷ
+                var jobId = order.AutoCompleteJobId;
 
                 /* ---------- 6. Commit ---------- */
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
+
+                // Huỷ background-job (ngoài transaction DB)
+                if (!string.IsNullOrEmpty(jobId))
+                    _jobService.CancelAutoComplete(jobId);
 
                 return points; // Trả về số điểm cộng thêm cho user
             }

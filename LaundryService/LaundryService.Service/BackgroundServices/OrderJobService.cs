@@ -15,16 +15,22 @@ namespace LaundryService.Service.BackgroundServices
 
         public OrderJobService(IBackgroundJobClient bg) => _bg = bg;
 
-        public void ScheduleAutoComplete(string orderId, DateTime deliveredAtUtc)
+        public string ScheduleAutoComplete(string orderId, DateTime deliveredAtUtc)
         {
-            var id = JobId(orderId);
-            _bg.Delete(id); // nếu đã tồn tại -> huỷ trước
-            _bg.Schedule<OrderAutoCompleteWorker>(
-                id,
-                x => x.ExecuteAsync(orderId),
-                deliveredAtUtc.AddHours(48) - DateTime.UtcNow);
+            // delay đúng 48 giờ:
+            var jobId = _bg.Schedule<OrderAutoCompleteWorker>(
+                            x => x.ExecuteAsync(orderId),
+                            deliveredAtUtc.AddHours(1) - DateTime.UtcNow);
+
+            return jobId;                 // lưu lại nếu cần huỷ
         }
 
-        public void CancelAutoComplete(string orderId) => _bg.Delete(JobId(orderId));
+        public void CancelAutoComplete(string jobId)
+        {
+            if (string.IsNullOrWhiteSpace(jobId)) return;
+
+            // Delete() trả bool - không ném exception, ta cũng không cần quan tâm
+            BackgroundJob.Delete(jobId);
+        }
     }
 }
