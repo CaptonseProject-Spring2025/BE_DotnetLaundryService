@@ -464,11 +464,6 @@ namespace LaundryService.Api.Controllers
                 var result = await _orderService.GetCartAsync(userId);
                 return Ok(result);
             }
-            catch (KeyNotFoundException ex)
-            {
-                // Không tìm thấy cart => 404
-                return NotFound(new { Message = ex.Message });
-            }
             catch (UnauthorizedAccessException ex)
             {
                 // UserId không hợp lệ => 401
