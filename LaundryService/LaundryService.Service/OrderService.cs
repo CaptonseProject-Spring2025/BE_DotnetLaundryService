@@ -387,7 +387,7 @@ namespace LaundryService.Service
                         .ThenInclude(oe => oe.Extra)
                 .FirstOrDefault(o => o.Userid == userId && o.Currentstatus == "INCART");
 
-            if (order == null) throw new KeyNotFoundException("No cart found.");
+            if (order == null) return null;
 
             decimal total = 0;
             int? maxMinCompleteTime = null;
