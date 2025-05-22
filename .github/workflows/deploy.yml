@@ -24,4 +24,4 @@ jobs:
           git pull origin main
           docker-compose down
           docker-compose up --build -d
-          docker system prune -af  # <--- Dọn dẹp các images không gắn với Container nào đang chạy
+          docker image prune -af  # <--- Dọn dẹp các images không gắn với Container nào đang chạy
