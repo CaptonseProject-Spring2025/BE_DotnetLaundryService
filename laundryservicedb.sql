@@ -153,6 +153,7 @@ CREATE TABLE Orders (
     TotalPrice DECIMAL(10),
 	Discount DECIMAL(10),
 	CurrentStatus TEXT, --CHECK (CurrentStatus IN ('INCART', 'PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED')) DEFAULT 'INCART',
+    AutoCompleteJobId TEXT,
     CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
