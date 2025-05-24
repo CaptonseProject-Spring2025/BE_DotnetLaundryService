@@ -163,7 +163,20 @@ namespace LaundryService.Service
 
 
         //============================
+        private decimal GetLegShippingFee(
+            IDictionary<string, Area> districtToArea,          // tra cứu quận → Area
+            string district,
+            IEnumerable<Area> allShippingAreas)                // list để lấy max fallback
+        {
+            if (districtToArea.TryGetValue(district, out var area)
+                && area.Shippingfee.HasValue && area.Shippingfee > 0)
+            {
+                return area.Shippingfee.Value;
+            }
 
+            // fallback: lấy giá cao nhất trong bảng ShippingFee
+            return allShippingAreas.Where(a => a.Shippingfee.HasValue).Max(a => a.Shippingfee!.Value);
+        }
 
         // Tính phí ship cho đơn hàng
         public async Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CalculateShippingFeeRequest req)
@@ -207,36 +220,29 @@ namespace LaundryService.Service
                                     deliveryAddr.Latitude ?? 0, deliveryAddr.Longitude ?? 0)
                                 ?? "Unknown";
 
-            /* ---------- 3. Tra cứu Area ShippingFee ---------- */
+            /* -------- 3. Truy bảng Area lấy phí ship ---------- */
             var shippingAreas = _unitOfWork.Repository<Area>()
                                 .GetAll()
                                 .Where(a => a.Areatype.ToUpper() == "SHIPPINGFEE")
-                                .ToList();
+                                .ToList();          // EF -> RAM (chỉ 1 lần)
 
+            if (!shippingAreas.Any(a => a.Shippingfee.HasValue))
+                throw new ApplicationException("Bảng Area (ShippingFee) chưa có giá nào.");
+
+            // Build dictionary: quận  →  Area
             var districtToArea = shippingAreas
                 .Where(a => a.Districts != null)
-                .SelectMany(a => a.Districts!.Select(d => new { d, a.Name }))
-                .ToDictionary(x => x.d, x => x.Name, StringComparer.OrdinalIgnoreCase);
+                .SelectMany(a => a.Districts!.Select(d => new { District = d.Trim(), Area = a }))
+                .ToDictionary(x => x.District, x => x.Area, StringComparer.OrdinalIgnoreCase);
 
-            string pickupAreaName = districtToArea.TryGetValue(pickupDistrict, out var pa) ? pa : "Unknown";
-            string deliveryAreaName = districtToArea.TryGetValue(deliveryDistrict, out var da) ? da : "Unknown";
+            /* -------- 4. Tính phí từng chiều ---------- */
+            decimal pickupLeg = GetLegShippingFee(districtToArea, pickupDistrict, shippingAreas);
+            decimal deliverLeg = GetLegShippingFee(districtToArea, deliveryDistrict, shippingAreas);
+            decimal shippingFee = pickupLeg + deliverLeg;
 
-            decimal CalcLegFee(string areaName)
-                => areaName switch
-                {
-                    "Khu vực 1" => 30_000m,
-                    "Khu vực 2" => 40_000m,
-                    "Khu vực 3" => 50_000m,
-                    _ => 50_000m               // default cao nhất
-                };
-
-            decimal shippingFee = CalcLegFee(pickupAreaName) + CalcLegFee(deliveryAreaName);
-
-            /* ---------- 4. Giảm phí ship theo EstimatedTotal ---------- */
-            if (req.EstimatedTotal >= 1_000_000m)
-                shippingFee = 0;
-            else if (req.EstimatedTotal >= 350_000m)
-                shippingFee *= 0.5m;
+            /* -------- 5. Giảm phí theo EstimatedTotal ---------- */
+            if (req.EstimatedTotal >= 1_000_000m) shippingFee = 0;
+            else if (req.EstimatedTotal >= 350_000m) shippingFee *= 0.5m;
 
             return new CalculateShippingFeeResponse
             {
