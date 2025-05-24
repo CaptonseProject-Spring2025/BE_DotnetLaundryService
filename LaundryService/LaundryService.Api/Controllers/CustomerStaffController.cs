@@ -15,14 +15,16 @@ namespace LaundryService.Api.Controllers
     public class CustomerStaffController : BaseApiController
     {
         private readonly IOrderService _orderService;
+        private readonly ICustomerStaffService _customerStaffService;
         private readonly IFirebaseNotificationService _firebaseNotificationService;
         private readonly INotificationService _notificationService;
 
-        public CustomerStaffController(IOrderService orderService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService)
+        public CustomerStaffController(IOrderService orderService, IFirebaseNotificationService firebaseNotificationService, INotificationService notificationService, ICustomerStaffService customerStaffService)
         {
             _orderService = orderService;
             _firebaseNotificationService = firebaseNotificationService;
             _notificationService = notificationService;
+            _customerStaffService = customerStaffService;
         }
 
         /// <summary>
@@ -51,7 +53,7 @@ namespace LaundryService.Api.Controllers
             try
             {
                 // Gọi service
-                var result = await _orderService.GetPendingOrdersForStaffAsync(HttpContext, page, pageSize);
+                var result = await _customerStaffService.GetPendingOrdersForStaffAsync(HttpContext, page, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -95,7 +97,7 @@ namespace LaundryService.Api.Controllers
             try
             {
                 // Gọi service -> nhận về assignmentId
-                var assignmentId = await _orderService.ProcessOrderAsync(HttpContext, orderId);
+                var assignmentId = await _customerStaffService.ProcessOrderAsync(HttpContext, orderId);
 
                 return Ok(new
                 {
@@ -157,7 +159,7 @@ namespace LaundryService.Api.Controllers
             try
             {
                 // Gọi service
-                await _orderService.ConfirmOrderAsync(HttpContext, orderId, notes ?? "");
+                await _customerStaffService.ConfirmOrderAsync(HttpContext, orderId, notes ?? "");
 
                 // Lấy customerId để gửi notification
                 var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
@@ -239,7 +241,7 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                var result = await _orderService.GetInCartOrdersPagedAsync(HttpContext, page, pageSize);
+                var result = await _customerStaffService.GetInCartOrdersPagedAsync(HttpContext, page, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -290,7 +292,7 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                await _orderService.CancelOrderAsync(HttpContext, assignmentId, notes);
+                await _customerStaffService.CancelOrderAsync(HttpContext, assignmentId, notes);
 
                 // Lấy thông tin để tạo notification
                 var customerId = await _orderService.GetCustomerIdByAssignmentAsync(assignmentId);
@@ -379,7 +381,7 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                await _orderService.CancelProcessingAsync(HttpContext, assignmentId, note);
+                await _customerStaffService.CancelProcessingAsync(HttpContext, assignmentId, note);
                 return Ok(new { Message = "Staff đã hủy xử lý đơn hàng thành công." });
             }
             catch (KeyNotFoundException ex)
@@ -415,7 +417,7 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                await _orderService.StaffAddToCartAsync(userId, request);
+                await _customerStaffService.StaffAddToCartAsync(userId, request);
                 return Ok(new { Message = "Add to cart successfully." });
             }
             catch (KeyNotFoundException ex)
@@ -564,7 +566,7 @@ namespace LaundryService.Api.Controllers
 
             try
             {
-                var orderId = await _orderService.CusStaffPlaceOrderAsync(HttpContext, userId, request);
+                var orderId = await _customerStaffService.CusStaffPlaceOrderAsync(HttpContext, userId, request);
                                 
                 return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
             }

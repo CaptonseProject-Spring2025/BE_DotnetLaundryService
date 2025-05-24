@@ -41,26 +41,11 @@ namespace LaundryService.Domain.Interfaces.Services
         /// <summary>Người dùng xác nhận đã nhận hàng thành công.</summary>
         Task<int> CompleteOrderAsync(HttpContext httpContext, string orderId);
 
+        Task AddToCartNoTransactionAsync(Guid userId, AddToCartRequest request);
 
         // --------------------- CUSTOMER STAFF ------------------
         Task<CartResponse> GetCartAsync(Guid userId);
 
         Task<CartResponse> UpdateCartItemAsync(Guid userId, UpdateCartItemRequest request);
-
-        Task<string> CusStaffPlaceOrderAsync(HttpContext httpContext, Guid userId, CusStaffPlaceOrderRequest request);
-
-        Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
-
-        Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
-
-        Task ConfirmOrderAsync(HttpContext httpContext, string orderId, string notes);
-
-        Task<PaginationResult<InCartOrderAdminResponse>> GetInCartOrdersPagedAsync(HttpContext httpContext, int page, int pageSize);
-
-        Task CancelOrderAsync(HttpContext httpContext, Guid assignmentId, string notes);
-
-        Task CancelProcessingAsync(HttpContext httpContext, Guid assignmentId, string note);
-
-        Task StaffAddToCartAsync(Guid userId, AddToCartRequest request);
     }
 }

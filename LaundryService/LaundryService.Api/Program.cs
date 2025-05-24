@@ -88,6 +88,7 @@ builder.Services.AddScoped<IRatingService, RatingService>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 builder.Services.AddScoped<IOrderJobService, OrderJobService>();
+builder.Services.AddScoped<ICustomerStaffService, CustomerStaffService>();
 
 builder.Services.AddTransient<OrderAutoCompleteWorker>();   // job class
 
