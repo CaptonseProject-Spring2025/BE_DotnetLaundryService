@@ -34,6 +34,13 @@ namespace LaundryService.Service
             if (request.Areas is null || request.Areas.Count == 0)
                 throw new ArgumentException("Areas list is empty.");
 
+            if (request.AreaType.Trim().ToLower().Equals("driver") && request.Areas.Any(a => a.ShippingFee.HasValue))
+                throw new ArgumentException("Nếu AreaType là 'driver', thì không được có ShippingFee.");
+
+            //Nếu AreaType là 'shippingFee', thì ShippingFee phải có giá trị và không âm
+            if (request.AreaType.Trim().ToLower().Equals("shippingfee") && request.Areas.Any(a => a.ShippingFee == null || a.ShippingFee < 0))
+                throw new ArgumentException("Nếu AreaType là 'shippingFee', thì ShippingFee phải có giá trị và không âm.");
+
             await _unitOfWork.BeginTransaction();
             try
             {
@@ -57,6 +64,7 @@ namespace LaundryService.Service
                         Areaid = Guid.NewGuid(),
                         Name = item.Name.Trim(),
                         Districts = item.Districts ?? new List<string>(),
+                        Shippingfee = item.ShippingFee.HasValue ? item.ShippingFee.Value : null,
                         Areatype = request.AreaType.Trim()
                     };
 
@@ -89,14 +97,15 @@ namespace LaundryService.Service
                                    {
                                        AreaId = a.Areaid,
                                        Name = a.Name,
-                                       Districts = a.Districts ?? new List<string>()
+                                       Districts = a.Districts ?? new List<string>(),
+                                       ShippingFee = a.Shippingfee
                                    })
                                    .ToList();
 
             return await Task.FromResult(areas);   // Linq ToObjects ⇒ không cần EF async
         }
 
-        public async Task UpdateAreaByIdAsync(Guid areaId, string name, List<string> districts)
+        public async Task UpdateAreaByIdAsync(Guid areaId, string name, List<string> districts, decimal shippingFee)
         {
             if (areaId == Guid.Empty)
                 throw new ArgumentException("AreaId is required.");
@@ -109,7 +118,10 @@ namespace LaundryService.Service
 
             if (districts.Any())
                 area.Districts = districts;
-            
+
+            if (shippingFee >= 0)
+                area.Shippingfee = shippingFee;
+
             await _unitOfWork.Repository<Area>().UpdateAsync(area, saveChanges: false);
             await _unitOfWork.SaveChangesAsync();
         }

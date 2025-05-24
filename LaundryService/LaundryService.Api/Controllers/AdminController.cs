@@ -409,14 +409,15 @@ namespace LaundryService.Api.Controllers
         /// <param name="areaId"></param>
         /// <param name="name"></param>
         /// <param name="districts"></param>
+        /// <param name="shippingFee"></param>
         /// <returns></returns>
         [HttpPut("areas/{areaId}")]
         [ProducesResponseType(typeof(string), 200)]
-        public async Task<IActionResult> UpdateAreaById(Guid areaId, string name, List<string> districts)
+        public async Task<IActionResult> UpdateAreaById(Guid areaId, string name, List<string> districts, decimal shippingFee)
         {
             try
             {
-                await _areaService.UpdateAreaByIdAsync(areaId, name, districts);
+                await _areaService.UpdateAreaByIdAsync(areaId, name, districts, shippingFee);
                 return Ok(new { Message = "Cập nhật khu vực thành công." });
             }
             catch (KeyNotFoundException ex)

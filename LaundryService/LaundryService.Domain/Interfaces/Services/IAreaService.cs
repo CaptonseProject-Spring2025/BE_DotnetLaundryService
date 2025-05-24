@@ -21,7 +21,7 @@ namespace LaundryService.Domain.Interfaces.Services
         /// </summary>
         Task<List<AreaItemResponse>> GetAreasByTypeAsync(string areaType);
 
-        Task UpdateAreaByIdAsync(Guid areaId, string name, List<string> districts);
+        Task UpdateAreaByIdAsync(Guid areaId, string name, List<string> districts, decimal shippingFee);
 
         Task DeleteAreaByIdAsync(Guid areaId);
 

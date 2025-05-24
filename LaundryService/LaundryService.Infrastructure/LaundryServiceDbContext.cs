@@ -149,6 +149,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Areatype).HasColumnName("areatype");
             entity.Property(e => e.Districts).HasColumnName("districts");
             entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Shippingfee)
+                .HasPrecision(10)
+                .HasColumnName("shippingfee");
         });
 
         modelBuilder.Entity<Branchaddress>(entity =>

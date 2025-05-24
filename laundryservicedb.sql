@@ -308,7 +308,8 @@ CREATE TABLE Areas (
 	AreaID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 	Name TEXT NOT NULL,
     Districts TEXT[],
-    AreaType TEXT NOT NULL -- CHECK (Purpose IN ('ShippingFee', 'Driver'))
+    AreaType TEXT NOT NULL, -- CHECK (Purpose IN ('ShippingFee', 'Driver'))
+    ShippingFee DECIMAL(10)
 );
 
 CREATE TABLE BranchAddress (

@@ -12,4 +12,6 @@ public partial class Area
     public List<string>? Districts { get; set; }
 
     public string Areatype { get; set; } = null!;
+
+    public decimal? Shippingfee { get; set; }
 }
