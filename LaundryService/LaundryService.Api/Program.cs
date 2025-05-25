@@ -92,7 +92,6 @@ builder.Services.AddScoped<ICustomerStaffService, CustomerStaffService>();
 
 builder.Services.AddTransient<OrderAutoCompleteWorker>();   // job class
 
-builder.Services.AddHostedService<AssignmentAutoFailService>();
 builder.Services.AddHangfireServices(builder.Configuration);
 
 builder.Services.AddSignalR(options =>
