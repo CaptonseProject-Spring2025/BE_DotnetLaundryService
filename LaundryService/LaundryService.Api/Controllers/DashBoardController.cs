@@ -70,5 +70,133 @@ namespace LaundryService.Api.Controllers
             var statistics = await _dashBoardServices.GetCustomerStatistic();
             return Ok(statistics);
         }
+        /// <summary>
+        /// Lấy tổng doanh thu
+        /// </summary>
+        /// <returns>Tổng doanh thu với trạng thái thanh toán là PAID</returns>
+        [HttpGet("get-total-revenue")]
+        public async Task<ActionResult> GetTotalRevenue()
+        {
+            decimal totalRevenue = await _dashBoardServices.GetTotalRevenueAsync();
+            return Ok(new { TotalRevenue = totalRevenue });
+        }
+
+        /// <summary>
+        /// Lấy doanh thu theo ngày
+        /// </summary>
+        /// <param name="date">Ngày cần thống kê (định dạng: yyyy-MM-dd)</param>
+        /// <returns>Doanh thu của ngày đó với trạng thái thanh toán là PAID</returns>
+        [HttpGet("get-daily-revenue")]
+        public async Task<ActionResult> GetDailyRevenue([FromQuery] DateTime? date = null)
+        {
+            decimal dailyRevenue = await _dashBoardServices.GetDailyRevenueAsync(date);
+            return Ok(new { Date = date?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"), Revenue = dailyRevenue });
+        }
+
+        /// <summary>
+        /// Lấy doanh thu theo tháng
+        /// </summary>
+        /// <param name="month">Tháng cần thống kê (1-12)</param>
+        /// <param name="year">Năm cần thống kê</param>
+        /// <returns>Doanh thu của tháng đó với trạng thái thanh toán là PAID</returns>
+        [HttpGet("get-monthly-revenue")]
+        public async Task<ActionResult> GetMonthlyRevenue([FromQuery] int month, [FromQuery] int? year = null)
+        {
+            // Kiểm tra tính hợp lệ của tháng
+            if (month < 1 || month > 12)
+            {
+                return BadRequest(new { Message = "Tháng phải nằm trong khoảng từ 1 đến 12" });
+            }
+
+            year ??= DateTime.Today.Year;
+
+            decimal monthlyRevenue = await _dashBoardServices.GetMonthlyRevenueAsync(month, year);
+            return Ok(new { Month = month, Year = year, Revenue = monthlyRevenue });
+        }
+
+        /// <summary>
+        /// Lấy doanh thu theo năm
+        /// </summary>
+        /// <param name="year">Năm cần thống kê</param>
+        /// <returns>Doanh thu của năm đó với trạng thái thanh toán là PAID</returns>
+        [HttpGet("get-yearly-revenue")]
+        public async Task<ActionResult> GetYearlyRevenue([FromQuery] int? year = null)
+        {
+            year ??= DateTime.Today.Year;
+
+            decimal yearlyRevenue = await _dashBoardServices.GetYearlyRevenueAsync(year);
+            return Ok(new { Year = year, Revenue = yearlyRevenue });
+        }
+
+        /// <summary>
+        /// Lấy doanh thu theo phương thức thanh toán
+        /// </summary>
+        /// <param name="paymentMethodId">ID của phương thức thanh toán</param>
+        /// <returns>Doanh thu theo phương thức thanh toán với trạng thái thanh toán là PAID</returns>
+        [HttpGet("get-revenue-by-payment-method/{paymentMethodId}")]
+        public async Task<ActionResult> GetRevenueByPaymentMethod(Guid paymentMethodId)
+        {
+            var result = await _dashBoardServices.GetRevenueByPaymentMethodAsync(paymentMethodId);
+            return Ok(new
+            {
+                PaymentMethodId = paymentMethodId,
+                PaymentMethodName = result.Name,
+                Revenue = result.Revenue
+            });
+        }
+
+        /// <summary>
+        /// Lấy chi tiết doanh thu theo khoảng thời gian và phương thức thanh toán
+        /// </summary>
+        /// <param name="startDate">Ngày bắt đầu (định dạng: yyyy-MM-dd)</param>
+        /// <param name="endDate">Ngày kết thúc (định dạng: yyyy-MM-dd)</param>
+        /// <param name="paymentMethodId">ID của phương thức thanh toán (tùy chọn)</param>
+        /// <returns>Chi tiết doanh thu</returns>
+        [HttpGet("get-revenue-detail")]
+        public async Task<ActionResult> GetRevenueDetail(
+            [FromQuery] DateTime startDate,
+            [FromQuery] DateTime endDate,
+            [FromQuery] Guid? paymentMethodId = null)
+        {
+            // Kiểm tra tính hợp lệ của khoảng thời gian
+            if (startDate > endDate)
+            {
+                return BadRequest(new { Message = "Ngày bắt đầu không thể sau ngày kết thúc" });
+            }
+
+            var revenueDetail = await _dashBoardServices.GetRevenueDetailAsync(startDate, endDate, paymentMethodId);
+            return Ok(revenueDetail);
+        }
+
+        /// <summary>
+        /// Lấy thống kê doanh thu theo thời gian
+        /// </summary>
+        /// <param name="timeFrame">Khoảng thời gian: "day", "week", "month", "year"</param>
+        /// <returns>Thống kê doanh thu theo thời gian</returns>
+        [HttpGet("get-revenue-statistic-by-timeframe")]
+        public async Task<ActionResult> GetRevenueStatisticByTimeFrame([FromQuery] string timeFrame = "day")
+        {
+            // Kiểm tra tính hợp lệ của timeFrame
+            if (!new[] { "day", "week", "month", "year" }.Contains(timeFrame.ToLower()))
+            {
+                return BadRequest(new { Message = "Khoảng thời gian không hợp lệ. Sử dụng một trong các giá trị: day, week, month, year" });
+            }
+
+            try
+            {
+                var revenueStatistic = await _dashBoardServices.GetRevenueStatisticByTimeFrameAsync(timeFrame);
+                return Ok(revenueStatistic);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi lấy thống kê doanh thu", Error = ex.Message });
+            }
+        }
+
+
     }
 }
