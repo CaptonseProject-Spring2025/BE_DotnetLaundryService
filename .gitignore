@@ -5,6 +5,9 @@
 
 .env
 
+# ignore firebase admin sdk key
+/LaundryService/LaundryService.Api/notification-laundry-firebase-adminsdk.json
+
 # User-specific files
 *.rsuser
 *.suo
