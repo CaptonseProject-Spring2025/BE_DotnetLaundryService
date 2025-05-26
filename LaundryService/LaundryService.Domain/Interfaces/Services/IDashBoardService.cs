@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using System.Threading.Tasks;
+using LaundryService.Domain.Entities;
 using LaundryService.Dto.Responses;
 
 namespace LaundryService.Domain.Interfaces.Services
@@ -27,6 +28,20 @@ namespace LaundryService.Domain.Interfaces.Services
 
 
         //Các phương thức tính tổng doanh thu
+
+         /// <summary>
+        /// Lấy tất cả phương thức thanh toán trong hệ thống
+        /// </summary>
+        /// <param name="activeOnly">Chỉ lấy các phương thức đang hoạt động (mặc định: true)</param>
+        /// <returns>Danh sách các phương thức thanh toán</returns>
+        public Task<List<Paymentmethod>> GetAllPaymentMethodsAsync(bool activeOnly = true);
+        
+        /// <summary>
+        /// Lấy tổng doanh thu theo từng phương thức thanh toán
+        /// </summary>
+        /// <returns>Danh sách phương thức thanh toán kèm doanh thu tương ứng</returns>
+        public Task<List<PaymentMethodRevenueResponse>> GetRevenueByAllPaymentMethodsAsync();
+
         /// <summary>
         /// Lấy tổng doanh thu với trạng thái thanh toán là PAID
         /// </summary>
@@ -82,5 +97,7 @@ namespace LaundryService.Domain.Interfaces.Services
         /// <param name="timeFrame">Khoảng thời gian: "day", "week", "month", "year"</param>
         /// <returns>Thống kê doanh thu theo thời gian</returns>
         public Task<RevenueTimeStatistic> GetRevenueStatisticByTimeFrameAsync(string timeFrame);
+
+
     }
 }

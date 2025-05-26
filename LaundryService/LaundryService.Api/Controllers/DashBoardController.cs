@@ -70,6 +70,31 @@ namespace LaundryService.Api.Controllers
             var statistics = await _dashBoardServices.GetCustomerStatistic();
             return Ok(statistics);
         }
+
+
+        /// <summary>
+        /// Lấy tất cả phương thức thanh toán trong hệ thống
+        /// </summary>
+        /// <param name="activeOnly">Chỉ lấy các phương thức đang hoạt động</param>
+        /// <returns>Danh sách các phương thức thanh toán</returns>
+        [HttpGet("get-all-payment-methods")]
+        public async Task<ActionResult> GetAllPaymentMethods([FromQuery] bool activeOnly = true)
+        {
+            var paymentMethods = await _dashBoardServices.GetAllPaymentMethodsAsync(activeOnly);
+            return Ok(paymentMethods);
+        }
+
+        /// <summary>
+        /// Lấy tổng doanh thu theo từng phương thức thanh toán
+        /// </summary>
+        /// <returns>Danh sách phương thức thanh toán kèm doanh thu tương ứng</returns>
+        [HttpGet("get-revenue-by-all-payment-methods")]
+        public async Task<ActionResult> GetRevenueByAllPaymentMethods()
+        {
+            var revenueByMethods = await _dashBoardServices.GetRevenueByAllPaymentMethodsAsync();
+            return Ok(revenueByMethods);
+        }
+
         /// <summary>
         /// Lấy tổng doanh thu
         /// </summary>

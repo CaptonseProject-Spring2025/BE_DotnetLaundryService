@@ -139,6 +139,67 @@ public class DashBoardService : IDashBoardServices
     return paidPayments.Sum(p => p.Amount);
   }
 
+  public async Task<List<Paymentmethod>> GetAllPaymentMethodsAsync(bool activeOnly = true)
+  {
+    if (activeOnly)
+    {
+      return (await _unitOfWork.Repository<Paymentmethod>()
+          .GetAllAsync(p => p.Isactive == true)).ToList();
+    }
+    else
+    {
+      return (await _unitOfWork.Repository<Paymentmethod>()
+          .GetAllAsync(p => p.Isactive == false)).ToList();
+    }
+  }
+
+  public async Task<List<PaymentMethodRevenueResponse>> GetRevenueByAllPaymentMethodsAsync()
+  {
+    // Lấy tất cả phương thức thanh toán
+    var paymentMethods = await _unitOfWork.Repository<Paymentmethod>().GetAllAsync();
+
+    // Lấy tất cả thanh toán có trạng thái PAID
+    var paidPayments = await _unitOfWork.Repository<Payment>()
+        .GetAllAsync(p => p.Paymentstatus == "PAID");
+
+    // Nhóm thanh toán theo phương thức thanh toán và tính tổng doanh thu
+    var paymentsByMethod = paidPayments
+        .GroupBy(p => p.Paymentmethodid)
+        .ToDictionary(g => g.Key, g => new
+        {
+          Revenue = g.Sum(p => p.Amount),
+          Count = g.Count()
+        });
+
+    // Tạo danh sách kết quả
+    var result = new List<PaymentMethodRevenueResponse>();
+
+    foreach (var method in paymentMethods)
+    {
+      var methodRevenue = new PaymentMethodRevenueResponse
+      {
+        PaymentMethodId = method.Paymentmethodid,
+        Name = method.Name,
+        Description = method.Description ?? string.Empty,
+        IsActive = method.Isactive ?? false,
+        TotalRevenue = 0,
+        TransactionCount = 0
+      };
+
+      // Nếu có doanh thu từ phương thức thanh toán này
+      if (paymentsByMethod.TryGetValue(method.Paymentmethodid, out var revenueData))
+      {
+        methodRevenue.TotalRevenue = revenueData.Revenue;
+        methodRevenue.TransactionCount = revenueData.Count;
+      }
+
+      result.Add(methodRevenue);
+    }
+
+    // Sắp xếp theo doanh thu giảm dần
+    return result.OrderByDescending(r => r.TotalRevenue).ToList();
+  }
+
   public async Task<decimal> GetDailyRevenueAsync(DateTime? date = null)
   {
     // Chuyển đổi ngày sang UTC
@@ -184,22 +245,22 @@ public class DashBoardService : IDashBoardServices
     return paidPayments.Sum(p => p.Amount);
   }
 
-public async Task<(decimal Revenue, string Name)> GetRevenueByPaymentMethodAsync(Guid paymentMethodId)
-{
+  public async Task<(decimal Revenue, string Name)> GetRevenueByPaymentMethodAsync(Guid paymentMethodId)
+  {
     // Lấy danh sách các thanh toán có trạng thái PAID và đúng phương thức
     var paidPayments = await _unitOfWork.Repository<Payment>()
         .GetAllAsync(p => p.Paymentstatus == "PAID" &&
                          p.Paymentmethodid == paymentMethodId);
-    
+
     // Lấy thông tin phương thức thanh toán để lấy tên
     var paymentMethod = await _unitOfWork.Repository<Paymentmethod>()
         .FindAsync(paymentMethodId);
-    
+
     string methodName = paymentMethod?.Name ?? "Unknown";
-    
+
     // Tính tổng doanh thu và trả về kèm tên phương thức
     return (paidPayments.Sum(p => p.Amount), methodName);
-}
+  }
 
   public async Task<RevenueDetailStatistic> GetRevenueDetailAsync(DateTime startDate, DateTime endDate, Guid? paymentMethodId = null)
   {
