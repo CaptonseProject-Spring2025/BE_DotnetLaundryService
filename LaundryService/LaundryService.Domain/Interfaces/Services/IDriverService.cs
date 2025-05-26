@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using LaundryService.Dto.Responses;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,5 +20,11 @@ namespace LaundryService.Domain.Interfaces.Services
         Task ConfirmOrderDeliverySuccessAsync(HttpContext httpContext, string orderId);
         Task CancelAssignedDeliveryAsync(HttpContext httpContext, string orderId, string cancelReason);
         Task CancelDeliveryNoShowAsync(HttpContext httpContext, string orderId);
+        Task<DriverStatisticsResponse> GetDailyStatisticsAsync(HttpContext httpContext, DateTime date);
+        Task<DriverStatisticsResponse> GetWeeklyStatisticsAsync(HttpContext httpContext, DateTime dateInWeek);
+        Task<DriverStatisticsResponse> GetMonthlyStatisticsAsync(HttpContext httpContext, int year, int month);
+        Task<List<DriverStatisticsListResponse>> GetDailyStatisticsListAsync(HttpContext httpContext, DateTime date);
+        Task<List<DriverStatisticsListResponse>> GetWeeklyStatisticsListAsync(HttpContext httpContext, DateTime dateInWeek);
+        Task<List<DriverStatisticsListResponse>> GetMonthlyStatisticsListAsync(HttpContext httpContext, int year, int month);
     }
 }

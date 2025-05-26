@@ -564,5 +564,110 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy thống kê tổng hợp của tài xế cho một ngày nhất định.
+        /// </summary>
+        [HttpGet("statistics/daily")]
+        public async Task<IActionResult> GetDailyStatistics([FromQuery] DateTime date)
+        {
+            try
+            {
+                var result = await _driverService.GetDailyStatisticsAsync(HttpContext, date);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy thống kê tổng hợp của tài xế cho một tuần nhất định.
+        /// </summary>
+        [HttpGet("statistics/weekly")]
+        public async Task<IActionResult> GetWeeklyStatistics([FromQuery] DateTime dateInWeek)
+        {
+            try
+            {
+                var result = await _driverService.GetWeeklyStatisticsAsync(HttpContext, dateInWeek);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy thống kê tổng hợp của tài xế cho một tháng nhất định.
+        /// </summary>
+        [HttpGet("statistics/monthly")]
+        public async Task<IActionResult> GetMonthlyStatistics([FromQuery] int year, [FromQuery] int month)
+        {
+            try
+            {
+                var result = await _driverService.GetMonthlyStatisticsAsync(HttpContext, year, month);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách chi tiết các đơn hàng đã hoàn thành của tài xế cho một ngày nhất định.
+        /// </summary>
+        [HttpGet("statistics/daily/list")]
+        [ProducesResponseType(typeof(List<DriverStatisticsListResponse>), 200)]
+        public async Task<IActionResult> GetDailyStatisticsList([FromQuery] DateTime date)
+        {
+            try
+            {
+                var list = await _driverService.GetDailyStatisticsListAsync(HttpContext, date);
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách chi tiết các đơn hàng đã hoàn thành của tài xế cho một tuần nhất định.
+        /// </summary>
+        [HttpGet("statistics/weekly/list")]
+        [ProducesResponseType(typeof(List<DriverStatisticsListResponse>), 200)]
+        public async Task<IActionResult> GetWeeklyStatisticsList([FromQuery] DateTime dateInWeek)
+        {
+            try
+            {
+                var list = await _driverService.GetWeeklyStatisticsListAsync(HttpContext, dateInWeek);
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách chi tiết các đơn hàng đã hoàn thành của tài xế cho một tháng nhất định.
+        /// </summary>
+        [HttpGet("statistics/monthly/list")]
+        [ProducesResponseType(typeof(List<DriverStatisticsListResponse>), 200)]
+        public async Task<IActionResult> GetMonthlyStatisticsList([FromQuery] int year, [FromQuery] int month)
+        {
+            try
+            {
+                var list = await _driverService.GetMonthlyStatisticsListAsync(HttpContext, year, month);
+                return Ok(list);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
     }
 }
