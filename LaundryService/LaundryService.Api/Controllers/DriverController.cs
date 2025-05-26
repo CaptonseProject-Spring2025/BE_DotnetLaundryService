@@ -318,6 +318,39 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _driverService.ConfirmOrderDeliveredAsync(HttpContext, orderId, notes);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreateOrderDeliveredNotificationAsync(customerId, orderId);
+                    await _notificationService.CreateThankYouNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.Delivered
+                        );
+
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.Finish
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
+                    }
+                });
+
                 return Ok(new { Message = "Tài xế đã xác nhận giao hàng thành công (DELIVERED)." });
             }
             catch (ApplicationException ex)
@@ -352,38 +385,6 @@ namespace LaundryService.Api.Controllers
             try
             {
                 await _driverService.ConfirmOrderDeliverySuccessAsync(HttpContext, orderId);
-
-                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
-
-                try
-                {
-                    await _notificationService.CreateOrderDeliveredNotificationAsync(customerId, orderId);
-                    await _notificationService.CreateThankYouNotificationAsync(customerId, orderId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Lỗi tạo notification trong hệ thống: {ex.Message}");
-                }
-
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _firebaseNotificationService.SendOrderNotificationAsync(
-                            customerId.ToString(),
-                            NotificationType.Delivered
-                        );
-
-                        await _firebaseNotificationService.SendOrderNotificationAsync(
-                            customerId.ToString(),
-                            NotificationType.Finish
-                        );
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Lỗi gửi thông báo: {ex.Message}");
-                    }
-                });
 
                 return Ok(new { Message = "Tài xế đã xác nhận giao hàng thành công và đã về." });
             }
