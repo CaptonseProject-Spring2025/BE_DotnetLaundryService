@@ -29,13 +29,12 @@ namespace LaundryService.Domain.Interfaces.Services
 
         //Các phương thức tính tổng doanh thu
 
-         /// <summary>
-        /// Lấy tất cả phương thức thanh toán trong hệ thống
-        /// </summary>
-        /// <param name="activeOnly">Chỉ lấy các phương thức đang hoạt động (mặc định: true)</param>
-        /// <returns>Danh sách các phương thức thanh toán</returns>
-        public Task<List<Paymentmethod>> GetAllPaymentMethodsAsync(bool activeOnly = true);
-        
+        /// <summary>
+/// Lấy tất cả phương thức thanh toán trong hệ thống kèm chi tiết đơn hàng
+/// </summary>
+/// <param name="activeOnly">Chỉ lấy các phương thức đang hoạt động (mặc định: true)</param>
+/// <returns>Danh sách các phương thức thanh toán kèm chi tiết đơn hàng</returns>
+public Task<List<PaymentMethodWithOrdersDetailResponse>> GetAllPaymentMethodsAsync(bool activeOnly = true);
         /// <summary>
         /// Lấy tổng doanh thu theo từng phương thức thanh toán
         /// </summary>

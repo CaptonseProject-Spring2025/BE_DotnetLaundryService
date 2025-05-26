@@ -139,19 +139,90 @@ public class DashBoardService : IDashBoardServices
     return paidPayments.Sum(p => p.Amount);
   }
 
-  public async Task<List<Paymentmethod>> GetAllPaymentMethodsAsync(bool activeOnly = true)
+ public async Task<List<PaymentMethodWithOrdersDetailResponse>> GetAllPaymentMethodsAsync(bool activeOnly = true)
+{
+   // Lấy tất cả phương thức thanh toán theo trạng thái active
+  var paymentMethods = activeOnly
+      ? await _unitOfWork.Repository<Paymentmethod>().GetAllAsync(p => p.Isactive == true)
+      : await _unitOfWork.Repository<Paymentmethod>().GetAllAsync();
+  
+  // Lấy tất cả thanh toán, loại bỏ các thanh toán đã hủy
+  var payments = await _unitOfWork.Repository<Payment>().GetAllAsync(p => p.Paymentstatus != "CANCELLED");
+  
+  // Lấy thông tin chi tiết về orders
+  var orders = await _unitOfWork.Repository<Order>().GetAllAsync();
+  var orderDict = orders.ToDictionary(o => o.Orderid);
+  
+  // Lấy thông tin về users (để có thông tin khách hàng)
+  var users = await _unitOfWork.Repository<User>().GetAllAsync();
+  var userDict = users.ToDictionary(u => u.Userid);
+  
+  // Kết quả trả về
+  var result = new List<PaymentMethodWithOrdersDetailResponse>();
+  
+  foreach (var method in paymentMethods)
   {
-    if (activeOnly)
+    // Tạo đối tượng response cho phương thức thanh toán
+    var methodResponse = new PaymentMethodWithOrdersDetailResponse
     {
-      return (await _unitOfWork.Repository<Paymentmethod>()
-          .GetAllAsync(p => p.Isactive == true)).ToList();
-    }
-    else
+      PaymentMethodId = method.Paymentmethodid,
+      Name = method.Name,
+      Description = method.Description ?? string.Empty,
+      IsActive = method.Isactive ?? false,
+      CreatedAt = method.Createdat,
+      OrderCount = 0,
+      TotalRevenue = 0,
+      OrderDetails = new List<OrderDetailResponse>()
+    };
+    
+    // Lấy các payment liên quan đến phương thức thanh toán này (đã loại bỏ CANCELLED)
+    var methodPayments = payments.Where(p => p.Paymentmethodid == method.Paymentmethodid).ToList();
+    
+    // Cập nhật số lượng đơn hàng và tổng doanh thu
+    methodResponse.OrderCount = methodPayments.Count;
+    methodResponse.TotalRevenue = methodPayments.Sum(p => p.Amount);
+    
+    // Thêm chi tiết từng đơn hàng
+    foreach (var payment in methodPayments)
     {
-      return (await _unitOfWork.Repository<Paymentmethod>()
-          .GetAllAsync(p => p.Isactive == false)).ToList();
+      if (orderDict.TryGetValue(payment.Orderid, out var order))
+      {
+        // Lấy thông tin khách hàng
+        string customerName = "Unknown";
+        string customerPhone = "Unknown";
+        if (order?.Userid != null && userDict.TryGetValue(order.Userid, out var customer))
+        {
+          customerName = customer.Fullname ?? "No Name";
+          customerPhone = customer.Phonenumber ?? "No Phone";
+        }
+        
+        // Thêm chi tiết đơn hàng vào danh sách
+        methodResponse.OrderDetails.Add(new OrderDetailResponse
+        {
+          OrderId = order.Orderid,
+          PaymentId = payment.Paymentid,
+          CustomerName = customerName,
+          CustomerPhone = customerPhone,
+          Amount = payment.Amount,
+          PaymentDate = payment.Paymentdate,
+          PaymentStatus = payment.Paymentstatus,
+          TransactionId = payment.Transactionid,
+          OrderStatus = order.Currentstatus,
+          CreatedAt = order.Createdat
+        });
+      }
     }
+    
+    // Sắp xếp các đơn hàng theo ngày thanh toán giảm dần (mới nhất trước)
+    methodResponse.OrderDetails = methodResponse.OrderDetails
+        .OrderByDescending(o => o.PaymentDate)
+        .ToList();
+    
+    result.Add(methodResponse);
   }
+  
+  return result;
+}
 
   public async Task<List<PaymentMethodRevenueResponse>> GetRevenueByAllPaymentMethodsAsync()
   {
