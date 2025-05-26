@@ -1,5 +1,6 @@
 ﻿using Google.Cloud.Firestore;
 using LaundryService.Domain.Interfaces.Services;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +13,16 @@ namespace LaundryService.Service
     {
         private readonly FirestoreDb _firestore;
 
-        public FirebaseStorageService()
+        public FirebaseStorageService(IConfiguration configuration)
         {
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-laundry-firebase-adminsdk.json");
-            _firestore = FirestoreDb.Create("notification-laundry-f73e8");
+            var credentialPath = configuration["Firebase:CredentialPath"];
+            var projectId = configuration["Firebase:ProjectId"];
+
+            if (string.IsNullOrEmpty(credentialPath) || string.IsNullOrEmpty(projectId))
+            {
+                throw new InvalidOperationException("Firebase configuration is missing.");
+            }
+            _firestore = FirestoreDb.Create(projectId);
         }
 
         public async Task SaveTokenAsync(string userId, string fcmToken)
