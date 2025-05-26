@@ -35,8 +35,9 @@ RUN apt-get update \
 # Copy các file publish từ build stage
 COPY --from=build /app/publish .
 
-# Copy file firebase config vào container nếu cần
-COPY LaundryService.Api/notification-laundry-firebase-adminsdk.json ./
+# Copy file firebase config vào container + đặt biến môi trường
+COPY LaundryService.Api/notification-laundry-firebase-adminsdk.json /creds/firebase.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=/creds/firebase.json
 
 # Expose port mặc định
 EXPOSE 8080
