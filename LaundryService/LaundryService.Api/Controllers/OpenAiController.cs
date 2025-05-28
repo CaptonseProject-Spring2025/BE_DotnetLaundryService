@@ -1,65 +1,124 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using LaundryService.Domain.Interfaces.Services;
+using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-//using LaundryService.Api.Models;
 
 namespace LaundryService.Api.Controllers
 {
-  [Route("api/[controller]")]
-  [ApiController]
-  public class OpenAiController : ControllerBase
-  {
-    // API Key của bạn
-    private const string apiKey = "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";
-    private const string apiUrl = "https://openrouter.ai/api/v1/chat/completions"; // Địa chỉ API
-
-    [HttpPost("get-ai-response")]
-    public async Task<IActionResult> GetAIResponse([FromBody] string query)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class OpenAiController : ControllerBase
     {
-      // Tạo HttpClient để gọi API
-      using var client = new HttpClient();
+        private readonly IAIService _aiService;
 
-      // Đặt Authorization Header
-      client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        public OpenAiController(IAIService aiService)
+        {
+            _aiService = aiService;
+        }
 
-      // Cấu trúc của body JSON
-      var requestBody = new
-      {
-        model = "deepseek/deepseek-r1-zero:free",
-        messages = new[]
-          {
-            new
+        /// <summary>
+        /// Nhận câu trả lời từ AI liên quan đến dữ liệu dịch vụ giặt là
+        /// </summary>
+        [HttpPost("get-ai-response")]
+        public async Task<ActionResult<AIResponse>> GetAIResponse([FromBody] AIRequest request)
+        {
+            try
             {
-                role = "user",
-                content = query
+                if (string.IsNullOrEmpty(request.Query))
+                {
+                    return BadRequest(new AIResponse 
+                    { 
+                        Success = false, 
+                        Error = "Truy vấn không được để trống" 
+                    });
+                }
+                
+                // Luôn truyền "vi" để đảm bảo trả lời bằng tiếng Việt
+                var response = await _aiService.GetResponseAsync(request.Query, "vi");
+                return Ok(new AIResponse 
+                { 
+                    Success = true, 
+                    Response = response 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new AIResponse 
+                { 
+                    Success = false, 
+                    Error = ex.Message 
+                });
             }
         }
-      };
-
-      // Chuyển body thành JSON
-      var jsonContent = JsonConvert.SerializeObject(requestBody);
-
-      // Đóng gói nội dung trong StringContent và thiết lập Content-Type
-      var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-      // Gửi yêu cầu POST tới API
-      HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-
-      // Kiểm tra xem yêu cầu có thành công không
-      if (response.IsSuccessStatusCode)
-      {
-        var responseJson = await response.Content.ReadAsStringAsync();
-        return Ok(responseJson);
-      }
-      else
-      {
-        var errorResponse = await response.Content.ReadAsStringAsync();
-        return StatusCode(500, $"Error calling OpenAI API: {errorResponse}");
-      }
+        
+        /// <summary>
+        /// Cập nhật cơ sở kiến thức cho AI từ dữ liệu hiện tại
+        /// </summary>
+        [HttpPost("update-knowledge")]
+        public async Task<ActionResult<AIResponse>> UpdateKnowledge()
+        {
+            try
+            {
+                await _aiService.UpdateKnowledgeBaseAsync();
+                return Ok(new AIResponse 
+                { 
+                    Success = true, 
+                    Response = "Knowledge base updated successfully" 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new AIResponse 
+                { 
+                    Success = false, 
+                    Error = ex.Message 
+                });
+            }
+        }
+        
+        /// <summary>
+        /// Lấy danh sách các câu hỏi liên quan đến chủ đề
+        /// </summary>
+        /// <param name="request">
+        ///   <see cref="RelatedQuestionsRequest"/> chứa:
+        ///   - <c>Topic</c>: Chủ đề hoặc từ khóa (tùy chọn)
+        ///   - <c>Count</c>: Số lượng câu hỏi muốn lấy (mặc định: 5)
+        /// </param>
+        /// <returns>
+        ///   Danh sách các câu hỏi gợi ý để người dùng có thể hỏi AI
+        /// </returns>
+        /// <remarks>
+        /// Nếu không chỉ định Topic, hệ thống sẽ trả về các câu hỏi phổ biến.
+        /// Nếu có chỉ định Topic, hệ thống sẽ tạo các câu hỏi liên quan đến chủ đề đó.
+        /// </remarks>
+        [HttpPost("related-questions")]
+        public async Task<ActionResult<RelatedQuestionsResponse>> GetRelatedQuestions([FromBody] RelatedQuestionsRequest request)
+        {
+            try
+            {
+                // Mặc định là 5 câu hỏi nếu không chỉ định
+                int count = request.Count ?? 5;
+                
+                // Giới hạn số lượng câu hỏi từ 1-10
+                count = Math.Max(1, Math.Min(count, 10));
+                
+                var questions = await _aiService.GetRelatedQuestionsAsync(request.Topic, count);
+                return Ok(new RelatedQuestionsResponse 
+                { 
+                    Success = true, 
+                    Questions = questions 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new RelatedQuestionsResponse 
+                { 
+                    Success = false, 
+                    Error = ex.Message 
+                });
+            }
+        }
     }
-  }
 }
