@@ -32,7 +32,7 @@ namespace LaundryService.Service
 
         public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
         {
-            /* ---------- 1. Lấy Order CONFIRMED ---------- */
+            // ---------- Lấy Order CONFIRMED ----------
             var orders = _unitOfWork.Repository<Order>()
                 .GetAll()
                 .Where(o => o.Currentstatus == "CONFIRMED")
@@ -40,29 +40,29 @@ namespace LaundryService.Service
                 .OrderBy(o => o.Createdat) // sắp xếp theo CreatedAt
                 .ToList();
 
-            /* ---------- 2. Lấy danh sách Area (Driver) ---------- */
+            // ---------- Lấy danh sách Area (Driver) ----------
             var driverAreas = _unitOfWork.Repository<Area>()
                                          .GetAll()
                                          .Where(a => a.Areatype.ToUpper() == "DRIVER")
                                          .ToList();
 
-            /* Build tra cứu: district  ➜  areaName
-               Vì dữ liệu bảo đảm 1‐1 nên có thể dùng ToDictionary thẳng. */
+            //Build tra cứu: district -> areaName
+            //dùng ToDictionary vì district là duy nhất trong mỗi Area
             var districtToArea = driverAreas
-                                 .Where(a => a.Districts != null)                   // bỏ khu vực chưa khai Districts
+                                 .Where(a => a.Districts != null) // bỏ khu vực chưa khai Districts
                                  .SelectMany(a => a.Districts!
                                                    .Select(d => new { District = d, AreaName = a.Name }))
                                  .ToDictionary(
-                                     x => x.District,                              // key   = tên quận
-                                     x => x.AreaName,                              // value = tên khu vực
-                                     StringComparer.OrdinalIgnoreCase);            // so sánh không phân biệt hoa thường
+                                     x => x.District, // key   = tên quận
+                                     x => x.AreaName, // value = tên khu vực
+                                     StringComparer.OrdinalIgnoreCase); // so sánh không phân biệt hoa thường
 
-            /* ---------- 3. Lấy lat/lon trung tâm ---------- */
+            //------- Lấy lat/lon trung tâm ----------
             var branchAddress = _unitOfWork.Repository<Branchaddress>().GetAll().FirstOrDefault();
             decimal refLat = branchAddress.Latitude ?? 0;
             decimal refLon = branchAddress.Longitude ?? 0;
 
-            /* ---------- 4. Gom nhóm ---------- */
+            // ---------- Gom nhóm ----------
             // Dictionary<AreaName, List<ConfirmedOrderInfo>>
             var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
 
@@ -81,7 +81,7 @@ namespace LaundryService.Service
                 // Tính khoảng cách
                 double distance = _mapboxService.CalculateDistance(lat, lon, refLat, refLon);
 
-                /* Build ConfirmedOrderInfo */
+                //Build ConfirmedOrderInfo
                 var info = new ConfirmedOrderInfo
                 {
                     OrderId = order.Orderid,
@@ -109,15 +109,15 @@ namespace LaundryService.Service
                 areaDict[areaName].Add(info);
             }
 
-            /* ---------- 5. Trả kết quả ---------- */
+            //---------- 5. Trả kết quả ----------
             var result = areaDict
-                .Where(kv => kv.Value.Any())           // bỏ nhóm rỗng
+                .Where(kv => kv.Value.Any()) // bỏ nhóm rỗng
                 .Select(kv => new AreaOrdersResponse
                 {
                     Area = kv.Key,
                     Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
                 })
-                .OrderBy(r => r.Area)                  // sắp Area theo tên (nếu muốn)
+                .OrderBy(r => r.Area) // sắp Area theo tên
                 .ToList();
 
             return result;
@@ -125,10 +125,10 @@ namespace LaundryService.Service
 
         public async Task AssignPickupToDriverAsync(HttpContext httpContext, AssignPickupRequest request)
         {
-            // 1) Lấy userId admin từ token (người gọi API)
+            // Lấy userId admin từ token
             var adminUserId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            // 2) Validate request
+            // Validate request
             if (request.DriverId == Guid.Empty)
                 throw new ArgumentException("DriverId is required.");
             if (request.OrderIds == null || request.OrderIds.Count == 0)
@@ -167,7 +167,7 @@ namespace LaundryService.Service
                         );
                     }
 
-                    // b) Tạo record Orderassignmenthistory
+                    // Tạo row Orderassignmenthistory
                     var assignment = new Orderassignmenthistory
                     {
                         Orderid = orderId,
@@ -177,7 +177,7 @@ namespace LaundryService.Service
                     };
                     await _unitOfWork.Repository<Orderassignmenthistory>().InsertAsync(assignment, saveChanges: false);
 
-                    // c) Tạo record Orderstatushistory
+                    // Tạo row Orderstatushistory
                     var statusHistory = new Orderstatushistory
                     {
                         Orderid = orderId,
@@ -188,12 +188,11 @@ namespace LaundryService.Service
                     };
                     await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(statusHistory, saveChanges: false);
 
-                    // d) Cập nhật Order -> Currentstatus = "SCHEDULED_PICKUP"
+                    // cập nhật Order.Currentstatus = "SCHEDULED_PICKUP"
                     order.Currentstatus = OrderStatusEnum.SCHEDULED_PICKUP.ToString();
                     await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
                 }
 
-                // 5) Lưu và commit
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
             }
@@ -213,12 +212,12 @@ namespace LaundryService.Service
             if (order == null)
                 throw new KeyNotFoundException("Không tìm thấy đơn hàng.");
 
-            return order.Userid; //  Trường chứa customer ID
+            return order.Userid;
         }
 
         public async Task<List<AreaOrdersResponse>> GetQualityCheckedOrdersByAreaAsync()
         {
-            /* ---------- 1. Lấy Order có CurrentStatus = QUALITY_CHECKED ---------- */
+            // ---------- Lấy Order có CurrentStatus = QUALITY_CHECKED ----------
             var statusQC = OrderStatusEnum.QUALITY_CHECKED.ToString();
             var orders = _unitOfWork.Repository<Order>()
                                     .GetAll()
@@ -227,13 +226,13 @@ namespace LaundryService.Service
                                     .OrderBy(o => o.Createdat)   // tạm sắp xếp theo CreatedAt (để lát nữa nhóm theo khu)
                                     .ToList();
 
-            /* ---------- 2. Lấy danh sách Area (Driver) từ DB ---------- */
+            // ---------- Lấy danh sách Area (Driver) từ DB ----------
             var driverAreas = _unitOfWork.Repository<Area>()
                                          .GetAll()
                                          .Where(a => a.Areatype.ToUpper() == "DRIVER")
                                          .ToList();
 
-            // Build tra cứu:  tên quận  ->  tên khu vực
+            // Build tra cứu: tên quận -> tên khu vực
             var districtToArea = driverAreas
                 .Where(a => a.Districts != null && a.Districts.Count > 0)
                 .SelectMany(a => a.Districts!
@@ -241,14 +240,14 @@ namespace LaundryService.Service
                 .ToDictionary(
                     x => x.District,
                     x => x.AreaName,
-                    StringComparer.OrdinalIgnoreCase);       // bỏ phân biệt hoa thường
+                    StringComparer.OrdinalIgnoreCase);
 
-            /* ---------- 3. Tọa độ chi nhánh để tính distance ---------- */
+            // ---------- Tọa độ chi nhánh để tính distance ----------
             var branchAddress = _unitOfWork.Repository<Branchaddress>().GetAll().FirstOrDefault();
             decimal refLat = branchAddress.Latitude ?? 0;
             decimal refLon = branchAddress.Longitude ?? 0;
 
-            /* ---------- 4. Gom nhóm đơn theo khu vực ---------- */
+            // ---------- Gom nhóm đơn theo khu vực ----------
             var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var order in orders)
@@ -256,23 +255,23 @@ namespace LaundryService.Service
                 var lat = order.Pickuplatitude ?? 0;
                 var lon = order.Pickuplongitude ?? 0;
 
-                // 4a) Mapbox -> tên quận
+                // tìm tên quận
                 var district = await _mapboxService.GetDistrictFromCoordinatesAsync(lat, lon);
                 district = district?.Trim() ?? string.Empty;
 
-                // 4b) Xác định tên khu vực
+                // xác định tên khu vực
                 var areaName = districtToArea.TryGetValue(district, out var a) ? a : "Unknown";
 
-                // 4c) Khoảng cách tới chi nhánh
+                // tính khoảng cách tới chi nhánh
                 double distance = _mapboxService.CalculateDistance(lat, lon, refLat, refLon);
 
-                // 4d) Chuyển thời gian sang giờ VN
+                // Convert thời gian UTC sang VN
                 var createdAtVn = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow);
                 DateTime? pickupTimeVn = order.Pickuptime.HasValue
                                          ? _util.ConvertToVnTime(order.Pickuptime.Value)
                                          : null;
 
-                // 4e) Tạo model
+                //Tạo model
                 var info = new ConfirmedOrderInfo
                 {
                     OrderId = order.Orderid,
@@ -300,15 +299,15 @@ namespace LaundryService.Service
                 areaDict[areaName].Add(info);
             }
 
-            /* ---------- 5. Chuẩn bị kết quả ---------- */
+            // ---------- Chuẩn bị kết quả ----------
             var result = areaDict
-                .Where(kv => kv.Value.Any())                     // bỏ nhóm rỗng
+                .Where(kv => kv.Value.Any())
                 .Select(kv => new AreaOrdersResponse
                 {
                     Area = kv.Key,
                     Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
                 })
-                .OrderBy(r => r.Area)                            // sắp xếp theo tên khu vực
+                .OrderBy(r => r.Area)
                 .ToList();
 
             return result;
@@ -316,17 +315,14 @@ namespace LaundryService.Service
 
         public async Task AssignDeliveryToDriverAsync(HttpContext httpContext, AssignPickupRequest request)
         {
-            // 1) Lấy AdminUserId (người gọi API) từ JWT
             var adminUserId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            // 2) Validate request
             if (request.DriverId == Guid.Empty)
                 throw new ArgumentException("DriverId is required.");
 
             if (request.OrderIds == null || request.OrderIds.Count == 0)
                 throw new ArgumentException("OrderIds cannot be empty.");
 
-            // Kiểm tra DriverId có tồn tại & có Role = "Driver" hay không
             var driver = await _unitOfWork.Repository<User>()
                                           .GetAsync(u => u.Userid == request.DriverId && u.Role == "Driver");
             if (driver == null)
@@ -336,14 +332,11 @@ namespace LaundryService.Service
                 );
             }
 
-            // 3) Bắt đầu Transaction
             await _unitOfWork.BeginTransaction();
             try
             {
-                // 4) Lặp qua từng OrderId
                 foreach (var orderId in request.OrderIds)
                 {
-                    // a) Tìm Order -> kiểm tra
                     var order = _unitOfWork.Repository<Order>()
                         .GetAll()
                         .FirstOrDefault(o => o.Orderid == orderId);
@@ -351,8 +344,8 @@ namespace LaundryService.Service
                     if (order == null)
                         throw new KeyNotFoundException($"OrderId '{orderId}' không tồn tại.");
 
-                    // (Tuỳ logic) Kiểm tra order có đang "QUALITY_CHECKED" hay không
-                    // để đảm bảo logic (chỉ những đơn giặt xong, đã QA-check xong mới giao)
+                    // kiểm tra order có đang "QUALITY_CHECKED" hay không
+                    // chỉ những đơn giặt xong, đã QA-check xong mới giao
                     if (order.Currentstatus != OrderStatusEnum.QUALITY_CHECKED.ToString())
                     {
                         throw new ApplicationException(
@@ -360,7 +353,7 @@ namespace LaundryService.Service
                         );
                     }
 
-                    // b) Tạo record Orderassignmenthistory
+                    // Tạo row Orderassignmenthistory
                     var assignment = new Orderassignmenthistory
                     {
                         Orderid = orderId,
@@ -372,7 +365,7 @@ namespace LaundryService.Service
                     await _unitOfWork.Repository<Orderassignmenthistory>()
                                      .InsertAsync(assignment, saveChanges: false);
 
-                    // c) Tạo record Orderstatushistory
+                    // tạo row Orderstatushistory
                     var statusHistory = new Orderstatushistory
                     {
                         Orderid = orderId,
@@ -384,19 +377,17 @@ namespace LaundryService.Service
                     await _unitOfWork.Repository<Orderstatushistory>()
                                      .InsertAsync(statusHistory, saveChanges: false);
 
-                    // d) Cập nhật Order => Currentstatus = "SCHEDULED_DELIVERY"
+                    // cập nhật order.currentstatus = "SCHEDULED_DELIVERY"
                     order.Currentstatus = OrderStatusEnum.SCHEDULED_DELIVERY.ToString();
                     await _unitOfWork.Repository<Order>()
                                      .UpdateAsync(order, saveChanges: false);
                 }
 
-                // 5) SaveChanges + Commit
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
             }
             catch
             {
-                // Rollback nếu có lỗi
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
@@ -404,7 +395,6 @@ namespace LaundryService.Service
 
         public async Task DeleteOrderAsync(string orderId)
         {
-            // Bắt đầu Transaction
             await _unitOfWork.BeginTransaction();
 
             try
@@ -420,11 +410,11 @@ namespace LaundryService.Service
                 // Lấy hết OrderStatusHistory => sau đó xoá OrderPhotos
                 var orderStatusHistories = _unitOfWork.Repository<Orderstatushistory>()
                     .GetAll()
-                    .Include(x => x.Orderphotos)  // cần Include để load list OrderPhoto
+                    .Include(x => x.Orderphotos)
                     .Where(x => x.Orderid == orderId)
                     .ToList();
 
-                // 1) Xoá ảnh (OrderPhotos) trên Backblaze + DB
+                // Xoá ảnh (OrderPhotos) trên Backblaze + DB
                 foreach (var history in orderStatusHistories)
                 {
                     var photos = history.Orderphotos.ToList();
@@ -439,7 +429,7 @@ namespace LaundryService.Service
                     }
                 }
 
-                // 2) Xoá OrderStatusHistory
+                // Xoá OrderStatusHistory
                 foreach (var history in orderStatusHistories)
                 {
                     await _unitOfWork.Repository<Orderstatushistory>()
@@ -454,7 +444,7 @@ namespace LaundryService.Service
                     .Select(oi => oi.Orderitemid)
                     .ToList();
 
-                // 3) Lấy tất cả OrderExtras => xóa
+                // lấy tất cả OrderExtras => xóa
                 var orderExtras = _unitOfWork.Repository<Orderextra>()
                     .GetAll()
                     .Where(oe => orderItemIds.Contains(oe.Orderitemid))
@@ -465,7 +455,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(oe, saveChanges: false);
                 }
 
-                // 4) Xoá OrderItems
+                // xoá OrderItems
                 var orderItems = _unitOfWork.Repository<Orderitem>()
                     .GetAll()
                     .Where(oi => oi.Orderid == orderId)
@@ -476,7 +466,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(item, saveChanges: false);
                 }
 
-                // 5) Xoá OrderAssignmentHistory
+                // Xoá OrderAssignmentHistory
                 var assignmentHistories = _unitOfWork.Repository<Orderassignmenthistory>()
                     .GetAll()
                     .Where(ah => ah.Orderid == orderId)
@@ -487,7 +477,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(ah, saveChanges: false);
                 }
 
-                // 5) Xoá Complaints
+                // Xoá Complaints
                 var complaints = _unitOfWork.Repository<Complaint>()
                     .GetAll()
                     .Where(com => com.Orderid == orderId)
@@ -498,7 +488,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(com, saveChanges: false);
                 }
 
-                // 6) Xoá Payments
+                // xoá Payments
                 var payments = _unitOfWork.Repository<Payment>()
                     .GetAll()
                     .Where(p => p.Orderid == orderId)
@@ -509,7 +499,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(pay, saveChanges: false);
                 }
 
-                // 7) Xoá DriverLocationHistory
+                //Xoá DriverLocationHistory
                 var driverLoc = _unitOfWork.Repository<Driverlocationhistory>()
                     .GetAll()
                     .Where(d => d.Orderid == orderId)
@@ -520,7 +510,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(dlh, saveChanges: false);
                 }
 
-                // 8) Xoá Ratings
+                // Xoá Ratings
                 var ratings = _unitOfWork.Repository<Rating>()
                     .GetAll()
                     .Where(r => r.Orderid == orderId)
@@ -531,7 +521,7 @@ namespace LaundryService.Service
                                      .DeleteAsync(r, saveChanges: false);
                 }
 
-                // 9) Xoá OrderDiscounts
+                // Xoá OrderDiscounts
                 var orderDiscounts = _unitOfWork.Repository<Orderdiscount>()
                     .GetAll()
                     .Where(od => od.Orderid == orderId)
@@ -542,16 +532,14 @@ namespace LaundryService.Service
                                      .DeleteAsync(od, saveChanges: false);
                 }
 
-                // 10) Xoá Order
+                // Xoá Order
                 await _unitOfWork.Repository<Order>().DeleteAsync(order, saveChanges: false);
 
-                // Save + commit transaction
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
             }
             catch
             {
-                // rollback nếu có lỗi
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }

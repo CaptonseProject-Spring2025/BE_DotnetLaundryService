@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace LaundryService.Service.BackgroundServices
 {
     /// <summary>
-    /// job chạy 48 h
+    /// job chạy 48h để tự động hoàn tất đơn hàng đã nhận
     /// </summary>
     public class OrderAutoCompleteWorker
     {

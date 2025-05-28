@@ -34,7 +34,7 @@ namespace LaundryService.Service
         {
             if (request == null) throw new ArgumentNullException(nameof(request));
 
-            // Lấy UserId từ JWT token
+            //lấy userId từ jwt token
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
@@ -95,14 +95,14 @@ namespace LaundryService.Service
 
         public async Task<bool> DeleteAddressAsync(HttpContext httpContext, Guid addressId)
         {
-            // Lấy UserId từ JWT token
+            //lấy userId từ jwt token
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
                 throw new UnauthorizedAccessException("Invalid or missing user token.");
             }
 
-            // Tìm địa chỉ theo ID
+            // Tìm địa chỉ theo id
             var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId && a.Userid == userId);
             if (address == null)
             {
@@ -128,7 +128,7 @@ namespace LaundryService.Service
 
         public async Task<List<AddressResponse>> GetUserAddressesAsync(HttpContext httpContext)
         {
-            // Lấy UserId từ JWT token
+            //lấy userId từ jwt token
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
@@ -165,14 +165,14 @@ namespace LaundryService.Service
                 throw new UnauthorizedAccessException("Invalid or missing user token.");
             }
 
-            // Tìm địa chỉ theo ID và kiểm tra quyền sở hữu
+            // Tìm địa chỉ theo id
             var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId && a.Userid == userId);
             if (address == null)
             {
                 throw new KeyNotFoundException("Address not found or does not belong to the user.");
             }
 
-            // Trả về thông tin chi tiết của địa chỉ
+            // retủn thông tin chi tiết của địa chỉ
             return new AddressResponse
             {
                 AddressId = address.Addressid,

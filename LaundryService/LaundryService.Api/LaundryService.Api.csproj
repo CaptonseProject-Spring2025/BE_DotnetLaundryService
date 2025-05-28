@@ -9,6 +9,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Content Include="notification-laundry-firebase-adminsdk.json.sample" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="FirebaseAdmin" Version="3.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.13" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
