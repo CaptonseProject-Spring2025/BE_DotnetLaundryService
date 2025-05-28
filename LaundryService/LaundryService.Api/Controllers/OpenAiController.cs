@@ -14,7 +14,7 @@ namespace LaundryService.Api.Controllers
   public class OpenAiController : ControllerBase
   {
     // API Key của bạn
-    private const string apiKey = "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";
+    private const string apiKey = "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";
     private const string apiUrl = "https://openrouter.ai/api/v1/chat/completions"; // Địa chỉ API
 
     [HttpPost("get-ai-response")]
