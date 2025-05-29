@@ -80,6 +80,7 @@ builder.Services.AddScoped<IDashBoardServices, DashBoardService>();
 builder.Services.AddScoped<IOrderAssignmentHistoryService, OrderAssignmentHistoryService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IStaffStatisticsService, StaffStatisticsService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ITrackingPermissionService, TrackingPermissionService>();
