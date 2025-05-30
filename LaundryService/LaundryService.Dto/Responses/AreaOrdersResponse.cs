@@ -26,6 +26,9 @@ namespace LaundryService.Dto.Responses
         public DateTime? PickupTime { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal? TotalPrice { get; set; }
+
+        // số lần customer không nhận hàng.
+        public int? UserDeclineCount { get; set; } = 0;
     }
 
     public class UserInfoDto

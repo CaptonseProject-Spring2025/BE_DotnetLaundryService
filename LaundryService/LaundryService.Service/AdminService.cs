@@ -32,13 +32,40 @@ namespace LaundryService.Service
 
         public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
         {
-            // ---------- Lấy Order CONFIRMED ----------
+            /* -------- 1. Load Order theo tiêu chí -------- */
+            var wantedStatuses = new[]
+            {
+        OrderStatusEnum.CONFIRMED.ToString(),
+        OrderStatusEnum.PICKUPFAILED.ToString(),
+        OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
+        OrderStatusEnum.PICKINGUP.ToString()
+    };
+
             var orders = _unitOfWork.Repository<Order>()
-                .GetAll()
-                .Where(o => o.Currentstatus == "CONFIRMED")
-                .Include(o => o.User) // để lấy UserInfo
-                .OrderBy(o => o.Createdat) // sắp xếp theo CreatedAt
-                .ToList();
+                         .GetAll()
+                         .Where(o => wantedStatuses.Contains(o.Currentstatus!))
+                         .Include(o => o.User)
+                         .Include(o => o.Orderassignmenthistories)
+                         .ToList();
+
+            /* Giữ lại đơn SCHEDULED_PICKUP | PICKINGUP chỉ khi
+               assignment gần nhất Completedat có Status = PICKUP_FAILED */
+            orders = orders.Where(o =>
+            {
+                var st = o.Currentstatus;
+
+                // Giữ lại các đơn KHÔNG thuộc SCHEDULED_PICKUP / PICKINGUP
+                if (st != OrderStatusEnum.SCHEDULED_PICKUP.ToString() &&
+                    st != OrderStatusEnum.PICKINGUP.ToString())
+                    return true;                // CONFIRMED hoặc PICKUPFAILED  → giữ
+
+                var lastAss = o.Orderassignmenthistories
+                               .Where(a => a.Completedat.HasValue)
+                               .OrderByDescending(a => a.Completedat)
+                               .FirstOrDefault();
+
+                return lastAss?.Status == AssignStatusEnum.PICKUP_FAILED.ToString();
+            }).ToList();
 
             // ---------- Lấy danh sách Area (Driver) ----------
             var driverAreas = _unitOfWork.Repository<Area>()
@@ -115,7 +142,7 @@ namespace LaundryService.Service
                 .Select(kv => new AreaOrdersResponse
                 {
                     Area = kv.Key,
-                    Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
+                    Orders = kv.Value.OrderBy(i => i.PickupTime ?? DateTime.MaxValue).ToList()
                 })
                 .OrderBy(r => r.Area) // sắp Area theo tên
                 .ToList();
@@ -157,14 +184,6 @@ namespace LaundryService.Service
                     if (order == null)
                     {
                         throw new KeyNotFoundException($"OrderId {orderId} not found.");
-                    }
-
-                    // Chỉ assign pickup nếu order đang CONFIRMED
-                    if (order.Currentstatus != OrderStatusEnum.CONFIRMED.ToString())
-                    {
-                        throw new ApplicationException(
-                            $"Order {orderId} is not in CONFIRMED status. Current: {order.Currentstatus}"
-                        );
                     }
 
                     // Tạo row Orderassignmenthistory
