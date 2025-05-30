@@ -253,14 +253,44 @@ namespace LaundryService.Service
 
         public async Task<List<AreaOrdersResponse>> GetQualityCheckedOrdersByAreaAsync()
         {
-            // ---------- Lấy Order có CurrentStatus = QUALITY_CHECKED ----------
-            var statusQC = OrderStatusEnum.QUALITY_CHECKED.ToString();
+            /* ---------- Đọc Order theo 4 trạng thái ---------- */
+            var wantedStatuses = new[]
+            {
+                OrderStatusEnum.QUALITY_CHECKED.ToString(),
+                OrderStatusEnum.DELIVERYFAILED.ToString(),
+                OrderStatusEnum.SCHEDULED_DELIVERY.ToString(),
+                OrderStatusEnum.DELIVERING.ToString()
+            };
             var orders = _unitOfWork.Repository<Order>()
-                                    .GetAll()
-                                    .Where(o => o.Currentstatus == statusQC)
-                                    .Include(o => o.User)
-                                    .OrderBy(o => o.Createdat)   // tạm sắp xếp theo CreatedAt (để lát nữa nhóm theo khu)
-                                    .ToList();
+                        .GetAll()
+                        .Where(o => wantedStatuses.Contains(o.Currentstatus!))
+                        .Include(o => o.User)
+                        .Include(o => o.Orderassignmenthistories)   // dùng bước 2
+                        .Include(o => o.Orderstatushistories)       // dùng bước 3
+                        .ToList();
+
+            /* ---------- Lọc SCHEDULED_PICKUP | PICKINGUP ---------- */
+            orders = orders.Where(o =>
+            {
+                var st = (o.Currentstatus ?? string.Empty)
+                            .Trim()
+                            .ToUpperInvariant();
+
+                if (st != OrderStatusEnum.SCHEDULED_DELIVERY.ToString() &&
+                    st != OrderStatusEnum.DELIVERING.ToString())
+                    return true;   // QUALITY_CHECKED hoặc DELIVERYFAILED -> giữ
+
+                // lấy assignment gần nhất
+                var lastAss = o.Orderassignmenthistories
+                               .OrderByDescending(a => a.Assignedat)
+                               .FirstOrDefault();
+
+                return lastAss != null &&
+                       lastAss.Completedat.HasValue &&
+                       string.Equals(lastAss.Status?.Trim(),
+                                     AssignStatusEnum.DELIVERY_FAILED.ToString(),
+                                     StringComparison.OrdinalIgnoreCase);
+            }).ToList();
 
             // ---------- Lấy danh sách Area (Driver) từ DB ----------
             var driverAreas = _unitOfWork.Repository<Area>()
@@ -288,6 +318,12 @@ namespace LaundryService.Service
 
             foreach (var order in orders)
             {
+                // 4.1 – đếm số lần DELIVERYFAILED
+                int declineCnt = order.Orderstatushistories.Count(h =>
+                     string.Equals(h.Status?.Trim(),
+                                   OrderStatusEnum.DELIVERYFAILED.ToString(),
+                                   StringComparison.OrdinalIgnoreCase));
+
                 var lat = order.Pickuplatitude ?? 0;
                 var lon = order.Pickuplongitude ?? 0;
 
@@ -326,7 +362,8 @@ namespace LaundryService.Service
                     PickupLongitude = lon,
                     PickupTime = pickupTimeVn,
                     CreatedAt = createdAtVn,
-                    TotalPrice = order.Totalprice
+                    TotalPrice = order.Totalprice,
+                    UserDeclineCount = declineCnt
                 };
 
                 if (!areaDict.ContainsKey(areaName))
@@ -341,7 +378,8 @@ namespace LaundryService.Service
                 .Select(kv => new AreaOrdersResponse
                 {
                     Area = kv.Key,
-                    Orders = kv.Value.OrderBy(o => o.CreatedAt).ToList()
+                    Orders = kv.Value.OrderBy(i => i.PickupTime ?? DateTime.MaxValue) // xa nhất → gần nhất
+                                    .ToList()
                 })
                 .OrderBy(r => r.Area)
                 .ToList();
