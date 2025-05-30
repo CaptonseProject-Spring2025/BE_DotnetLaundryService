@@ -16,7 +16,7 @@ namespace LaundryService.Domain.Enums
 
         // Driver đã đến lấy đồ nhưng không thành công, KH hủy or giao hôm khác
         // orderStatushistory vẫn lưu trạng thái, hôm sau Admin giao lại thì quay lại trạng thái SCHEDULED_PICKUP
-        PICKUPFAILED = 5, 
+        PICKUPFAILED = 5,
 
         PICKEDUP = 6,
         CHECKING = 7,

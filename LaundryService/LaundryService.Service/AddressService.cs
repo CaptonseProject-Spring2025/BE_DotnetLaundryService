@@ -44,13 +44,13 @@ namespace LaundryService.Service
             if (string.IsNullOrWhiteSpace(request.DetailAddress))
                 throw new ArgumentException("DetailAddress is required.");
 
-            // Gọi MapboxService để lấy tọa độ từ địa chỉ
-            var (fetchedLatitude, fetchedLongitude) = await _mapboxService.GetCoordinatesFromAddressAsync(request.DetailAddress);
+            //// Gọi MapboxService để lấy tọa độ từ địa chỉ
+            //var (fetchedLatitude, fetchedLongitude) = await _mapboxService.GetCoordinatesFromAddressAsync(request.DetailAddress);
 
-            // Tính khoảng cách
-            double distance = _mapboxService.CalculateDistance(request.Latitude, request.Longitude, fetchedLatitude, fetchedLongitude);
-            if (distance > 3000)
-                throw new ArgumentException($"The location is too far from the entered address. Difference: {distance:F2} meters.");
+            //// Tính khoảng cách
+            //double distance = _mapboxService.CalculateDistance(request.Latitude, request.Longitude, fetchedLatitude, fetchedLongitude);
+            //if (distance > 3000)
+            //    throw new ArgumentException($"The location is too far from the entered address. Difference: {distance:F2} meters.");
 
             // Bắt đầu Transaction
             await _unitOfWork.BeginTransaction();
