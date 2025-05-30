@@ -57,6 +57,19 @@ public class ChatHub : Hub
             await _unitOfWork.Repository<Message>().InsertAsync(message);
             await _unitOfWork.SaveChangesAsync();
 
+            // Lấy thông tin conversation để biết ai là người nhận
+            var conversation = await _unitOfWork.Repository<Conversation>()
+                .GetAsync(c => c.Conversationid == Guid.Parse(conversationId));
+
+            // Xác định người nhận (không phải người gửi)
+            var receiverId = conversation.Userone == Guid.Parse(userId)
+                ? conversation.Usertwo
+                : conversation.Userone;
+
+            // Lấy thông tin người gửi
+            var sender = await _unitOfWork.Repository<User>()
+                .GetAsync(u => u.Userid == Guid.Parse(userId));
+
             // Lấy thông tin tin nhắn vừa tạo kèm thông tin user
             var messageInfo = await _unitOfWork.Repository<Message>()
                 .GetAll()
@@ -79,6 +92,46 @@ public class ChatHub : Hub
 
             // Gửi tin nhắn đến tất cả các client trong nhóm (conversationId)    
             await Clients.Group(conversationId).SendAsync("ReceiveMessage", messageInfo);
+
+            // Gửi push notification cho người nhận
+            if (receiverId != Guid.Parse(userId)) // Không gửi cho chính mình
+            {
+                var notificationTitle = $"Tin nhắn mới từ {sender?.Fullname ?? "Unknown User"}";
+                var notificationBody = messageContent.Length > 50
+                    ? messageContent.Substring(0, 50) + "..."
+                    : messageContent;
+
+                // Tạo notification trong database với cấu trúc đúng
+                var notification = new Notification
+                {
+                    Notificationid = Guid.NewGuid(),
+                    Userid = receiverId,
+                    Title = notificationTitle,
+                    Message = notificationBody, // Sử dụng Message thay vì Content
+                    Notificationtype = "message", // Sử dụng Notificationtype thay vì Type
+                    Isread = false, // Sử dụng Isread thay vì Isseen
+                    Createdat = DateTime.UtcNow, // Sử dụng Createdat thay vì Creationdate
+                    Ispushenabled = true // Bật push notification
+                };
+
+                await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Gửi real-time notification đến user
+                await Clients.User(receiverId.ToString()).SendAsync("ReceiveNotification", new
+                {
+                    notificationid = notification.Notificationid.ToString(),
+                    title = notificationTitle,
+                    message = notificationBody, // Thay đổi content thành message
+                    notificationtype = "message", // Thay đổi type thành notificationtype
+                    createdat = notification.Createdat, // Thay đổi creationdate thành createdat
+                    conversationId = conversationId,
+                    senderId = userId,
+                    senderName = sender?.Fullname
+                });
+
+                Console.WriteLine($"Notification sent to user {receiverId} for new message from {sender?.Fullname}");
+            }
         }
         catch (Exception ex)
         {
@@ -87,7 +140,6 @@ public class ChatHub : Hub
             throw;
         }
     }
-
     // Đánh dấu tin nhắn đã đọc
     public async Task MarkMessageAsRead(string messageId, string userId)
     {
@@ -101,17 +153,83 @@ public class ChatHub : Hub
                 message.Isseen = true;
 
                 await _unitOfWork.Repository<Message>().UpdateAsync(message);
+
+                // Đánh dấu notification tương ứng đã đọc
+                var notifications = await _unitOfWork.Repository<Notification>()
+                    .GetAll()
+                    .Where(n => n.Userid == Guid.Parse(userId) &&
+                               n.Notificationtype == "message" &&
+                               n.Isread == false &&
+                               n.Message.Contains(message.Message1.Substring(0, Math.Min(20, message.Message1.Length))))
+                    .ToListAsync();
+
+                foreach (var notification in notifications)
+                {
+                    notification.Isread = true;
+                    await _unitOfWork.Repository<Notification>().UpdateAsync(notification);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
 
                 // Thông báo cho người gửi
                 await Clients.User(message.Userid.ToString()).SendAsync("MessageRead", messageId);
-                
+
+                // Thông báo cập nhật notification count
+                await Clients.User(userId).SendAsync("NotificationRead", messageId);
+
                 Console.WriteLine($"Message {messageId} marked as read by user {userId}");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error marking message as read: {ex.Message}");
+        }
+    }
+
+    // Thêm method để lấy số lượng notification chưa đọc
+    public async Task GetUnreadNotificationCount(string userId)
+    {
+        try
+        {
+            var unreadCount = await _unitOfWork.Repository<Notification>()
+                .GetAll()
+                .CountAsync(n => n.Userid == Guid.Parse(userId) &&
+                                n.Isread == false);
+
+            await Clients.User(userId).SendAsync("UnreadNotificationCount", unreadCount);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting unread notification count: {ex.Message}");
+        }
+    }
+
+    //Method để lấy danh sách notification
+    public async Task GetNotifications(string userId)
+    {
+        try
+        {
+            var notifications = await _unitOfWork.Repository<Notification>()
+                .GetAll()
+                .Where(n => n.Userid == Guid.Parse(userId))
+                .OrderByDescending(n => n.Createdat)
+                .Take(20) // Lấy 20 notification gần nhất
+                .Select(n => new
+                {
+                    notificationid = n.Notificationid.ToString(),
+                    title = n.Title,
+                    message = n.Message,
+                    notificationtype = n.Notificationtype,
+                    isread = n.Isread,
+                    createdat = n.Createdat
+                })
+                .ToListAsync();
+
+            await Clients.User(userId).SendAsync("ReceiveNotifications", notifications);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting notifications: {ex.Message}");
         }
     }
 
@@ -131,7 +249,7 @@ public class ChatHub : Hub
                 await _unitOfWork.SaveChangesAsync();
 
                 await Clients.Group(message.Conversationid.ToString()).SendAsync("MessageDeleted", messageId);
-                
+
                 Console.WriteLine($"Message {messageId} deleted by user {userId}");
             }
         }
