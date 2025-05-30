@@ -32,39 +32,44 @@ namespace LaundryService.Service
 
         public async Task<List<AreaOrdersResponse>> GetConfirmedOrdersByAreaAsync()
         {
-            /* -------- 1. Load Order theo tiêu chí -------- */
+            /* ---------- 1. Đọc Order theo 4 trạng thái ---------- */
             var wantedStatuses = new[]
             {
-        OrderStatusEnum.CONFIRMED.ToString(),
-        OrderStatusEnum.PICKUPFAILED.ToString(),
-        OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
-        OrderStatusEnum.PICKINGUP.ToString()
-    };
+                OrderStatusEnum.CONFIRMED.ToString(),
+                OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
+                OrderStatusEnum.PICKINGUP.ToString(),
+                OrderStatusEnum.PICKUPFAILED.ToString()
+            };
 
             var orders = _unitOfWork.Repository<Order>()
-                         .GetAll()
-                         .Where(o => wantedStatuses.Contains(o.Currentstatus!))
-                         .Include(o => o.User)
-                         .Include(o => o.Orderassignmenthistories)
-                         .ToList();
+                        .GetAll()
+                        .Where(o => wantedStatuses.Contains(o.Currentstatus!))
+                        .Include(o => o.User)
+                        .Include(o => o.Orderassignmenthistories)   // dùng bước 2
+                        .Include(o => o.Orderstatushistories)       // dùng bước 3
+                        .ToList();
 
-            /* Giữ lại đơn SCHEDULED_PICKUP | PICKINGUP chỉ khi
-               assignment gần nhất Completedat có Status = PICKUP_FAILED */
+            /* ---------- 2. Lọc SCHEDULED_PICKUP | PICKINGUP ---------- */
             orders = orders.Where(o =>
             {
-                var st = o.Currentstatus;
+                var st = (o.Currentstatus ?? string.Empty)
+                            .Trim()
+                            .ToUpperInvariant();
 
-                // Giữ lại các đơn KHÔNG thuộc SCHEDULED_PICKUP / PICKINGUP
                 if (st != OrderStatusEnum.SCHEDULED_PICKUP.ToString() &&
                     st != OrderStatusEnum.PICKINGUP.ToString())
-                    return true;                // CONFIRMED hoặc PICKUPFAILED  → giữ
+                    return true;   // CONFIRMED hoặc PICKUPFAILED → giữ
 
+                // lấy assignment gần nhất
                 var lastAss = o.Orderassignmenthistories
-                               .Where(a => a.Completedat.HasValue)
-                               .OrderByDescending(a => a.Completedat)
+                               .OrderByDescending(a => a.Assignedat)
                                .FirstOrDefault();
 
-                return lastAss?.Status == AssignStatusEnum.PICKUP_FAILED.ToString();
+                return lastAss != null &&
+                       lastAss.Completedat.HasValue &&
+                       string.Equals(lastAss.Status?.Trim(),
+                                     AssignStatusEnum.PICKUP_FAILED.ToString(),
+                                     StringComparison.OrdinalIgnoreCase);
             }).ToList();
 
             // ---------- Lấy danh sách Area (Driver) ----------
@@ -89,12 +94,18 @@ namespace LaundryService.Service
             decimal refLat = branchAddress.Latitude ?? 0;
             decimal refLon = branchAddress.Longitude ?? 0;
 
-            // ---------- Gom nhóm ----------
+            // ---------- Gom nhóm & tính UserDeclineCount ----------
             // Dictionary<AreaName, List<ConfirmedOrderInfo>>
             var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var order in orders)
             {
+                // đếm số lần PICKUPFAILED
+                int declineCnt = order.Orderstatushistories.Count(h =>
+                     string.Equals(h.Status?.Trim(),
+                                   OrderStatusEnum.PICKUPFAILED.ToString(),
+                                   StringComparison.OrdinalIgnoreCase));
+
                 var lat = order.Pickuplatitude ?? 0;
                 var lon = order.Pickuplongitude ?? 0;
 
@@ -127,7 +138,8 @@ namespace LaundryService.Service
                     PickupLongitude = lon,
                     PickupTime = order.Pickuptime,
                     CreatedAt = order.Createdat ?? DateTime.UtcNow,
-                    TotalPrice = order.Totalprice
+                    TotalPrice = order.Totalprice,
+                    UserDeclineCount = declineCnt
                 };
 
                 if (!areaDict.ContainsKey(areaName))
@@ -196,20 +208,25 @@ namespace LaundryService.Service
                     };
                     await _unitOfWork.Repository<Orderassignmenthistory>().InsertAsync(assignment, saveChanges: false);
 
-                    // Tạo row Orderstatushistory
-                    var statusHistory = new Orderstatushistory
+                    // Nếu order chưa có status history là "SCHEDULED_PICKUP" hoặc "PICKINGUP"
+                    if (order.Currentstatus != OrderStatusEnum.SCHEDULED_PICKUP.ToString() &&
+                        order.Currentstatus != OrderStatusEnum.PICKINGUP.ToString())
                     {
-                        Orderid = orderId,
-                        Status = OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
-                        Statusdescription = "Đã lên lịch lấy hàng",
-                        Updatedby = adminUserId,
-                        Createdat = DateTime.UtcNow
-                    };
-                    await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(statusHistory, saveChanges: false);
+                        // Tạo row Orderstatushistory
+                        var statusHistory = new Orderstatushistory
+                        {
+                            Orderid = orderId,
+                            Status = OrderStatusEnum.SCHEDULED_PICKUP.ToString(),
+                            Statusdescription = "Đã lên lịch lấy hàng",
+                            Updatedby = adminUserId,
+                            Createdat = DateTime.UtcNow
+                        };
+                        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(statusHistory, saveChanges: false);
 
-                    // cập nhật Order.Currentstatus = "SCHEDULED_PICKUP"
-                    order.Currentstatus = OrderStatusEnum.SCHEDULED_PICKUP.ToString();
-                    await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                        // cập nhật Order.Currentstatus = "SCHEDULED_PICKUP"
+                        order.Currentstatus = OrderStatusEnum.SCHEDULED_PICKUP.ToString();
+                        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                    }
                 }
 
                 await _unitOfWork.SaveChangesAsync();
