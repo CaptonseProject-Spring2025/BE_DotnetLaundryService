@@ -22,6 +22,7 @@ namespace LaundryService.Service
             {
                 throw new InvalidOperationException("Firebase configuration is missing.");
             }
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", "notification-laundry-firebase-adminsdk.json");
             _firestore = FirestoreDb.Create(projectId);
         }
 
