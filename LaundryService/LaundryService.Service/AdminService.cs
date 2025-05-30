@@ -94,12 +94,18 @@ namespace LaundryService.Service
             decimal refLat = branchAddress.Latitude ?? 0;
             decimal refLon = branchAddress.Longitude ?? 0;
 
-            // ---------- Gom nhóm ----------
+            // ---------- Gom nhóm & tính UserDeclineCount ----------
             // Dictionary<AreaName, List<ConfirmedOrderInfo>>
             var areaDict = new Dictionary<string, List<ConfirmedOrderInfo>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var order in orders)
             {
+                // đếm số lần PICKUPFAILED
+                int declineCnt = order.Orderstatushistories.Count(h =>
+                     string.Equals(h.Status?.Trim(),
+                                   OrderStatusEnum.PICKUPFAILED.ToString(),
+                                   StringComparison.OrdinalIgnoreCase));
+
                 var lat = order.Pickuplatitude ?? 0;
                 var lon = order.Pickuplongitude ?? 0;
 
@@ -132,7 +138,8 @@ namespace LaundryService.Service
                     PickupLongitude = lon,
                     PickupTime = order.Pickuptime,
                     CreatedAt = order.Createdat ?? DateTime.UtcNow,
-                    TotalPrice = order.Totalprice
+                    TotalPrice = order.Totalprice,
+                    UserDeclineCount = declineCnt
                 };
 
                 if (!areaDict.ContainsKey(areaName))
