@@ -186,14 +186,6 @@ namespace LaundryService.Service
                         throw new KeyNotFoundException($"OrderId {orderId} not found.");
                     }
 
-                    // Chỉ assign pickup nếu order đang CONFIRMED
-                    if (order.Currentstatus != OrderStatusEnum.CONFIRMED.ToString())
-                    {
-                        throw new ApplicationException(
-                            $"Order {orderId} is not in CONFIRMED status. Current: {order.Currentstatus}"
-                        );
-                    }
-
                     // Tạo row Orderassignmenthistory
                     var assignment = new Orderassignmenthistory
                     {
