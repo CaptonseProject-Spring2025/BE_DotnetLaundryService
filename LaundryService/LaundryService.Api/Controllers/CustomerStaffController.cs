@@ -567,7 +567,7 @@ namespace LaundryService.Api.Controllers
             try
             {
                 var orderId = await _customerStaffService.CusStaffPlaceOrderAsync(HttpContext, userId, request);
-                                
+
                 return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
             }
             catch (KeyNotFoundException ex)
@@ -586,6 +586,40 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = $"An unexpected error occurred. {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// CustomerStaff tạo địa chỉ mới cho người dùng.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("create-address")]
+        public async Task<IActionResult> CreateAddress(Guid userId, [FromBody] CreateAddressRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            try
+            {
+                var addressId = await _customerStaffService.CreateAddressAsync(userId, request);
+                return Ok(new { AddressId = addressId, Message = "Địa chỉ đã được tạo thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
     }

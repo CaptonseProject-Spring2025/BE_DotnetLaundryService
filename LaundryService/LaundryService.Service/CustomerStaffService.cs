@@ -21,12 +21,14 @@ namespace LaundryService.Service
         private readonly IUnitOfWork _unitOfWork;
         private readonly IUtil _util;
         private readonly IOrderService _orderService;
+        private readonly IAddressService _addressService;
 
-        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService)
+        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService, IAddressService addressService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _orderService = orderService;
+            _addressService = addressService;
         }
 
         /// <summary>
@@ -581,6 +583,16 @@ namespace LaundryService.Service
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
+        }
+
+        // CustomerStaff tạo địa chỉ cho customer
+        public async Task<AddressResponse> CreateAddressAsync(Guid userId, CreateAddressRequest request)
+        {
+            if (userId == Guid.Empty)
+            {
+                throw new ArgumentException("UserId không được để trống.", nameof(userId));
+            }
+            return await _addressService.CreateAddressAsync(userId, request);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using LaundryService.Domain.Interfaces.Services;
 using LaundryService.Dto.Requests;
+using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -340,5 +341,32 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = "An unexpected error occurred." });
             }
         }
+
+        /// <summary>
+        /// Tìm kiếm 1 ServiceDetail theo Name (không phân biệt HOA/thường).
+        /// </summary>
+        /// <param name="name">Tên service cần tìm</param>
+        /// <returns><see cref="ServiceDetailResponse"/> nếu tìm thấy</returns>
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchByName([FromQuery] string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest(new { Message = "Query parameter 'name' is required." });
+
+            try
+            {
+                var result = await _serviceDetailService.SearchServiceDetailByNameAsync(name);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
     }
 }

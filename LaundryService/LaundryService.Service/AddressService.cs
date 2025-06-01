@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,14 +33,19 @@ namespace LaundryService.Service
 
         public async Task<AddressResponse> CreateAddressAsync(HttpContext httpContext, CreateAddressRequest request)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
-
             //lấy userId từ jwt token
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
                 throw new UnauthorizedAccessException("Invalid or missing user token.");
             }
+
+            return await CreateAddressAsync(userId, request);
+        }
+
+        public async Task<AddressResponse> CreateAddressAsync(Guid userId, CreateAddressRequest request)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
 
             if (string.IsNullOrWhiteSpace(request.DetailAddress))
                 throw new ArgumentException("DetailAddress is required.");

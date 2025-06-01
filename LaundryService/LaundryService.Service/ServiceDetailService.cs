@@ -441,5 +441,30 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<ServiceDetailResponse> SearchServiceDetailByNameAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Name is required.");
+
+            // tìm chính xác 1 service (case-insensitive, bỏ khoảng trắng 2 đầu)
+            var service = _unitOfWork.Repository<Servicedetail>()
+                            .GetAll()
+                            .FirstOrDefault(s =>
+                                s.Name.Trim().ToLower() == name.Trim().ToLower());
+
+            if (service == null)
+                throw new KeyNotFoundException($"Service detail with Name = '{name}' not found.");
+
+            return new ServiceDetailResponse
+            {
+                ServiceId = service.Serviceid,
+                Name = service.Name,
+                Description = service.Description,
+                Price = service.Price,
+                ImageUrl = service.Image,
+                CreatedAt = service.Createdat
+            };
+        }
     }
 }
