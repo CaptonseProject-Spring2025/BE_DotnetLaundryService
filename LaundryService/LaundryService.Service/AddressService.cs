@@ -162,17 +162,32 @@ namespace LaundryService.Service
             }).ToList();
         }
 
-        public async Task<AddressResponse> GetAddressByIdAsync(HttpContext httpContext, Guid addressId)
+        public async Task<List<AddressResponse>> GetUserAddressesAsync(Guid userId)
         {
-            // Lấy UserId từ JWT token
-            var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            var addresses = await _unitOfWork.Repository<Address>().GetAllAsync(a => a.Userid == userId);
+            if (!addresses.Any())
             {
-                throw new UnauthorizedAccessException("Invalid or missing user token.");
+                throw new KeyNotFoundException("No addresses found for this user.");
             }
 
+            return addresses.Select(a => new AddressResponse
+            {
+                AddressId = a.Addressid,
+                DetailAddress = a.Detailaddress,
+                Latitude = a.Latitude ?? 0,
+                Longitude = a.Longitude ?? 0,
+                AddressLabel = a.Addresslabel,
+                ContactName = a.Contactname,
+                ContactPhone = a.Contactphone,
+                Description = a.Description,
+                DateCreated = a.Datecreated ?? DateTime.MinValue
+            }).ToList();
+        }
+
+        public async Task<AddressResponse> GetAddressByIdAsync(Guid addressId)
+        {
             // Tìm địa chỉ theo id
-            var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId && a.Userid == userId);
+            var address = await _unitOfWork.Repository<Address>().GetAsync(a => a.Addressid == addressId);
             if (address == null)
             {
                 throw new KeyNotFoundException("Address not found or does not belong to the user.");

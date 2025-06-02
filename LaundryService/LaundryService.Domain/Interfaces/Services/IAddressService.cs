@@ -19,7 +19,9 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<List<AddressResponse>> GetUserAddressesAsync(HttpContext httpContext);
 
-        Task<AddressResponse> GetAddressByIdAsync(HttpContext httpContext, Guid addressId);
+        Task<List<AddressResponse>> GetUserAddressesAsync(Guid userId);
+
+        Task<AddressResponse> GetAddressByIdAsync(Guid addressId);
 
         Task<AddressInfoResponse> GetPickupAddressFromAssignmentAsync(HttpContext httpContext, Guid assignmentId);
 

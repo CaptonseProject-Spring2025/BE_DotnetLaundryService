@@ -173,8 +173,42 @@ namespace LaundryService.Api.Controllers
         {
             try
             {
-                var result = await _addressService.GetAddressByIdAsync(HttpContext, addressId);
+                var result = await _addressService.GetAddressByIdAsync(addressId);
                 return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred.", Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách tất cả địa chỉ (Address) của 1 user
+        /// </summary>
+        /// <returns>Danh sách các địa chỉ dạng <see cref="AddressResponse"/> của user</returns>
+        /// <remarks>
+        /// **Response codes**:
+        /// - **200**: Tìm thấy danh sách địa chỉ (có thể rỗng nếu user chưa thêm địa chỉ nào)
+        /// - **401**: Chưa đăng nhập/token không hợp lệ
+        /// - **404**: Không có địa chỉ nào cho user này
+        /// - **500**: Lỗi server
+        /// </remarks>
+        [HttpGet("userId")]
+        [ProducesResponseType(typeof(List<AddressResponse>), 200)]
+        public async Task<IActionResult> GetUserAddresses(Guid userId)
+        {
+            try
+            {
+                var addresses = await _addressService.GetUserAddressesAsync(userId);
+                return Ok(addresses);
             }
             catch (UnauthorizedAccessException ex)
             {
