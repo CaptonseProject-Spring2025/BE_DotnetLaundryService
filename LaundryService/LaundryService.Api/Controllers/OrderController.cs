@@ -404,6 +404,34 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// Tìm một đơn hàng theo <c>orderId</c>.
+        /// </summary>
+        /// <param name="orderId"></param>
+        /// <returns></returns>
+        [HttpGet("{orderId}")]
+        public async Task<IActionResult> GetOrderById(string orderId)
+        {
+            try
+            {
+                var result = await _orderService.GetOrderByIdAsync(HttpContext, orderId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { Message = "An unexpected error occurred." });
+            }
+        }
+
+
+        /// <summary>
         /// Lấy chi tiết một đơn hàng theo <c>orderId</c> (bao gồm địa chỉ, dịch vụ, extras, trạng thái...).
         /// </summary>
         /// <param name="orderId">ID của đơn hàng cần lấy chi tiết.</param>

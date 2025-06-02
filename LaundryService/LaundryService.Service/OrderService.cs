@@ -880,6 +880,42 @@ namespace LaundryService.Service
             return paginationResult;
         }
 
+        public async Task<UserOrderResponse> GetOrderByIdAsync(HttpContext httpContext, string orderId)
+        {
+            if (string.IsNullOrWhiteSpace(orderId))
+                throw new ArgumentException("orderId is required.");
+
+            // 1) Eager-load đầy đủ thông tin cần thiết
+            var order = _unitOfWork.Repository<Order>()
+                         .GetAll()
+                         .Where(o => o.Orderid == orderId && o.Currentstatus != "INCART")
+                         .Include(o => o.Orderitems)
+                             .ThenInclude(oi => oi.Service)
+                                 .ThenInclude(s => s.Subservice)
+                                     .ThenInclude(sb => sb.Category)
+                         .FirstOrDefault();
+
+            if (order == null)
+                throw new KeyNotFoundException($"Order '{orderId}' not found.");
+
+            // 2) Gom tên Category cho OrderName
+            var categoryNames = order.Orderitems
+                .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Distinct()
+                .ToList();
+
+            return new UserOrderResponse
+            {
+                OrderId = order.Orderid,
+                OrderName = string.Join(", ", categoryNames),
+                ServiceCount = order.Orderitems.Count,
+                TotalPrice = order.Totalprice,
+                OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                OrderStatus = order.Currentstatus
+            };
+        }
+
         public async Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, string orderId)
         {
             // 1) Eager load

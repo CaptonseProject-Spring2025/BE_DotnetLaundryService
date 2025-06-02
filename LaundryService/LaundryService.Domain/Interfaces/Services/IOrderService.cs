@@ -24,6 +24,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task<PaginationResult<UserOrderResponse>> GetAllOrdersAsync(HttpContext httpContext, string? status, int page, int pageSize);
 
+        Task<UserOrderResponse> GetOrderByIdAsync(HttpContext httpContext, string orderId);
+
         Task<OrderDetailCustomResponse> GetOrderDetailCustomAsync(HttpContext httpContext, string orderId);
 
         Task<List<OrderStatusHistoryItemResponse>> GetOrderStatusHistoryAsync(HttpContext httpContext, string orderId);
