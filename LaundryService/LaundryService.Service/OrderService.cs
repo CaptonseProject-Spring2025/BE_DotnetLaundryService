@@ -203,15 +203,6 @@ namespace LaundryService.Service
             var deliveryAddr = await addressRepo.FindAsync(req.DeliveryAddressId)
                              ?? throw new KeyNotFoundException("Delivery address not found.");
 
-            /* ---------- 1. Tính ApplicableFee ---------- */
-            decimal applicableFee = 0m;
-            if (diffProcess.TotalHours < 22)
-                applicableFee = req.EstimatedTotal * 0.75m;
-            else if (diffProcess.TotalHours < 46)
-                applicableFee = req.EstimatedTotal * 0.5m;
-            else if (diffProcess.TotalHours < 70)
-                applicableFee = req.EstimatedTotal * 0.15m;
-
             /* ---------- 2. Lấy tọa độ & District ---------- */
             var pickupDistrict = await _mapboxService.GetDistrictFromCoordinatesAsync(
                                     pickupAddr.Latitude ?? 0, pickupAddr.Longitude ?? 0)
@@ -243,6 +234,15 @@ namespace LaundryService.Service
             /* -------- 5. Giảm phí theo EstimatedTotal ---------- */
             if (req.EstimatedTotal >= 1_000_000m) shippingFee = 0;
             else if (req.EstimatedTotal >= 350_000m) shippingFee *= 0.5m;
+
+            /* ---------- Tính ApplicableFee ---------- */
+            decimal applicableFee = 0m;
+            if (diffProcess.TotalHours < 22)
+                applicableFee = req.EstimatedTotal * 0.75m;
+            else if (diffProcess.TotalHours < 46)
+                applicableFee = req.EstimatedTotal * 0.5m;
+            else if (diffProcess.TotalHours < 70)
+                applicableFee = req.EstimatedTotal * 0.15m;
 
             return new CalculateShippingFeeResponse
             {

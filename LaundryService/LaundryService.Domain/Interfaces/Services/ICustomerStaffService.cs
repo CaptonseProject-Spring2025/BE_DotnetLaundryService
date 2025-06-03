@@ -26,6 +26,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task StaffAddToCartAsync(Guid userId, AddToCartRequest request);
 
+        Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CusStaffCalculateShippingFeeRequest req);
+
         Task<string> CusStaffPlaceOrderAsync(HttpContext httpContext, Guid userId, CusStaffPlaceOrderRequest request);
 
         Task<AddressResponse> CreateAddressAsync(Guid userId, CreateAddressRequest request);

@@ -22,13 +22,15 @@ namespace LaundryService.Service
         private readonly IUtil _util;
         private readonly IOrderService _orderService;
         private readonly IAddressService _addressService;
+        private readonly IMapboxService _mapboxService;
 
-        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService, IAddressService addressService)
+        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService, IAddressService addressService, IMapboxService mapboxService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _orderService = orderService;
             _addressService = addressService;
+            _mapboxService = mapboxService;
         }
 
         /// <summary>
@@ -445,6 +447,88 @@ namespace LaundryService.Service
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
+        }
+
+        private decimal GetLegShippingFee(
+            IDictionary<string, Area> districtToArea,          // tra cứu quận → Area
+            string district,
+            IEnumerable<Area> allShippingAreas)                // list để lấy max fallback
+        {
+            if (districtToArea.TryGetValue(district, out var area)
+                && area.Shippingfee.HasValue && area.Shippingfee > 0)
+            {
+                return area.Shippingfee.Value;
+            }
+
+            // fallback: lấy giá cao nhất trong bảng ShippingFee
+            return allShippingAreas.Where(a => a.Shippingfee.HasValue).Max(a => a.Shippingfee!.Value);
+        }
+
+        // Tính phí shipping cho đơn hàng
+        public async Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CusStaffCalculateShippingFeeRequest req)
+        {
+            decimal shippingFee = 0m; // Khởi tạo phí ship
+
+            // Lấy giờ VN để khớp với nghiệp vụ (dùng hàm util sẵn có)
+            var nowVn = DateTime.UtcNow.AddHours(7);
+
+            var diffProcess = req.DeliveryTime - nowVn;
+            if (diffProcess.TotalHours < req.MinCompleteTime)
+            {
+                var unit = req.MinCompleteTime >= 24 ? "ngày" : "giờ";
+                var min = req.MinCompleteTime / (unit == "ngày" ? 24 : 1);
+                throw new ApplicationException(
+                    $"Thời gian xử lý không đủ vì món đồ {req.ServiceName} có thời gian xử lý tối thiểu là {min} {unit}.");
+            }
+
+            if (req.DeliveryAddressId != Guid.Empty)
+            {
+                // Kiểm tra địa chỉ pickup/delivery có tồn tại không
+                var deliveryAddr = await _unitOfWork.Repository<Address>().FindAsync(req.DeliveryAddressId)
+                                 ?? throw new KeyNotFoundException("Delivery address not found.");
+
+                /* ---------- 2. Lấy tọa độ & District ---------- */
+                var deliveryDistrict = await _mapboxService.GetDistrictFromCoordinatesAsync(
+                                        deliveryAddr.Latitude ?? 0, deliveryAddr.Longitude ?? 0)
+                                    ?? "Unknown";
+
+                /* -------- 3. Truy bảng Area lấy phí ship ---------- */
+                var shippingAreas = _unitOfWork.Repository<Area>()
+                                    .GetAll()
+                                    .Where(a => a.Areatype.ToUpper() == "SHIPPINGFEE")
+                                    .ToList();          // EF -> RAM (chỉ 1 lần)
+
+                if (!shippingAreas.Any(a => a.Shippingfee.HasValue))
+                    throw new ApplicationException("Bảng Area (ShippingFee) chưa có giá nào.");
+
+                // Build dictionary: quận  →  Area
+                var districtToArea = shippingAreas
+                    .Where(a => a.Districts != null)
+                    .SelectMany(a => a.Districts!.Select(d => new { District = d.Trim(), Area = a }))
+                    .ToDictionary(x => x.District, x => x.Area, StringComparer.OrdinalIgnoreCase);
+
+                /* -------- 4. Tính phí ---------- */
+                shippingFee = GetLegShippingFee(districtToArea, deliveryDistrict, shippingAreas);
+
+                /* -------- 5. Giảm phí theo EstimatedTotal ---------- */
+                if (req.EstimatedTotal >= 1_000_000m) shippingFee = 0;
+                else if (req.EstimatedTotal >= 350_000m) shippingFee *= 0.5m;
+            }
+
+            /* ---------- Tính ApplicableFee ---------- */
+            decimal applicableFee = 0m;
+            if (diffProcess.TotalHours < 22)
+                applicableFee = req.EstimatedTotal * 0.75m;
+            else if (diffProcess.TotalHours < 46)
+                applicableFee = req.EstimatedTotal * 0.5m;
+            else if (diffProcess.TotalHours < 70)
+                applicableFee = req.EstimatedTotal * 0.15m;
+
+            return new CalculateShippingFeeResponse
+            {
+                ShippingFee = shippingFee,
+                ApplicableFee = Math.Round(applicableFee, 0)   // làm tròn 0 đ nếu muốn
+            };
         }
 
         public async Task<string> CusStaffPlaceOrderAsync(HttpContext httpContext, Guid userId, CusStaffPlaceOrderRequest request)

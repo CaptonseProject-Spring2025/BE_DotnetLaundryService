@@ -534,6 +534,32 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// Tính phí ship và phí áp dụng cho đơn hàng.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("shipping-fee")]
+        [ProducesResponseType(typeof(CalculateShippingFeeResponse), 200)]
+        public async Task<IActionResult> CalculateShippingFee([FromBody] CusStaffCalculateShippingFeeRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _customerStaffService.CalculateShippingFeeAsync(request);
+                return Ok(result);
+            }
+            catch (ApplicationException ex) { return BadRequest(new { Message = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+            catch (UnauthorizedAccessException ex) { return Unauthorized(new { Message = ex.Message }); }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// CustomerStaff tạo đơn hàng cho khách hàng.
         /// </summary>
         /// <param name="userId"> Id của khách hàng </param>
