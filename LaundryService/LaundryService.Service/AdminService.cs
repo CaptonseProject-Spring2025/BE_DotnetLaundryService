@@ -418,15 +418,6 @@ namespace LaundryService.Service
                     if (order == null)
                         throw new KeyNotFoundException($"OrderId '{orderId}' không tồn tại.");
 
-                    // kiểm tra order có đang "QUALITY_CHECKED" hay không
-                    // chỉ những đơn giặt xong, đã QA-check xong mới giao
-                    if (order.Currentstatus != OrderStatusEnum.QUALITY_CHECKED.ToString())
-                    {
-                        throw new ApplicationException(
-                            $"Order {orderId} chưa sẵn sàng để giao. Trạng thái hiện tại: {order.Currentstatus}"
-                        );
-                    }
-
                     // Tạo row Orderassignmenthistory
                     var assignment = new Orderassignmenthistory
                     {
@@ -438,23 +429,25 @@ namespace LaundryService.Service
                     };
                     await _unitOfWork.Repository<Orderassignmenthistory>()
                                      .InsertAsync(assignment, saveChanges: false);
-
-                    // tạo row Orderstatushistory
-                    var statusHistory = new Orderstatushistory
+                    // Nếu order chưa có status history là "SCHEDULED_DELIVERY" hoặc "DELIVERING"
+                    if (order.Currentstatus != OrderStatusEnum.SCHEDULED_DELIVERY.ToString() &&
+                        order.Currentstatus != OrderStatusEnum.DELIVERING.ToString())
                     {
-                        Orderid = orderId,
-                        Status = OrderStatusEnum.SCHEDULED_DELIVERY.ToString(),
-                        Statusdescription = "Đã lên lịch giao hàng. Bạn sẽ sớm nhận được đơn hàng.",
-                        Updatedby = adminUserId,
-                        Createdat = DateTime.UtcNow
-                    };
-                    await _unitOfWork.Repository<Orderstatushistory>()
-                                     .InsertAsync(statusHistory, saveChanges: false);
+                        // tạo row Orderstatushistory
+                        var statusHistory = new Orderstatushistory
+                        {
+                            Orderid = orderId,
+                            Status = OrderStatusEnum.SCHEDULED_DELIVERY.ToString(),
+                            Statusdescription = "Đã lên lịch giao hàng. Bạn sẽ sớm nhận được đơn hàng.",
+                            Updatedby = adminUserId,
+                            Createdat = DateTime.UtcNow
+                        };
+                        await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(statusHistory, saveChanges: false);
 
-                    // cập nhật order.currentstatus = "SCHEDULED_DELIVERY"
-                    order.Currentstatus = OrderStatusEnum.SCHEDULED_DELIVERY.ToString();
-                    await _unitOfWork.Repository<Order>()
-                                     .UpdateAsync(order, saveChanges: false);
+                        // cập nhật order.currentstatus = "SCHEDULED_DELIVERY"
+                        order.Currentstatus = OrderStatusEnum.SCHEDULED_DELIVERY.ToString();
+                        await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                    }
                 }
 
                 await _unitOfWork.SaveChangesAsync();
