@@ -9,17 +9,12 @@ namespace LaundryService.Dto.Requests
 {
     public class CusStaffPlaceOrderRequest
     {
-        public Guid DeliveryAddressId { get; set; }
+        public Guid? DeliveryAddressId { get; set; }
 
-        public DateTime Deliverytime { get; set; }
+        public DateTime? Deliverytime { get; set; }
 
         // Phí giao hàng
         public decimal? Shippingfee { get; set; }
-
-        // Giảm giá ship (thường là số âm nếu trừ tiền, 
-        // hoặc số dương nếu logic ngược), 
-        // tuỳ theo nghiệp vụ bạn quy ước
-        public decimal? Shippingdiscount { get; set; }
 
         // Phí bổ sung (nếu có)
         public decimal? Applicablefee { get; set; }

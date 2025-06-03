@@ -609,15 +609,13 @@ namespace LaundryService.Service
                 }
 
                 // 6) Tính tổng theo công thức
-                //    total = basePriceSum + shippingFee + shippingDiscount + applicableFee + discount
+                //    total = basePriceSum + shippingFee + applicableFee + discount
                 decimal shippingFee = request.Shippingfee ?? 0;
-                decimal shippingDiscount = request.Shippingdiscount ?? 0;
                 decimal applicableFee = request.Applicablefee ?? 0;
                 decimal discount = request.Discount ?? 0;
 
                 decimal finalTotal = basePriceSum
                                     + shippingFee
-                                    + shippingDiscount
                                     + applicableFee
                                     + discount;
 
@@ -632,7 +630,6 @@ namespace LaundryService.Service
 
                 // 7) Gán các trường còn lại vào Order
                 order.Shippingfee = shippingFee;
-                order.Shippingdiscount = shippingDiscount;
                 order.Applicablefee = applicableFee;
                 order.Discount = discount;
                 order.Totalprice = finalTotal;
