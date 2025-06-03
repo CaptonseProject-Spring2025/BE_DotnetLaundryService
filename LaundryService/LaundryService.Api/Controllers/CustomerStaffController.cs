@@ -650,6 +650,35 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        [HttpPost("order/otherprice")]
+        public async Task<IActionResult> UpdateOtherPrice(string orderId, [FromBody] AddOtherPriceRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _customerStaffService.AddOtherPrice(orderId, request);
+                return Ok(new { Message = "Cập nhật giá thành công." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
+
         /// <summary>
         /// CustomerStaff tạo địa chỉ mới cho người dùng.
         /// </summary>

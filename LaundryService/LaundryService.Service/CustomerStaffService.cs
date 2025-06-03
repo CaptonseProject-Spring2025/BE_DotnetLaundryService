@@ -813,5 +813,24 @@ namespace LaundryService.Service
             }
             return await _addressService.CreateAddressAsync(userId, request);
         }
+
+        public async Task AddOtherPrice(string orderId, AddOtherPriceRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(orderId) || request == null)
+                throw new ArgumentException("OrderId and request cannot be null or empty.");
+
+            // 1) Lấy Order
+            var order = await _unitOfWork.Repository<Order>().GetAll().FirstOrDefaultAsync(o => o.Orderid == orderId);
+
+            if (order == null)
+                throw new KeyNotFoundException("Order not found.");
+
+            // 2) Cập nhật OtherPrice và Note
+            order.Otherprice = request.otherPrice;
+            order.Noteforotherprice = request.otherPriceNote;
+            // 3) Cập nhật Order
+            await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: true);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

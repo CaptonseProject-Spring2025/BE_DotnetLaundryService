@@ -53,11 +53,13 @@ namespace LaundryService.Dto.Responses
         public decimal? ApplicableFee { get; set; }
         public decimal? Discount { get; set; }
         public decimal? Otherprice { get; set; }
+        public string? OtherPriceNote { get; set; }
         public decimal? TotalPrice { get; set; }
     }
 
     public class OrderItemSummary
     {
+        public Guid? OrderitemId { get; set; }
         public string ServiceName { get; set; }
         public decimal ServicePrice { get; set; }
         public int Quantity { get; set; }
@@ -67,6 +69,7 @@ namespace LaundryService.Dto.Responses
 
     public class ExtraSummary
     {
+        public Guid? OrderextraId { get; set; }
         public string ExtraName { get; set; }
         public decimal ExtraPrice { get; set; }
     }

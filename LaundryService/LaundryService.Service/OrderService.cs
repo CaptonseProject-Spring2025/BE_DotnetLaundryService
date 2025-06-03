@@ -982,6 +982,7 @@ namespace LaundryService.Service
                 ApplicableFee = order.Applicablefee,
                 Discount = order.Discount,
                 Otherprice = order.Otherprice,
+                OtherPriceNote = order.Noteforotherprice,
                 TotalPrice = order.Totalprice
             };
 
@@ -1001,6 +1002,7 @@ namespace LaundryService.Service
 
                     extraList.Add(new ExtraSummary
                     {
+                        OrderextraId = oe.Extraid,
                         ExtraName = extraName,
                         ExtraPrice = extraPrice
                     });
@@ -1011,6 +1013,7 @@ namespace LaundryService.Service
 
                 orderSummary.Items.Add(new OrderItemSummary
                 {
+                    OrderitemId = item.Orderitemid,
                     ServiceName = serviceName,
                     ServicePrice = servicePrice,
                     Quantity = item.Quantity,
