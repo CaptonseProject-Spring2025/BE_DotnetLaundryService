@@ -27,5 +27,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<UserDetailResponse> CreateUserAsync(CreateUserRequest request);
 
         Task<List<RewardHistoryResponse>> GetRewardHistoryAsync(HttpContext httpContext);
+
+        Task<List<DriverResponse>> GetAvailableDriversAsync();
     }
 }

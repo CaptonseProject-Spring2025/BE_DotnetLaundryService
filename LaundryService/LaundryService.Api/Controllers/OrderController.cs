@@ -622,5 +622,40 @@ namespace LaundryService.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Lấy danh sách đơn hàng đã được giao tài xế để lấy (pickup).
+        /// </summary>
+        [HttpGet("assigned-pickup")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AssignedPickups(int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var result = await _orderService.GetAssignedPickupsAsync(HttpContext, page, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách đơn hàng đã được giao tài xế để giao (delivery).
+        /// </summary>
+        [HttpGet("assigned-delivery")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> AssignedDeliveries(int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var result = await _orderService.GetAssignedDeliveriesAsync(HttpContext, page, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

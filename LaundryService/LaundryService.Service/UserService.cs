@@ -14,6 +14,7 @@ using LaundryService.Dto.Pagination;
 using LaundryService.Infrastructure;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.EntityFrameworkCore;
+using LaundryService.Domain.Enums;
 
 namespace LaundryService.Service
 {
@@ -329,6 +330,59 @@ namespace LaundryService.Service
             }
 
             return rewardHistory;
+        }
+
+        public async Task<List<DriverResponse>> GetAvailableDriversAsync()
+        {
+            var now = DateTime.UtcNow;
+            var nowVn = now.AddHours(7);
+
+            var baseDriversQuery = _unitOfWork.Repository<User>()
+                .GetAll()
+                .AsNoTracking()
+                .Where(u => u.Role == "Driver" && u.Status == "Active");
+
+            var absentNowQuery = _unitOfWork.Repository<Absentdriver>()
+                .GetAll()
+                .AsNoTracking()
+                .Where(a =>
+                    (a.Absentfrom <= now && a.Absentto >= now) ||
+                    (a.Absentfrom <= nowVn && a.Absentto >= nowVn));
+
+            var openOrdersQuery = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .AsNoTracking()
+                .Where(oh =>
+                    oh.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString() ||
+                    oh.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString());
+
+            var availableDrivers = await
+                (from d in baseDriversQuery
+                 join ab in absentNowQuery on d.Userid equals ab.Driverid into abGroup
+                 from ab in abGroup.DefaultIfEmpty()
+                 where ab == null
+
+                 join od in openOrdersQuery on d.Userid equals od.Assignedto into odGroup
+                 select new DriverResponse
+                 {
+                     UserId = d.Userid,
+                     Fullname = d.Fullname,
+                     Role = d.Role,
+                     Status = d.Status,
+                     Avatar = d.Avatar,
+                     Dob = d.Dob,
+                     Gender = d.Gender,
+                     PhoneNumber = d.Phonenumber,
+
+                     PickupOrderCount = odGroup.Count(o =>
+                                           o.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString()),
+                     DeliveryOrderCount = odGroup.Count(o =>
+                                           o.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString()),
+                     CurrentOrderCount = odGroup.Count()
+                 })
+                .ToListAsync();
+
+            return availableDrivers;
         }
     }
 }

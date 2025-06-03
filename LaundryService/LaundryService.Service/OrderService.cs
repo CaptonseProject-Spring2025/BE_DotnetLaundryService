@@ -1245,5 +1245,92 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task<PaginationResult<AssignedOrderDetailResponse>> GetAssignedPickupsAsync(HttpContext ctx, int page, int pageSize)
+        {
+            var query = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .AsNoTracking()
+                .Where(ah => ah.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString()
+                             && ah.Completedat == null)
+                .Include(ah => ah.Order)
+                    .ThenInclude(o => o.User)
+                .Include(ah => ah.AssignedtoNavigation)
+                .OrderByDescending(ah => ah.Assignedat);
+            int total = await query.CountAsync();
+            var rows = await query.Skip((page - 1) * pageSize)
+                                   .Take(pageSize)
+                                   .ToListAsync();
+
+            var list = rows.Select(r =>
+            {
+                var order = r.Order;
+                var customer = order.User;
+                var driver = r.AssignedtoNavigation;
+
+                return new AssignedOrderDetailResponse
+                {
+                    AssignmentId = r.Assignmentid,
+                    OrderId = order.Orderid,
+
+                    CustomerFullname = customer.Fullname,
+                    CustomerPhone = customer.Phonenumber,
+                    Address = order.Pickupaddressdetail,
+                    TotalPrice = order.Totalprice,
+
+                    DriverFullname = driver?.Fullname,
+                    DriverPhone = driver?.Phonenumber,
+
+                    AssignedAt = _util.ConvertToVnTime(r.Assignedat ?? DateTime.UtcNow),
+                    Status = r.Status
+                };
+            }).ToList();
+
+            return new PaginationResult<AssignedOrderDetailResponse>(list, total, page, pageSize);
+        }
+
+        public async Task<PaginationResult<AssignedOrderDetailResponse>> GetAssignedDeliveriesAsync(HttpContext ctx, int page, int pageSize)
+        {
+            var query = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .AsNoTracking()
+                .Where(ah => ah.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString()
+                             && ah.Completedat == null)
+                .Include(ah => ah.Order)
+                    .ThenInclude(o => o.User)
+                .Include(ah => ah.AssignedtoNavigation)
+                .OrderByDescending(ah => ah.Assignedat);
+
+            int total = await query.CountAsync();
+            var rows = await query.Skip((page - 1) * pageSize)
+                                   .Take(pageSize)
+                                   .ToListAsync();
+
+            var list = rows.Select(r =>
+            {
+                var order = r.Order;
+                var customer = order.User;
+                var driver = r.AssignedtoNavigation;
+
+                return new AssignedOrderDetailResponse
+                {
+                    AssignmentId = r.Assignmentid,
+                    OrderId = order.Orderid,
+
+                    CustomerFullname = customer.Fullname,
+                    CustomerPhone = customer.Phonenumber,
+                    Address = order.Deliveryaddressdetail,
+                    TotalPrice = order.Totalprice,
+
+                    DriverFullname = driver?.Fullname,
+                    DriverPhone = driver?.Phonenumber,
+
+                    AssignedAt = _util.ConvertToVnTime(r.Assignedat ?? DateTime.UtcNow),
+                    Status = r.Status
+                };
+            }).ToList();
+
+            return new PaginationResult<AssignedOrderDetailResponse>(list, total, page, pageSize);
+        }
     }
 }

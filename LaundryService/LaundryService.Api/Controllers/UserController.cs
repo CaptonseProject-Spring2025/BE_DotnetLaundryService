@@ -321,5 +321,57 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Lấy <b>danh sách tài xế khả dụng</b> cùng số đơn đang được giao / nhận.
+        /// </summary>
+        /// <returns>
+        /// Trả về một đối tượng ẩn danh chứa:
+        /// <list type="bullet">
+        ///   <item>
+        ///     <description><c>count</c>: số tài xế thỏa điều kiện.</description>
+        ///   </item>
+        ///   <item>
+        ///     <description><c>data</c>: mảng các <see cref="DriverResponse"/>.</description>
+        ///   </item>
+        /// </list>
+        /// </returns>
+        /// <remarks>
+        /// **Điều kiện tài xế được đưa vào danh sách**  
+        /// - `Role == "Driver"` và `Status == "Active"`.  
+        /// - Không nằm trong bất kỳ bản ghi <c>Absentdriver</c> đang hiệu lực tại thời điểm gọi (bao gồm cả bản ghi cũ lưu giờ VN).  
+        /// 
+        /// **Thông tin thống kê kèm theo mỗi tài xế**  
+        /// - <c>PickupOrderCount</c>: tổng đơn ở trạng thái <c>ASSIGNED_PICKUP</c>.  
+        /// - <c>DeliveryOrderCount</c>: tổng đơn ở trạng thái <c>ASSIGNED_DELIVERY</c>.  
+        /// - <c>CurrentOrderCount</c>: tổng hai giá trị trên.  
+        /// 
+        /// **Yêu cầu quyền**: Phải đăng nhập với vai trò **Admin**.  
+        /// 
+        /// **Response codes**  
+        /// - **200** – Trả về danh sách tài xế.  
+        /// - **500** – Lỗi phía server.  
+        /// </remarks>
+
+        [HttpGet("drivers/available")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAvailableDrivers()
+        {
+            try
+            {
+                var drivers = await _userService.GetAvailableDriversAsync();
+
+                return Ok(new
+                {
+                    Count = drivers.Count,
+                    Data = drivers
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
     }
 }
