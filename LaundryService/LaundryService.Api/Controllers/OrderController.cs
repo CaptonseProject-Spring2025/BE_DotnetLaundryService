@@ -409,6 +409,7 @@ namespace LaundryService.Api.Controllers
         /// <param name="orderId"></param>
         /// <returns></returns>
         [HttpGet("search/{orderId}")]
+        [ProducesResponseType(typeof(UserOrderResponse), 200)]
         public async Task<IActionResult> GetOrderById(string orderId)
         {
             try

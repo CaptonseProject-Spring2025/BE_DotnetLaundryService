@@ -616,6 +616,41 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// CustomerStaff thêm sản phẩm vào Order của một khách hàng khác.
+        /// </summary>
+        /// <param name="orderId">Id của đơn hàng mà CustomerStaff muốn thêm sản phẩm.</param>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("order/add-item")]
+        public async Task<IActionResult> AddItemToOrder(string orderId, [FromBody] AddToCartRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _customerStaffService.AddItemToOrderAsync(orderId, request);
+                return Ok(new { Message = "Add item successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// CustomerStaff tạo địa chỉ mới cho người dùng.
         /// </summary>
         /// <param name="userId"></param>

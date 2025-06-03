@@ -1,4 +1,5 @@
-﻿using LaundryService.Domain.Entities;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using LaundryService.Domain.Entities;
 using LaundryService.Domain.Enums;
 using LaundryService.Domain.Interfaces;
 using LaundryService.Domain.Interfaces.Services;
@@ -440,6 +441,143 @@ namespace LaundryService.Service
             try
             {
                 await _orderService.AddToCartNoTransactionAsync(userId, request);
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Hàm private so sánh xem 2 tập ExtraId có giống hệt nhau không.
+        /// </summary>
+        private bool ExtrasAreTheSame(ICollection<Orderextra> existingExtras, List<Guid> newExtraIds)
+        {
+            var existingIds = existingExtras.Select(e => e.Extraid).ToHashSet();
+            var newIds = newExtraIds.ToHashSet();
+
+            if (existingIds.Count != newIds.Count)
+                return false;
+
+            return existingIds.SetEquals(newIds);
+        }
+
+        /// <summary>CustomerStaff thêm item vào Order.</summary>
+        public async Task AddItemToOrderAsync(string orderId, AddToCartRequest request)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 1) Kiểm tra ServiceDetail
+                var serviceDetail = await _unitOfWork
+                    .Repository<Servicedetail>()
+                    .GetAsync(s => s.Serviceid == request.ServiceDetailId);
+
+                if (serviceDetail == null)
+                    throw new KeyNotFoundException("Service detail not found.");
+
+                // 2) Tìm Order INCART
+                var order = _unitOfWork.Repository<Order>().GetAll().FirstOrDefault(o => o.Orderid == orderId);
+
+                // 3) Kiểm tra ExtraIds
+                var validExtras = new List<Extra>();
+                if (request.ExtraIds != null && request.ExtraIds.Count > 0)
+                {
+                    validExtras = _unitOfWork.Repository<Extra>()
+                        .GetAll()
+                        .Where(e => request.ExtraIds.Contains(e.Extraid))
+                        .ToList();
+
+                    var invalidIds = request.ExtraIds.Except(validExtras.Select(x => x.Extraid)).ToList();
+                    if (invalidIds.Any())
+                    {
+                        throw new ApplicationException($"Some extras not found: {string.Join(", ", invalidIds)}");
+                    }
+                }
+
+                decimal newItemBasePrice = 0;
+                decimal newItemExtraPrice = 0;
+
+                // 4) Tìm xem đã có OrderItem trùng ServiceDetail & EXACT extras chưa
+                //    (Sẽ load kèm OrderExtras để so sánh)
+                //    Chỉ load những OrderItem có ServiceID == serviceDetail.Serviceid
+                //    Rồi so sánh ExtraIds
+                var orderItemsSameService = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Where(oi => oi.Orderid == order.Orderid && oi.Serviceid == serviceDetail.Serviceid)
+                    .ToList();
+
+                Orderitem matchedItem = null;
+                foreach (var oi in orderItemsSameService)
+                {
+                    newItemBasePrice = oi.Baseprice ?? 0;
+
+                    // Lấy list OrderExtra gắn với OrderItem này
+                    var oiExtras = _unitOfWork.Repository<Orderextra>()
+                        .GetAll()
+                        .Where(e => e.Orderitemid == oi.Orderitemid)
+                        .ToList();
+
+                    newItemExtraPrice = oiExtras.Sum(e => e.Extraprice ?? 0);
+
+                    // So sánh
+                    if (ExtrasAreTheSame(oiExtras, request.ExtraIds ?? new List<Guid>()))
+                    {
+                        matchedItem = oi;
+                        break;
+                    }
+                    else
+                    {
+                        newItemBasePrice = 0;
+                        newItemExtraPrice = 0;
+                    }
+                }
+
+                // 5) Nếu matchedItem != null => tăng Quantity
+                if (matchedItem != null)
+                {
+                    matchedItem.Quantity += request.Quantity;
+                    await _unitOfWork.Repository<Orderitem>().UpdateAsync(matchedItem, saveChanges: false);
+                }
+                else
+                {
+                    newItemBasePrice = serviceDetail.Price; // Giá cơ bản của ServiceDetail
+
+                    // Ngược lại => tạo OrderItem mới
+                    var newOrderItem = new Orderitem
+                    {
+                        Orderid = order.Orderid,
+                        Serviceid = serviceDetail.Serviceid,
+                        Quantity = request.Quantity,
+                        Baseprice = serviceDetail.Price,
+                        Createdat = DateTime.UtcNow
+                    };
+                    await _unitOfWork.Repository<Orderitem>().InsertAsync(newOrderItem, saveChanges: false);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Nếu có Extras => Insert OrderExtra
+                    if (validExtras.Any())
+                    {
+                        var newOrderExtras = validExtras.Select(ext => new Orderextra
+                        {
+                            Orderitemid = newOrderItem.Orderitemid,
+                            Extraid = ext.Extraid,
+                            Extraprice = ext.Price,
+                            Createdat = DateTime.UtcNow
+                        }).ToList();
+
+                        newItemExtraPrice = newOrderExtras.Sum(e => e.Extraprice ?? 0);
+
+                        await _unitOfWork.Repository<Orderextra>().InsertRangeAsync(newOrderExtras, saveChanges: false);
+                    }
+                }
+                order.Totalprice += (newItemBasePrice + newItemExtraPrice) * request.Quantity;
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+
                 await _unitOfWork.CommitTransaction();
             }
             catch
