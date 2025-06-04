@@ -324,13 +324,6 @@ namespace LaundryService.Service
                 if (assignment == null)
                     throw new KeyNotFoundException("Không tìm thấy assignmentId này.");
 
-                // 3) Kiểm tra thời gian, so sánh (UTCNow - Assignedat) <= 30p ?
-                if (!assignment.Assignedat.HasValue)
-                {
-                    // Không có AssignedAt => logic sai
-                    throw new ApplicationException("Assignment chưa có thông tin AssignedAt.");
-                }
-
                 // 4) Cập nhật assignment
                 //    Status = SUCCESS (coi như staff kết thúc assignment),
                 //    Completedat = utcnow
