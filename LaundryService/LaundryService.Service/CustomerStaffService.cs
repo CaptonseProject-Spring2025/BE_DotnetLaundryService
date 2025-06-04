@@ -619,7 +619,8 @@ namespace LaundryService.Service
                     $"Thời gian xử lý không đủ vì món đồ {req.ServiceName} có thời gian xử lý tối thiểu là {min} {unit}.");
             }
 
-            if (req.DeliveryAddressId != Guid.Empty)
+            // Nếu address delivery không null, thì tính phí ship
+            if (req.DeliveryAddressId.HasValue && req.DeliveryAddressId.Value != Guid.Empty)
             {
                 // Kiểm tra địa chỉ pickup/delivery có tồn tại không
                 var deliveryAddr = await _unitOfWork.Repository<Address>().FindAsync(req.DeliveryAddressId)
