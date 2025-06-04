@@ -809,8 +809,10 @@ namespace LaundryService.Service
             if (order == null)
                 throw new KeyNotFoundException("Order not found.");
 
+            decimal deltaPrice = request.otherPrice - (order.Otherprice ?? 0);
+
             // 2) Cập nhật OtherPrice và Note
-            order.Totalprice += request.otherPrice;
+            order.Totalprice += deltaPrice;
             order.Otherprice = request.otherPrice;
             order.Noteforotherprice = request.otherPriceNote;
             // 3) Cập nhật Order
