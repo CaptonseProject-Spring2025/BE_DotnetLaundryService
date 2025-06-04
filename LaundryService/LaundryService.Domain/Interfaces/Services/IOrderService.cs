@@ -50,6 +50,9 @@ namespace LaundryService.Domain.Interfaces.Services
         /// </summary>
         Task<AdditionalShippingFeeResponse> CalculateFailShippingFeeAsync(string orderId);
 
+        //Customer hủy đơn hàng
+        Task<bool> CancelOrderAsync(string orderId, string notes);
+
         // --------------------- CUSTOMER STAFF ------------------
         Task<CartResponse> GetCartAsync(Guid userId);
 
