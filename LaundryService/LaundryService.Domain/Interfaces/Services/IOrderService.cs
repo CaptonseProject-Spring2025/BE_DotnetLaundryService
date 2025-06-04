@@ -45,6 +45,11 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task AddToCartNoTransactionAsync(Guid userId, AddToCartRequest request);
 
+        /// <summary>
+        /// Tính phí phát sinh do pickup / delivery thất bại của 1 order.
+        /// </summary>
+        Task<AdditionalShippingFeeResponse> CalculateFailShippingFeeAsync(string orderId);
+
         // --------------------- CUSTOMER STAFF ------------------
         Task<CartResponse> GetCartAsync(Guid userId);
 

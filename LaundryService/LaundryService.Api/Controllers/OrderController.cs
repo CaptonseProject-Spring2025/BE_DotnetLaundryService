@@ -658,5 +658,26 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Tính phí phát sinh do pickup / delivery thất bại của một order.
+        /// </summary>
+        /// <param name="orderId"></param>
+        /// <returns></returns>
+        [HttpGet("no-show/{orderId}")]
+        [Authorize(Roles = "Admin,Staff,CustomerStaff,Driver")]
+        [ProducesResponseType(typeof(AdditionalShippingFeeResponse), 200)]
+        public async Task<IActionResult> GetFailShippingFee(string orderId)
+        {
+            try
+            {
+                var result = await _orderService.CalculateFailShippingFeeAsync(orderId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
+            catch (ArgumentException ex) { return BadRequest(new { Message = ex.Message }); }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message}); }
+        }
+
     }
 }

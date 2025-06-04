@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Ocsp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1247,6 +1248,74 @@ namespace LaundryService.Service
                 await _unitOfWork.RollbackTransaction();
                 throw;
             }
+        }
+
+        public async Task<AdditionalShippingFeeResponse> CalculateFailShippingFeeAsync(string orderId)
+        {
+            if (string.IsNullOrWhiteSpace(orderId))
+                throw new ArgumentException("orderId is required.");
+
+            /* ---------- 1. Lấy Order ---------- */
+            var order = _unitOfWork.Repository<Order>()
+                         .GetAll()
+                         .FirstOrDefault(o => o.Orderid == orderId && o.Currentstatus != OrderStatusEnum.INCART.ToString());
+
+            if (order == null)
+                throw new KeyNotFoundException($"Order '{orderId}' not found.");
+
+            /* ---------- 2. Đếm số lần failed ---------- */
+            var histories = _unitOfWork.Repository<Orderstatushistory>()
+                            .GetAll()
+                            .Where(h => h.Orderid == orderId)
+                            .ToList();
+
+            int pickupFailCount = histories.Count(h => h.Status == OrderStatusEnum.PICKUPFAILED.ToString());
+            int deliveryFailCount = histories.Count(h => h.Status == OrderStatusEnum.DELIVERYFAILED.ToString());
+
+            if (pickupFailCount == 0 && deliveryFailCount == 0)
+                return new AdditionalShippingFeeResponse();              // tất cả = 0
+
+            /* ---------- 3. Đọc bảng Area – SHIPPINGFEE ---------- */
+            var shippingAreas = _unitOfWork.Repository<Area>()
+                                .GetAll()
+                                .Where(a => a.Areatype.ToUpper() == "SHIPPINGFEE")
+                                .ToList();
+
+            if (!shippingAreas.Any(a => a.Shippingfee.HasValue))
+                throw new ApplicationException("Bảng Area (ShippingFee) chưa có giá nào.");
+
+            // Build tra cứu: quận → Area
+            var districtToArea = shippingAreas
+                .Where(a => a.Districts != null)
+                .SelectMany(a => a.Districts!.Select(d => new { d = d.Trim(), Area = a }))
+                .ToDictionary(x => x.d, x => x.Area, StringComparer.OrdinalIgnoreCase);
+
+            /* ---------- 4. Hàm nội bộ lấy phí 1 chiều ---------- */
+            decimal GetLegFee(decimal? lat, decimal? lon)
+            {
+                if (lat == null || lon == null) return 0;
+
+                var district = _mapboxService
+                               .GetDistrictFromCoordinatesAsync(lat.Value, lon.Value)
+                               .GetAwaiter().GetResult() ?? "Unknown";
+
+                return GetLegShippingFee(districtToArea, district, shippingAreas);
+            }
+
+            /* ---------- 5. Tính phí ---------- */
+            decimal pickupLegFee = GetLegFee(order.Pickuplatitude, order.Pickuplongitude);
+            decimal deliveryLegFee = GetLegFee(order.Deliverylatitude, order.Deliverylongitude);
+
+            var response = new AdditionalShippingFeeResponse
+            {
+                PickupFailCount = pickupFailCount,
+                PickupFailFee = pickupLegFee * pickupFailCount,
+
+                DeliveryFailCount = deliveryFailCount,
+                DeliveryFailFee = deliveryLegFee * deliveryFailCount
+            };
+
+            return response;
         }
 
         public async Task<PaginationResult<AssignedOrderDetailResponse>> GetAssignedPickupsAsync(HttpContext ctx, int page, int pageSize)

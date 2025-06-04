@@ -826,6 +826,7 @@ namespace LaundryService.Service
                 throw new KeyNotFoundException("Order not found.");
 
             // 2) Cập nhật OtherPrice và Note
+            order.Totalprice += request.otherPrice;
             order.Otherprice = request.otherPrice;
             order.Noteforotherprice = request.otherPriceNote;
             // 3) Cập nhật Order
