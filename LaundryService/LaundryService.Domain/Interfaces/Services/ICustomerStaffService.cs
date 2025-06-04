@@ -12,7 +12,7 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface ICustomerStaffService
     {
-        Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
+        Task<PaginationResult<PendingOrdersResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize);
 
         Task<Guid> ProcessOrderAsync(HttpContext httpContext, string orderId);
 
