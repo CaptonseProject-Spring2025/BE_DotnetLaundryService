@@ -713,7 +713,10 @@ namespace LaundryService.Service
 
                 // 4) Gán thời gian delivery
                 if (!string.IsNullOrEmpty(request.Deliverytime.ToString()))
-                    order.Deliverytime = request.Deliverytime;
+                {
+                    DateTime deliveryTime = request.Deliverytime.Value.ToUniversalTime(); // Chuyển sang UTC
+                    order.Deliverytime = deliveryTime;
+                }
 
                 // 5) Cập nhật giá cho các OrderItem và OrderExtra
                 decimal basePriceSum = 0m;
