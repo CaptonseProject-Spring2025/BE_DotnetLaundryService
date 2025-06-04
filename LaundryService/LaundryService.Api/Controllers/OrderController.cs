@@ -665,7 +665,7 @@ namespace LaundryService.Api.Controllers
         /// <param name="orderId"></param>
         /// <returns></returns>
         [HttpGet("no-show/{orderId}")]
-        [Authorize(Roles = "Admin,Staff,CustomerStaff,Driver")]
+        [Authorize]
         [ProducesResponseType(typeof(AdditionalShippingFeeResponse), 200)]
         public async Task<IActionResult> GetFailShippingFee(string orderId)
         {
