@@ -24,5 +24,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task DeleteOrderAsync(string orderId);
 
         Task DeleteOrdersAsync(List<string> orderIds);
+
+        Task CancelAssignmentAsync(HttpContext httpContext, CancelAssignmentRequest request);
     }
 }

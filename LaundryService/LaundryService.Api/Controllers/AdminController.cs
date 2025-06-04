@@ -538,5 +538,38 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Hủy công việc vừa giao cho tài xế(tài xế đã bắt đầu đi nhận/giao hàng không thể hủy)
+        /// </summary>
+        [HttpPost("cancel-assignment")]
+        public async Task<IActionResult> CancelAssignment([FromBody] CancelAssignmentRequest request)
+        {
+            try
+            {
+                await _adminService.CancelAssignmentAsync(HttpContext, request);
+                return Ok(new { Message = "Huỷ giao việc thành công!" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
     }
 }

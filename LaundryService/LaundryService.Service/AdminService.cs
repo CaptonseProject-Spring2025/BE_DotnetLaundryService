@@ -773,5 +773,74 @@ namespace LaundryService.Service
                 throw;
             }
         }
+
+        public async Task CancelAssignmentAsync(HttpContext httpContext, CancelAssignmentRequest request)
+        {
+
+            if (request.AssignmentIds is null || request.AssignmentIds.Count == 0)
+                throw new ArgumentException("AssignmentIds cannot be empty.");
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                foreach (var assignmentId in request.AssignmentIds)
+                {
+                    // Lấy assignment
+                    var assignment = _unitOfWork.Repository<Orderassignmenthistory>()
+                        .GetAll()
+                        .FirstOrDefault(a => a.Assignmentid == assignmentId);
+
+                    if (assignment is null)
+                        throw new KeyNotFoundException($"Assignment {assignmentId} không tồn tại.");
+
+                    // Lấy Order tương ứng
+                    var order = _unitOfWork.Repository<Order>()
+                                    .GetAll()
+                                    .FirstOrDefault(o => o.Orderid == assignment.Orderid);
+                    if (order is null)
+                        throw new KeyNotFoundException($"Order {assignment.Orderid} không tồn tại.");
+
+                    // Điều kiện huỷ: assignment.Status phải ở ASSIGNED_PICKUP/DELIVERY
+                    if (!(assignment.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString() ||
+                          assignment.Status == AssignStatusEnum.ASSIGNED_DELIVERY.ToString()))
+                        throw new ApplicationException($"Assignment {assignmentId}: trạng thái không hợp lệ để huỷ (hiện tại: {assignment.Status}).");
+
+                    // Không được có status PICKINGUP trong Orderstatushistory
+                    bool existsPickingUp = _unitOfWork.Repository<Orderstatushistory>()
+                        .GetAll()
+                        .Any(s => s.Orderid == order.Orderid && s.Status == OrderStatusEnum.PICKINGUP.ToString());
+                    if (existsPickingUp)
+                        throw new ApplicationException($"Order {order.Orderid}: tài xế đã bắt đầu lấy hàng (PICKINGUP), không thể huỷ.");
+
+                    // Xoá assignment
+                    await _unitOfWork.Repository<Orderassignmenthistory>()
+                        .DeleteAsync(assignment, saveChanges: false);
+
+                    // Xoá status "SCHEDULED_*" liên quan
+                    var scheduledStatuses = _unitOfWork.Repository<Orderstatushistory>()
+                        .GetAll()
+                        .Where(s => s.Orderid == order.Orderid &&
+                               (s.Status == OrderStatusEnum.SCHEDULED_PICKUP.ToString() ||
+                                s.Status == OrderStatusEnum.SCHEDULED_DELIVERY.ToString()))
+                        .ToList();
+                    foreach (var sh in scheduledStatuses)
+                        await _unitOfWork.Repository<Orderstatushistory>()
+                            .DeleteAsync(sh, saveChanges: false);
+
+                    // Cập nhật Order.Currentstatus
+                    order.Currentstatus = OrderStatusEnum.CONFIRMED.ToString();
+                    await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
     }
 }
