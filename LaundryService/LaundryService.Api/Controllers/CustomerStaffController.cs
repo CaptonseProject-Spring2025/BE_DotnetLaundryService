@@ -658,7 +658,7 @@ namespace LaundryService.Api.Controllers
         /// </summary>
         /// <param name="request"></param>
         /// <returns></returns>
-        [HttpPost("order/update-order")]
+        [HttpPut("order/update-order")]
         public async Task<IActionResult> UpdateOrderItem(UpdateCartItemRequest request)
         {
             if (!ModelState.IsValid)
