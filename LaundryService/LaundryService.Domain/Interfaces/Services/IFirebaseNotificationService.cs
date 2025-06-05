@@ -9,6 +9,6 @@ namespace LaundryService.Domain.Interfaces.Services
 {
     public interface IFirebaseNotificationService
     {
-        Task SendOrderNotificationAsync(string userId, NotificationType type, Dictionary<string, string>? data = null);
+        Task SendOrderNotificationAsync(string userId, NotificationType type, string? orderId = null, Dictionary<string, string>? data = null);
     }
 }

@@ -19,21 +19,22 @@ namespace LaundryService.Domain.Enums
         PICKUPFAILED = 5,
 
         PICKEDUP = 6,
-        CHECKING = 7,
-        CHECKED = 8,
-        WASHING = 9,
-        WASHED = 10,
-        QUALITY_CHECKED = 11,
-        SCHEDULED_DELIVERY = 12,
-        DELIVERING = 13,
+        ARRIVED = 7,
+        CHECKING = 8,
+        CHECKED = 9,
+        WASHING = 10,
+        WASHED = 11,
+        QUALITY_CHECKED = 12,
+        SCHEDULED_DELIVERY = 13,
+        DELIVERING = 14,
 
         // Driver đã đến lấy đồ nhưng không thành công, KH hủy or giao hôm khác
         // orderStatushistory vẫn lưu trạng thái, hôm sau Admin giao lại thì quay lại trạng thái SCHEDULED_DELIVERY
-        DELIVERYFAILED = 14,
-        
-        DELIVERED = 15,
-        COMPLETED = 16,
-        CANCELLED = 17,
-        COMPLAINT = 18
+        DELIVERYFAILED = 15,
+
+        DELIVERED = 16,
+        COMPLETED = 17,
+        CANCELLED = 18,
+        COMPLAINT = 19
     }
 }
