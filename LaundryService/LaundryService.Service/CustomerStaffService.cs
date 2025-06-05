@@ -568,6 +568,85 @@ namespace LaundryService.Service
             }
         }
 
+        // Cập nhật item trong Order
+        public async Task UpdateItemInOrderAsync(UpdateCartItemRequest request)
+        {
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // 1) Tìm OrderItem -> Include(Order) để lấy ra order
+                var orderItem = _unitOfWork.Repository<Orderitem>()
+                    .GetAll()
+                    .Include(oi => oi.Order)
+                    .FirstOrDefault(oi => oi.Orderitemid == request.OrderItemId);
+
+                if (orderItem == null)
+                    throw new KeyNotFoundException("Order item not found.");
+
+                if (orderItem.Order.Currentstatus != "PENDING")
+                    throw new ApplicationException("Cannot edit items in a non-PENDING order.");
+
+                var order = orderItem.Order;
+            
+                // 2) Xóa OrderExtra liên quan đến item này
+                var oldOrderExtras = _unitOfWork.Repository<Orderextra>()
+                    .GetAll()
+                    .Where(e => e.Orderitemid == orderItem.Orderitemid)
+                    .ToList();
+
+                // Tổng giá cũ của item
+                decimal oldItemTotalPrice = (orderItem.Baseprice ?? 0) * orderItem.Quantity + oldOrderExtras.Sum(e => e.Extraprice ?? 0);
+
+                // Cập nhật giá TotalPrice của Order
+                order.Totalprice -= oldItemTotalPrice;
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+                await _unitOfWork.SaveChangesAsync();
+
+                if (oldOrderExtras.Any())
+                {
+                    await _unitOfWork.Repository<Orderextra>().DeleteRangeAsync(oldOrderExtras, saveChanges: false);
+                }
+
+                // xóa luôn chính OrderItem này
+                await _unitOfWork.Repository<Orderitem>().DeleteAsync(orderItem, saveChanges: false);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Nếu quantity = 0 thì không cần thêm lại
+                // kiểm tra xem order có còn item nào không, nếu không thì báo lỗi không thể cập nhật
+                if (request.Quantity == 0)
+                {
+                    var remainingItems = _unitOfWork.Repository<Orderitem>()
+                        .GetAll()
+                        .Where(oi => oi.Orderid == order.Orderid)
+                        .Count();
+
+                    if (remainingItems == 0)
+                    {
+                        throw new ApplicationException("Cannot update item because order has no items left.");
+                    }
+                }
+                else
+                {
+                    // Nếu quantity > 0 thì thêm lại Item mới
+                    var addRequest = new AddToCartRequest
+                    {
+                        ServiceDetailId = orderItem.Serviceid,
+                        Quantity = request.Quantity,
+                        ExtraIds = request.ExtraIds
+                    };
+                    await AddItemToOrderAsync(order.Orderid, addRequest);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
+
         private decimal GetLegShippingFee(
             IDictionary<string, Area> districtToArea,          // tra cứu quận → Area
             string district,

@@ -6,6 +6,7 @@ using LaundryService.Dto.Responses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Update.Internal;
 
 namespace LaundryService.Api.Controllers
 {
@@ -633,6 +634,40 @@ namespace LaundryService.Api.Controllers
             {
                 await _customerStaffService.AddItemToOrderAsync(orderId, request);
                 return Ok(new { Message = "Add item successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật dịch vụ trong đơn hàng
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("order/update-order")]
+        public async Task<IActionResult> UpdateOrderItem(UpdateCartItemRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _customerStaffService.UpdateItemInOrderAsync(request);
+                return Ok(new { Message = "Update item successfully." });
             }
             catch (KeyNotFoundException ex)
             {

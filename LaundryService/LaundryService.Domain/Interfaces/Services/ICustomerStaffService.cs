@@ -28,6 +28,8 @@ namespace LaundryService.Domain.Interfaces.Services
 
         Task AddItemToOrderAsync(string orderId, AddToCartRequest request);
 
+        Task UpdateItemInOrderAsync(UpdateCartItemRequest request);
+
         Task<CalculateShippingFeeResponse> CalculateShippingFeeAsync(CusStaffCalculateShippingFeeRequest req);
 
         Task<string> CusStaffPlaceOrderAsync(HttpContext httpContext, Guid userId, CusStaffPlaceOrderRequest request);
