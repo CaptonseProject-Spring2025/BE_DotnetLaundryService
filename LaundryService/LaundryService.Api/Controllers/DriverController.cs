@@ -59,7 +59,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.PickupStarted
+                            NotificationType.PickupStarted,
+                            orderId
                         );
                     }
                     catch (Exception ex)
@@ -121,7 +122,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.PickedUp
+                            NotificationType.PickedUp,
+                            orderId
                         );
                     }
                     catch (Exception ex)
@@ -156,16 +158,20 @@ namespace LaundryService.Api.Controllers
 
 
         /// <summary>
-        /// Xác nhận hoàn tất nhận hàng
+        /// Xác nhận tài xế đã mang hàng về (ARRIVED) kèm ảnh chứng minh
         /// </summary>
-        [HttpPost("confirm-pickup-success")]
+        [HttpPost("confirm-pickup-arrived")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(string), 200)]
-        public async Task<IActionResult> ConfirmOrderPickupSuccess([FromQuery] string orderId)
+        public async Task<IActionResult> ConfirmOrderPickupArrived(
+            [FromForm] string orderId,
+            [FromForm] List<IFormFile> files)
         {
             try
             {
-                await _driverService.ConfirmOrderPickupSuccessAsync(HttpContext, orderId);
-                return Ok(new { Message = "Tài xế đã nhận hàng về thành công." });
+                await _driverService.ConfirmOrderPickupArrivedAsync(HttpContext, orderId);
+
+                return Ok(new { Message = "Tài xế đã mang hàng về thành công (ARRIVED)." });
             }
             catch (KeyNotFoundException ex)
             {

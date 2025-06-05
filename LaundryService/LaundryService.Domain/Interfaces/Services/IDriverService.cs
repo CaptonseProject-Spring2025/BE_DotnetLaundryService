@@ -11,7 +11,7 @@ namespace LaundryService.Domain.Interfaces.Services
     public interface IDriverService
     {
         Task StartOrderPickupAsync(HttpContext httpContext, string orderId);
-        Task ConfirmOrderPickupSuccessAsync(HttpContext httpContext, string orderId);
+        Task ConfirmOrderPickupArrivedAsync(HttpContext httpContext, string orderId);
         Task ConfirmOrderPickedUpAsync(HttpContext httpContext, string orderId, string notes);
         Task CancelAssignedPickupAsync(HttpContext httpContext, string orderId, string cancelReason);
         Task CancelPickupNoShowAsync(HttpContext httpContext, string orderId);

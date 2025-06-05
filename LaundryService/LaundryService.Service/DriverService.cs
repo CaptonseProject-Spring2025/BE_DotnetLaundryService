@@ -163,60 +163,79 @@ namespace LaundryService.Service
             }
         }
 
-        public async Task ConfirmOrderPickupSuccessAsync(HttpContext httpContext, string orderId)
+        public async Task ConfirmOrderPickupArrivedAsync(HttpContext httpContext, string orderId)
         {
             await _unitOfWork.BeginTransaction();
-
             try
             {
                 var statusPickedUp = OrderStatusEnum.PICKEDUP.ToString();
+                var statusArrived = OrderStatusEnum.ARRIVED.ToString();
                 var statusPickupSuccess = AssignStatusEnum.PICKUP_SUCCESS.ToString();
                 var statusAssignedPickup = AssignStatusEnum.ASSIGNED_PICKUP.ToString();
+
                 var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
                 var orderRepo = _unitOfWork.Repository<Order>();
                 var assignmentRepo = _unitOfWork.Repository<Orderassignmenthistory>();
-                var statusHistoryRepo = _unitOfWork.Repository<Orderstatushistory>();
+                var statusHistRepo = _unitOfWork.Repository<Orderstatushistory>();
+                var photoRepo = _unitOfWork.Repository<Orderphoto>();
 
-                var order = await orderRepo
-                    .GetAll()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(o => o.Orderid == orderId);
-                if (order == null)
-                    throw new KeyNotFoundException("Đơn hàng không tồn tại.");
+                var order = await orderRepo.GetAll()
+                                           .AsNoTracking()
+                                           .FirstOrDefaultAsync(o => o.Orderid == orderId)
+                          ?? throw new KeyNotFoundException("Đơn hàng không tồn tại.");
 
-                var assignedTo = await assignmentRepo
-                    .GetAll()
-                    .Where(a => a.Orderid == orderId && a.Status == statusAssignedPickup)
-                    .Select(a => a.Assignedto)
-                    .FirstOrDefaultAsync();
+                if (order.Currentstatus != statusPickedUp)
+                    throw new InvalidOperationException("Đơn hàng đang không ở bước này, vui lòng kiểm tra lại.");
+
+                var assignedTo = await assignmentRepo.GetAll()
+                                                     .Where(a => a.Orderid == orderId && a.Status == statusAssignedPickup)
+                                                     .Select(a => a.Assignedto)
+                                                     .FirstOrDefaultAsync();
+
                 if (assignedTo == default)
                     throw new InvalidOperationException("Đơn hàng này chưa được phân công nhận hàng.");
 
                 if (assignedTo != userId)
                     throw new UnauthorizedAccessException("Bạn không có quyền hoàn thành bước nhận hàng này.");
 
-                if (order.Currentstatus != statusPickedUp)
-                    throw new InvalidOperationException("Đơn hàng đang không ở bước này, vui lòng kiểm tra lại.");
+                var files = httpContext.Request.Form.Files;
+                if (files == null || files.Count == 0)
+                    throw new ArgumentException("Vui lòng chụp và gửi ít nhất một ảnh khi mang hàng về.");
 
-                var assignment = await assignmentRepo
-                    .GetAll()
-                    .FirstOrDefaultAsync(a =>
-                        a.Orderid == orderId &&
-                        a.Status == statusAssignedPickup &&
-                        a.Assignedto == userId);
+                var assignment = await assignmentRepo.GetAll()
+                                                     .FirstAsync(a => a.Orderid == orderId &&
+                                                                      a.Status == statusAssignedPickup &&
+                                                                      a.Assignedto == userId);
                 assignment.Status = statusPickupSuccess;
                 assignment.Completedat = DateTime.UtcNow;
                 await assignmentRepo.UpdateAsync(assignment, saveChanges: false);
 
+                order.Currentstatus = statusArrived;
+                await orderRepo.UpdateAsync(order, saveChanges: false);
+
                 var history = new Orderstatushistory
                 {
+                    Statushistoryid = Guid.NewGuid(),
                     Orderid = orderId,
-                    Status = statusPickupSuccess,
-                    Statusdescription = "Tài xế đã nhận hàng về tới nơi",
+                    Status = statusArrived,
+                    Statusdescription = "Tài xế đã mang hàng về đến nơi",
                     Updatedby = userId,
                     Createdat = DateTime.UtcNow
                 };
-                await statusHistoryRepo.InsertAsync(history, saveChanges: false);
+                await statusHistRepo.InsertAsync(history, saveChanges: false);
+
+                var uploadTasks = files.Select(async file =>
+                {
+                    var url = await _fileStorageService.UploadFileAsync(file, "order-photos");
+                    await photoRepo.InsertAsync(new Orderphoto
+                    {
+                        Photoid = Guid.NewGuid(),
+                        Statushistoryid = history.Statushistoryid,
+                        Photourl = url
+                    }, saveChanges: false);
+                });
+                await Task.WhenAll(uploadTasks);
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
