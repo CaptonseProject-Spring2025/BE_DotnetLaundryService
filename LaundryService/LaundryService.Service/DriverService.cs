@@ -875,35 +875,45 @@ namespace LaundryService.Service
             };
         }
 
-        private IQueryable<Orderassignmenthistory> BaseAssignmentQuery(Guid driverId, DateTime start, DateTime end)
-        => _unitOfWork.Repository<Orderassignmenthistory>()
-            .GetAll()
-            .Include(a => a.Order)
-            .Where(a =>
-                a.Assignedto == driverId &&
-                a.Completedat >= start &&
-                a.Completedat < end &&
-               (a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
-             || a.Status == AssignStatusEnum.DELIVERY_SUCCESS.ToString())
-            );
+        private IQueryable<Orderassignmenthistory> BaseAssignmentQuery(
+            Guid driverId, DateTime start, DateTime end)
+        {
+            string pickup = AssignStatusEnum.PICKUP_SUCCESS.ToString();
+            string delivery = AssignStatusEnum.DELIVERY_SUCCESS.ToString();
+
+            return _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .Include(a => a.Order)
+                    .ThenInclude(o => o.Payments)
+                        .ThenInclude(p => p.Paymentmethod)
+                .Where(a => a.Assignedto == driverId
+                         && a.Completedat >= start
+                         && a.Completedat < end
+                         && (a.Status == pickup || a.Status == delivery))
+                .OrderByDescending(a => a.Completedat);
+        }
 
         public async Task<List<DriverStatisticsListResponse>> GetDailyStatisticsListAsync(HttpContext httpContext, DateTime date)
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
             date = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
-            var start = date;
-            var end = start.AddDays(1);
 
-            var events = await BaseAssignmentQuery(driverId, start, end)
-                .OrderBy(a => a.Completedat)
+            var events = await BaseAssignmentQuery(driverId, date, date.AddDays(1))
+
                 .ToListAsync();
 
             return events.Select(a => new DriverStatisticsListResponse
             {
                 OrderId = a.Orderid,
-                CompletedAt = a.Completedat!.Value.TimeOfDay,
+                CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
-                AssignmentStatus = a.Status!
+                AssignmentStatus = a.Status!,
+                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                                     ? a.Order.Payments
+                                           .OrderByDescending(p => p.Paymentdate)
+                                           .FirstOrDefault()?
+                                           .Paymentmethod?.Name
+                                     : null
             }).ToList();
         }
 
@@ -911,26 +921,32 @@ namespace LaundryService.Service
         {
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
             dateInWeek = DateTime.SpecifyKind(dateInWeek.Date, DateTimeKind.Utc);
-            var diff = (7 + (dateInWeek.DayOfWeek - DayOfWeek.Monday)) % 7;
+            int diff = (7 + (dateInWeek.DayOfWeek - DayOfWeek.Monday)) % 7;
             var start = dateInWeek.AddDays(-diff);
             var end = start.AddDays(7);
 
             var events = await BaseAssignmentQuery(driverId, start, end)
-                .OrderBy(a => a.Completedat)
+
                 .ToListAsync();
 
             return events.Select(a => new DriverStatisticsListResponse
             {
                 OrderId = a.Orderid,
-                CompletedAt = a.Completedat!.Value.TimeOfDay,
+                CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
-                AssignmentStatus = a.Status!
+                AssignmentStatus = a.Status!,
+                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                                     ? a.Order.Payments
+                                           .OrderByDescending(p => p.Paymentdate)
+                                           .FirstOrDefault()?
+                                           .Paymentmethod?.Name
+                                     : null
             }).ToList();
         }
 
         public async Task<List<DriverStatisticsListResponse>> GetMonthlyStatisticsListAsync(HttpContext httpContext, int year, int month)
         {
-            if (month < 1 || month > 12)
+            if (month is < 1 or > 12)
                 throw new ArgumentException("Tháng phải nằm trong khoảng 1–12.");
 
             var driverId = _util.GetCurrentUserIdOrThrow(httpContext);
@@ -938,17 +954,22 @@ namespace LaundryService.Service
             var end = start.AddMonths(1);
 
             var events = await BaseAssignmentQuery(driverId, start, end)
-                .OrderBy(a => a.Completedat)
+
                 .ToListAsync();
 
             return events.Select(a => new DriverStatisticsListResponse
             {
                 OrderId = a.Orderid,
-                CompletedAt = a.Completedat!.Value.TimeOfDay,
+                CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
-                AssignmentStatus = a.Status!
+                AssignmentStatus = a.Status!,
+                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                                     ? a.Order.Payments
+                                           .OrderByDescending(p => p.Paymentdate)
+                                           .FirstOrDefault()?
+                                           .Paymentmethod?.Name
+                                     : null
             }).ToList();
         }
-
     }
 }

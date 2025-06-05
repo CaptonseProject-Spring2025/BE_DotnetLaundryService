@@ -9,7 +9,8 @@ namespace LaundryService.Dto.Responses
     public class DriverStatisticsListResponse
     {
         public string OrderId { get; set; } = null!;
-        public TimeSpan CompletedAt { get; set; }
+        public DateTime CompletedAt { get; set; }
+        public string? PaymentName { get; set; }
         public decimal TotalPrice { get; set; }
         public string AssignmentStatus { get; set; }
     }

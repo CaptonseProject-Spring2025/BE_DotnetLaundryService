@@ -15,7 +15,7 @@ namespace LaundryService.Dto.Responses
         public string CustomerFullname { get; set; }
         public string CustomerPhone { get; set; }
         public string Address { get; set; }
-
+        public string CurrentStatus { get; set; }
         public decimal? TotalPrice { get; set; }
 
         // Thông tin tài xế

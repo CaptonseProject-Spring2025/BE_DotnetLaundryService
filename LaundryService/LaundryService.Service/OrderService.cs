@@ -1325,10 +1325,12 @@ namespace LaundryService.Service
                 .AsNoTracking()
                 .Where(ah => ah.Status == AssignStatusEnum.ASSIGNED_PICKUP.ToString()
                              && ah.Completedat == null)
+
                 .Include(ah => ah.Order)
                     .ThenInclude(o => o.User)
                 .Include(ah => ah.AssignedtoNavigation)
                 .OrderByDescending(ah => ah.Assignedat);
+
             int total = await query.CountAsync();
             var rows = await query.Skip((page - 1) * pageSize)
                                    .Take(pageSize)
@@ -1348,6 +1350,7 @@ namespace LaundryService.Service
                     CustomerFullname = customer.Fullname,
                     CustomerPhone = customer.Phonenumber,
                     Address = order.Pickupaddressdetail,
+                    CurrentStatus = order.Currentstatus,
                     TotalPrice = order.Totalprice,
 
                     DriverFullname = driver?.Fullname,
@@ -1392,6 +1395,7 @@ namespace LaundryService.Service
                     CustomerFullname = customer.Fullname,
                     CustomerPhone = customer.Phonenumber,
                     Address = order.Deliveryaddressdetail,
+                    CurrentStatus = order.Currentstatus,
                     TotalPrice = order.Totalprice,
 
                     DriverFullname = driver?.Fullname,
