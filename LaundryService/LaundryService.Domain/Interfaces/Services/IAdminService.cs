@@ -26,5 +26,11 @@ namespace LaundryService.Domain.Interfaces.Services
         Task DeleteOrdersAsync(List<string> orderIds);
 
         Task CancelAssignmentAsync(HttpContext httpContext, CancelAssignmentRequest request);
+
+        Task<List<DriverCashDailyResponse>> GetDriverCashDailyAsync(DateTime date);
+
+        Task<List<DriverCashOrderResponse>> GetDriverCashOrdersAsync(Guid driverId, DateTime date);
+
+        Task MarkCashReturnedAsync(List<string> orderIds);
     }
 }

@@ -575,5 +575,72 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Lấy báo cáo tiền mặt theo ngày cho tất cả tài xế.
+        /// </summary>
+        [HttpGet("driver-cash/daily")]
+        public async Task<ActionResult<List<DriverCashDailyResponse>>> GetDailyCashReport(
+        [FromQuery] DateTime date)
+        {
+            try
+            {
+                var data = await _adminService.GetDriverCashDailyAsync(date);
+                return Ok(data);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách các đơn thu tiền mặt của một tài xế trong ngày.
+        /// </summary>
+        [HttpGet("driver-cash/orders-by-day")]
+        public async Task<ActionResult<List<DriverCashOrderResponse>>> GetCashOrdersByDay(
+        [FromQuery] Guid driverId,
+        [FromQuery] DateTime date)
+        {
+            try
+            {
+                var result = await _adminService.GetDriverCashOrdersAsync(driverId, date);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+
+        }
+
+        /// <summary>
+        /// Đánh dấu các đơn tiền mặt đã được tài xế nộp về Admin.
+        /// </summary>
+        [HttpPost("mark-returned")]
+        public async Task<IActionResult> MarkReturned([FromBody] MarkCashReturnedRequest req)
+        {
+            try
+            {
+                await _adminService.MarkCashReturnedAsync(req.OrderIds);
+
+                return Ok(new
+                {
+                    message = "Đã ghi nhận: tài xế nộp tiền mặt thành công."
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
     }
 }

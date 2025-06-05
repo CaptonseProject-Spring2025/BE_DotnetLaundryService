@@ -41,7 +41,7 @@ namespace LaundryService.Service
             try
             {
                 string otp = GenerateOTP();
-                string content = $"Mã OTP của bạn là: {otp}";
+                string content = $"[EcoLaundry] Mã OTP chỉ có hiệu lực trong 5 phút; Vui lòng không chia sẻ mã này với bất kỳ ai; Mã của bạn là: {otp}";
 
                 // Lưu OTP vào bộ nhớ tạm với thời gian sống là 5 phút (300 giây)
                 _memoryCache.Set(phone, otp, TimeSpan.FromMinutes(5));
