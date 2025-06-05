@@ -102,6 +102,7 @@ namespace LaundryService.Api.Controllers
         /// <response code="401">Không có quyền</response>
         /// <response code="500">Lỗi server</response>
         [HttpGet("orders/checking")]
+        [ProducesResponseType(typeof(List<PickedUpOrderResponse>), 200)]
         public async Task<IActionResult> GetCheckingOrders()
         {
             try

@@ -10,6 +10,7 @@ namespace LaundryService.Dto.Responses
     {
         public Guid AssignmentId { get; set; }
         public string OrderId { get; set; }
+        public bool? Emergency { get; set; }
 
         // Thông tin khách hàng
         public string CustomerFullname { get; set; }

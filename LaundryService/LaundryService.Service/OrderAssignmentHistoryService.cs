@@ -62,6 +62,7 @@ namespace LaundryService.Service
                 {
                     AssignmentId = a.Assignmentid,
                     OrderId = a.Orderid,
+                    Emergency = order?.Emergency,
                     Fullname = user?.Fullname,
                     Phonenumber = user?.Phonenumber,
                     Note = pendingNote,
@@ -116,7 +117,8 @@ namespace LaundryService.Service
                 DeliveryDescription = order.Deliverydescription,
                 TotalPrice = order.Totalprice,
                 CreatedAt = order.Createdat,
-                CurrentStatus = order.Currentstatus 
+                CurrentStatus = order.Currentstatus,
+                Emergency = order.Emergency
             };
         }
 

@@ -10,6 +10,7 @@ namespace LaundryService.Dto.Responses
     {
         public Guid AssignmentId { get; set; }
         public string OrderId { get; set; } = null!;
+        public bool? Emergency { get; set; }
         public string? Fullname { get; set; }
         public string? Phonenumber { get; set; }
         public string? Note { get; set; }
@@ -18,6 +19,4 @@ namespace LaundryService.Dto.Responses
         public string? Address { get; set; }
         public string? CurrentStatus { get; set; }
     }
-
-
 }

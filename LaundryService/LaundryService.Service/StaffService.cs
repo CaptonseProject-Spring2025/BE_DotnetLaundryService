@@ -230,7 +230,7 @@ namespace LaundryService.Service
                                 ? _util.ConvertToVnTime(order.Deliverytime.Value)
                                 : (DateTime?)null,
                     CurrentStatus = order.Currentstatus,
-                    Emergency = order.Emergency ?? false, // Nếu null => false
+                    Emergency = order.Emergency,
                     TotalPrice = order.Totalprice
                 };
                 result.Add(dto);
@@ -441,7 +441,7 @@ namespace LaundryService.Service
                 var dto = new PickedUpOrderResponse
                 {
                     OrderId = order.Orderid,
-                    Emergency = order.Emergency ?? false,
+                    Emergency = order.Emergency,
                     CustomerInfo = new CustomerInfoDto
                     {
                         CustomerId = order.Userid,
@@ -611,7 +611,7 @@ namespace LaundryService.Service
                 var dto = new PickedUpOrderResponse
                 {
                     OrderId = order.Orderid,
-                    Emergency = order.Emergency ?? false,
+                    Emergency = order.Emergency,
                     CustomerInfo = new CustomerInfoDto
                     {
                         CustomerId = order.Userid,
@@ -886,7 +886,7 @@ namespace LaundryService.Service
                 var dto = new PickedUpOrderResponse
                 {
                     OrderId = order.Orderid,
-                    Emergency = order.Emergency ?? false,
+                    Emergency = order.Emergency,
                     CustomerInfo = new CustomerInfoDto
                     {
                         CustomerId = order.Userid,

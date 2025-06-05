@@ -23,6 +23,7 @@ namespace LaundryService.Dto.Responses
         public decimal? TotalPrice { get; set; }
         public DateTime? CreatedAt { get; set; }
         public string? CurrentStatus { get; set; }
+        public bool? Emergency { get; set; }
     }
 
 }

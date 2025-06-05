@@ -76,6 +76,7 @@ namespace LaundryService.Service
                     TotalPrice = o.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(o.Createdat ?? DateTime.UtcNow),
                     OrderStatus = o.Currentstatus,
+                    Emergency = o.Emergency,
                     AssignmentId = o.Orderassignmenthistories.FirstOrDefault(aah => aah.Status == "PROCESSING" && aah.Assignedto == currentStaffId)?.Assignmentid
                 };
             }).ToList();

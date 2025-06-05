@@ -628,6 +628,7 @@ namespace LaundryService.Api.Controllers
         /// </summary>
         [HttpGet("assigned-pickup")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(PaginationResult<AssignedOrderDetailResponse>), 200)]
         public async Task<IActionResult> AssignedPickups(int page = 1, int pageSize = 10)
         {
             try
@@ -646,6 +647,7 @@ namespace LaundryService.Api.Controllers
         /// </summary>
         [HttpGet("assigned-delivery")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(PaginationResult<AssignedOrderDetailResponse>), 200)]
         public async Task<IActionResult> AssignedDeliveries(int page = 1, int pageSize = 10)
         {
             try

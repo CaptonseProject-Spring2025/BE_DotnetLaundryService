@@ -1361,6 +1361,7 @@ namespace LaundryService.Service
                 {
                     AssignmentId = r.Assignmentid,
                     OrderId = order.Orderid,
+                    Emergency = order.Emergency,
 
                     CustomerFullname = customer.Fullname,
                     CustomerPhone = customer.Phonenumber,
@@ -1406,6 +1407,7 @@ namespace LaundryService.Service
                 {
                     AssignmentId = r.Assignmentid,
                     OrderId = order.Orderid,
+                    Emergency = order.Emergency,
 
                     CustomerFullname = customer.Fullname,
                     CustomerPhone = customer.Phonenumber,
