@@ -105,7 +105,7 @@ namespace LaundryService.Api.Controllers
                             customerId.ToString(),
                             NotificationType.PickupScheduled,
                             orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                        //new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -120,7 +120,7 @@ namespace LaundryService.Api.Controllers
                             driverId.ToString(),
                             NotificationType.AssignedPickup,
                             orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                        //new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -219,7 +219,7 @@ namespace LaundryService.Api.Controllers
                             customerId.ToString(),
                             NotificationType.DeliveryScheduled,
                             orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                        //new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -236,7 +236,7 @@ namespace LaundryService.Api.Controllers
                             driverId.ToString(),
                             NotificationType.AssignedDelivery,
                             orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                        //new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -573,6 +573,31 @@ namespace LaundryService.Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách các đơn hàng bị lỗi chất lượng (isFail trong OrderStatusHistory là false).
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("quality-fail")]
+        [ProducesResponseType(typeof(List<UserOrderResponse>), 200)]
+        public async Task<IActionResult> GetFailOrders()
+        {
+            try
+            {
+                var result = await _adminService.GetFailOrdersAsync();
+
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { Message = "Không có đơn hàng bị lỗi chất lượng." });
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
     }

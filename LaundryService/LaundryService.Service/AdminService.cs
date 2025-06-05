@@ -842,5 +842,53 @@ namespace LaundryService.Service
             }
         }
 
+        //Admin xem các đơn giặt lỗi (isFail trong OrderStatusHistory là true)
+        public async Task<List<UserOrderResponse>> GetFailOrdersAsync()
+        {
+            // Lấy tất cả order maf OrderStatusHistory có isFail = true
+            var failOrders = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .Where(o => o.Orderstatushistories.Any(s => s.Isfail == true))
+                .Include(o => o.Orderitems)
+                    .ThenInclude(oi => oi.Service)
+                        .ThenInclude(s => s.Subservice)
+                            .ThenInclude(sb => sb.Category)
+                .OrderByDescending(o => o.Createdat)
+                .ToList();
+
+            var result = new List<UserOrderResponse>();
+
+            foreach (var order in failOrders)
+            {
+                // "OrderName": lấy danh mục (category) của từng service -> gộp bằng dấu phẩy
+                //   Mỗi OrderItem -> Service -> Subservice -> Category -> Name
+                //   Lọc null + distinct => ghép lại
+                var categoryNames = order.Orderitems
+                    .Select(oi => oi.Service?.Subservice?.Category?.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+
+                // Gộp thành 1 chuỗi, vd: "Giặt giày, Giặt sấy"
+                var orderName = string.Join(", ", categoryNames);
+
+                // Số lượng service = số dòng orderItem
+                var serviceCount = order.Orderitems.Count;
+
+                var item = new UserOrderResponse
+                {
+                    OrderId = order.Orderid,
+                    OrderName = orderName,
+                    ServiceCount = serviceCount,
+                    TotalPrice = order.Totalprice,
+                    OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                    OrderStatus = order.Currentstatus
+                };
+
+                result.Add(item);
+            }
+
+            return result;
+        }
     }
 }

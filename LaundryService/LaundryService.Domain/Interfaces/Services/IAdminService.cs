@@ -26,5 +26,8 @@ namespace LaundryService.Domain.Interfaces.Services
         Task DeleteOrdersAsync(List<string> orderIds);
 
         Task CancelAssignmentAsync(HttpContext httpContext, CancelAssignmentRequest request);
+
+        //Admin xem các đơn giặt lỗi (isFail trong OrderStatusHistory là false)
+        Task<List<UserOrderResponse>> GetFailOrdersAsync();
     }
 }
