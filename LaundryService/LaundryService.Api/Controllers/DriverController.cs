@@ -60,7 +60,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
                             NotificationType.PickupStarted,
-                            orderId
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     }
                     catch (Exception ex)
@@ -123,7 +123,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
                             NotificationType.PickedUp,
-                            orderId
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     }
                     catch (Exception ex)
@@ -164,12 +164,39 @@ namespace LaundryService.Api.Controllers
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(string), 200)]
         public async Task<IActionResult> ConfirmOrderPickupArrived(
-            [FromForm] string orderId,
-            [FromForm] List<IFormFile> files)
+    [FromForm] string orderId,
+    [FromForm] List<IFormFile> files)
         {
             try
             {
                 await _driverService.ConfirmOrderPickupArrivedAsync(HttpContext, orderId);
+
+                var customerId = await _orderService.GetCustomerIdByOrderAsync(orderId);
+
+                try
+                {
+                    await _notificationService.CreatePickupArrivedNotificationAsync(customerId, orderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Lỗi khi tạo notification: {ex.Message}");
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _firebaseNotificationService.SendOrderNotificationAsync(
+                            customerId.ToString(),
+                            NotificationType.PickupArrived,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Lỗi gửi Firebase push: {ex.Message}");
+                    }
+                });
 
                 return Ok(new { Message = "Tài xế đã mang hàng về thành công (ARRIVED)." });
             }
@@ -190,6 +217,7 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
         }
+
 
 
         /// <summary>
@@ -282,7 +310,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.DeliveryStarted
+                            NotificationType.DeliveryStarted,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     }
                     catch (Exception ex)
@@ -343,7 +372,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.Delivered
+                            NotificationType.Delivered,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
 
                         await _firebaseNotificationService.SendOrderNotificationAsync(

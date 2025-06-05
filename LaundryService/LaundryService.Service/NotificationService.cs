@@ -340,5 +340,23 @@ namespace LaundryService.Service
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task CreatePickupArrivedNotificationAsync(Guid userId, string orderId)
+        {
+            var notification = new Notification
+            {
+                Notificationid = Guid.NewGuid(),
+                Userid = userId,
+                Title = "Thông báo nhận hàng",
+                Message = "Đơn hàng của bạn đã được tài xế mang về thành công.",
+                Notificationtype = NotificationType.PickupArrived.ToString(),
+                Orderid = orderId,
+                Createdat = DateTime.UtcNow,
+                Ispushenabled = true,
+                Isread = false
+            };
+
+            await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

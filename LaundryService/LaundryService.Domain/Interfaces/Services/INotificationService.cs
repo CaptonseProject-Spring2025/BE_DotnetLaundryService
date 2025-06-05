@@ -27,6 +27,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task CreateAssignedPickupNotificationAsync(Guid driverId, string orderId);
         Task CreateDeliveryScheduledNotificationAsync(Guid customerId, string orderId);
         Task CreateAssignedDeliveryNotificationAsync(Guid driverId, string orderId);
+        Task CreatePickupArrivedNotificationAsync(Guid userId, string orderId);
 
     }
 }

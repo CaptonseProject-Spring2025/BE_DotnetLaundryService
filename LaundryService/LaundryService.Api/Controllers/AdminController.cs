@@ -104,8 +104,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
                             NotificationType.PickupScheduled,
-                            orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -119,8 +118,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             driverId.ToString(),
                             NotificationType.AssignedPickup,
-                            orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -218,8 +216,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
                             NotificationType.DeliveryScheduled,
-                            orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }
@@ -235,8 +232,7 @@ namespace LaundryService.Api.Controllers
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             driverId.ToString(),
                             NotificationType.AssignedDelivery,
-                            orderId
-                            //new Dictionary<string, string> { ["orderId"] = orderId }
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     });
                 }

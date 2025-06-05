@@ -19,7 +19,8 @@ namespace LaundryService.Domain.Enums
         Delivered,
         Finish,
         AssignedPickup,
-        AssignedDelivery
+        AssignedDelivery,
+        PickupArrived
     }
 
 }

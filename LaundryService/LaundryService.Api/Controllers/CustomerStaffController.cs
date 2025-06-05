@@ -181,7 +181,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.OrderConfirmed
+                            NotificationType.OrderConfirmed,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     }
                     catch (Exception ex)
@@ -316,7 +317,8 @@ namespace LaundryService.Api.Controllers
                     {
                         await _firebaseNotificationService.SendOrderNotificationAsync(
                             customerId.ToString(),
-                            NotificationType.OrderCancelled
+                            NotificationType.OrderCancelled,
+                            new Dictionary<string, string> { ["orderId"] = orderId }
                         );
                     }
                     catch (Exception ex)
