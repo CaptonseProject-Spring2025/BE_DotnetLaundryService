@@ -29,5 +29,10 @@ namespace LaundryService.Domain.Interfaces.Services
 
         //Admin xem các đơn giặt lỗi (isFail trong OrderStatusHistory là false)
         Task<List<UserOrderResponse>> GetFailOrdersAsync();
+        Task<List<DriverCashDailyResponse>> GetDriverCashDailyAsync(DateTime date);
+
+        Task<List<DriverCashOrderResponse>> GetDriverCashOrdersAsync(Guid driverId, DateTime date);
+
+        Task MarkCashReturnedAsync(List<string> orderIds);
     }
 }

@@ -890,5 +890,135 @@ namespace LaundryService.Service
 
             return result;
         }
+        public async Task<List<DriverCashDailyResponse>> GetDriverCashDailyAsync(DateTime date)
+        {
+            var start = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            var end = start.AddDays(1);
+
+            var assignmentsQ = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .Where(a => a.Assignedat >= start && a.Assignedat < end
+                            && a.Assignedto != null)
+                .Select(a => new
+                {
+                    a.Orderid,
+                    DriverId = a.Assignedto,
+                    a.Assignedat
+                });
+
+            var assignments = await assignmentsQ.ToListAsync();
+
+            var orderIdsInDay = assignments.Select(a => a.Orderid).Distinct().ToList();
+
+            var cashPayments = await _unitOfWork.Repository<Payment>()
+                .GetAll()
+                .Include(p => p.Paymentmethod)
+                .Where(p => p.Paymentmethod.Name == "Cash"
+                            && orderIdsInDay.Contains(p.Orderid)
+                            && p.Collectedby != null)
+                .ToListAsync();
+
+            var orderToDriver = assignments
+                .GroupBy(a => a.Orderid)
+                .ToDictionary(g => g.Key, g => g.First().DriverId);
+
+            var driverIds = orderToDriver.Values.Distinct().ToList();
+
+            var drivers = await _unitOfWork.Repository<User>()
+                .GetAll()
+                .Where(u => driverIds.Contains(u.Userid))
+                .ToDictionaryAsync(u => u.Userid);
+
+            var result = cashPayments
+                .GroupBy(p => orderToDriver[p.Orderid])
+                .Select(g =>
+                {
+                    var driver = drivers[g.Key];
+                    var totalCollected = g.Sum(p => p.Amount);
+
+                    var returned = g.Where(p => p.Isreturnedtoadmin).ToList();
+                    var returnedAmount = returned.Sum(p => p.Amount);
+                    var returnedOrders = returned.Select(p => p.Orderid).Distinct().Count();
+
+                    var unreturnedAmount = totalCollected - returnedAmount;
+
+                    return new DriverCashDailyResponse
+                    {
+                        DriverId = g.Key,
+                        DriverName = driver.Fullname ?? "(No name)",
+                        DriverAvatar = driver.Avatar,
+                        DriverPhone = driver.Phonenumber,
+                        CashOrdersCount = g.Select(p => p.Orderid).Distinct().Count(),
+                        ReturnedOrdersCount = returnedOrders,
+                        TotalCollectedAmount = totalCollected,
+                        TotalReturnedAmount = returnedAmount,
+                        TotalUnreturnedAmount = unreturnedAmount
+                    };
+                })
+                .OrderBy(r => r.DriverName)
+                .ToList();
+
+            return result;
+        }
+
+        public async Task<List<DriverCashOrderResponse>> GetDriverCashOrdersAsync(Guid driverId, DateTime date)
+        {
+            var start = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            var end = start.AddDays(1);
+
+            var assignQ = _unitOfWork.Repository<Orderassignmenthistory>()
+                .GetAll()
+                .Where(a =>
+                    a.Assignedto == driverId &&
+                    a.Assignedat >= start && a.Assignedat < end &&
+                    a.Status == AssignStatusEnum.DELIVERY_SUCCESS.ToString());
+
+            var data = from a in assignQ
+                       join p in _unitOfWork.Repository<Payment>().GetAll()
+                                .Include(pay => pay.Paymentmethod)
+                            on a.Orderid equals p.Orderid
+                       where p.Paymentmethod.Name == "Cash"
+                       select new DriverCashOrderResponse
+                       {
+                           PaymentId = p.Paymentid,
+                           OrderId = p.Orderid,
+                           Amount = p.Amount,
+                           AssignedAt = a.Assignedat,
+                           PaymentDate = p.Paymentdate,
+                           UpdatedAt = p.Updatedat,
+                           IsReturnedToAdmin = p.Isreturnedtoadmin
+                       };
+
+            return await data
+                .OrderBy(d => d.AssignedAt)
+                .ThenBy(d => d.PaymentId)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
+        public async Task MarkCashReturnedAsync(List<string> orderIds)
+        {
+            if (orderIds == null || orderIds.Count == 0)
+                throw new ArgumentException("Danh sách OrderId trống.");
+
+            var payments = await _unitOfWork.Repository<Payment>().GetAll()
+                .Include(p => p.Paymentmethod)
+                .Where(p =>
+                    orderIds.Contains(p.Orderid) &&
+                    p.Paymentmethod.Name == "Cash" &&
+                    !p.Isreturnedtoadmin)
+                .ToListAsync();
+
+            if (payments.Count == 0)
+                throw new InvalidOperationException("Không tìm thấy khoản tiền mặt nào cần cập nhật.");
+
+            foreach (var pay in payments)
+            {
+                pay.Isreturnedtoadmin = true;
+                pay.Updatedat = DateTime.UtcNow;
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }
