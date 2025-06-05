@@ -750,6 +750,16 @@ namespace LaundryService.Service
                         $"Total mismatch. Server computed: {finalTotal}, client sent: {request.Total}.");
                 }
 
+                // Nếu có Applicablefee thì Emergency là true
+                if (applicableFee > 0)
+                {
+                    order.Emergency = true;
+                }
+                else
+                {
+                    order.Emergency = false;
+                }
+
                 // 7) Gán các trường còn lại vào Order
                 order.Shippingfee = shippingFee;
                 order.Applicablefee = applicableFee;

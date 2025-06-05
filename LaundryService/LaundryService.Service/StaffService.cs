@@ -27,7 +27,7 @@ namespace LaundryService.Service
         }
 
         /// <summary>
-        /// Lấy tất cả đơn có currentStatus = PICKEDUP 
+        /// Lấy tất cả đơn có currentStatus = ARRIVED 
         /// và có OrderAssignmentHistory (mới nhất) = PICKUP_SUCCESS,
         /// sắp xếp theo Emergency desc, rồi Deliverytime asc.
         /// </summary>
@@ -37,7 +37,7 @@ namespace LaundryService.Service
             var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
 
             // (2) Truy vấn Order
-            //    - currentStatus == "PICKEDUP"
+            //    - currentStatus == "ARRIVED"
             //    - Có ít nhất 1 assignmenthistory với Status="PICKUP_SUCCESS"
             //    - Lấy Eager load: .Include(o => o.User), .Include(o => o.Orderitems => Service)
             //    - Rồi sắp xếp theo Emergency desc, Deliverytime asc
@@ -49,7 +49,7 @@ namespace LaundryService.Service
                     .ThenInclude(oi => oi.Service)
                 .Include(o => o.Orderassignmenthistories)
                 .Where(o =>
-                    o.Currentstatus == OrderStatusEnum.PICKEDUP.ToString()
+                    o.Currentstatus == OrderStatusEnum.ARRIVED.ToString()
                     && o.Orderassignmenthistories.Any(ah =>
                            ah.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
                        // Bạn có thể kiểm tra "mới nhất" = so sánh ah.Completedat == max ...
@@ -97,7 +97,6 @@ namespace LaundryService.Service
                 var orderResp = new PickedUpOrderResponse
                 {
                     OrderId = o.Orderid,
-                    Emergency = (o.Emergency ?? false), // null => false
                     CustomerInfo = new CustomerInfoDto
                     {
                         CustomerId = o.Userid,
@@ -110,7 +109,8 @@ namespace LaundryService.Service
                     DeliveryTime = deliveryTimeVn,
                     CurrentStatus = o.Currentstatus ?? "",
                     OrderDate = _util.ConvertToVnTime(o.Createdat ?? DateTime.UtcNow),
-                    TotalPrice = o.Totalprice
+                    TotalPrice = o.Totalprice,
+                    Emergency = o.Emergency
                 };
 
                 result.Add(orderResp);

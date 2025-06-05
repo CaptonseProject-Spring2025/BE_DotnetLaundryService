@@ -649,6 +649,16 @@ namespace LaundryService.Service
                         $"Total mismatch. Server computed: {finalTotal}, client sent: {request.Total}.");
                 }
 
+                // Nếu có Applicablefee thì Emergency là true
+                if (applicableFee > 0)
+                {
+                    order.Emergency = true;
+                }
+                else
+                {
+                    order.Emergency = false;
+                }
+
                 // 7) Gán các trường còn lại vào Order
                 order.Shippingfee = request.Shippingfee;
                 order.Shippingdiscount = shippingDiscount;
@@ -802,7 +812,8 @@ namespace LaundryService.Service
                     ServiceCount = serviceCount,
                     TotalPrice = order.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
-                    OrderStatus = order.Currentstatus
+                    OrderStatus = order.Currentstatus,
+                    Emergency = order.Emergency
                 };
 
                 result.Add(item);
@@ -866,7 +877,8 @@ namespace LaundryService.Service
                     ServiceCount = order.Orderitems.Count,
                     TotalPrice = order.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
-                    OrderStatus = order.Currentstatus
+                    OrderStatus = order.Currentstatus,
+                    Emergency = order.Emergency
                 });
             }
 
@@ -913,7 +925,8 @@ namespace LaundryService.Service
                 ServiceCount = order.Orderitems.Count,
                 TotalPrice = order.Totalprice,
                 OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
-                OrderStatus = order.Currentstatus
+                OrderStatus = order.Currentstatus,
+                Emergency = order.Emergency
             };
         }
 
@@ -963,6 +976,7 @@ namespace LaundryService.Service
                 PickupTime = _util.ConvertToVnTime(order.Pickuptime ?? DateTime.UtcNow),
                 DeliveryTime = _util.ConvertToVnTime(order.Deliverytime ?? DateTime.UtcNow),
                 CreatedAt = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
+                Emergency = order.Emergency,
             };
 
             // 3) Lấy notes từ OrderStatusHistory => status = "PENDING" (nếu có)

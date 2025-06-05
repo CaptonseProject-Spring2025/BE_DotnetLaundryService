@@ -14,5 +14,6 @@ namespace LaundryService.Dto.Responses
         public decimal? TotalPrice { get; set; }
         public DateTime? OrderedDate { get; set; }
         public string OrderStatus { get; set; }
+        public bool? Emergency { get; set; }
     }
 }

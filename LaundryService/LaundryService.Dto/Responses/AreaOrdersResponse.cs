@@ -26,6 +26,7 @@ namespace LaundryService.Dto.Responses
         public DateTime? PickupTime { get; set; }
         public DateTime CreatedAt { get; set; }
         public decimal? TotalPrice { get; set; }
+        public bool? Emergency { get; set; }
 
         // số lần customer không nhận hàng.
         public int? UserDeclineCount { get; set; } = 0;

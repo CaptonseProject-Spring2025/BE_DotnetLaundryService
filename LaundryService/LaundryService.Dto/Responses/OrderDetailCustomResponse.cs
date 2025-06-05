@@ -36,6 +36,7 @@ namespace LaundryService.Dto.Responses
 
         // CreatedAt -> chuyển sang giờ Việt Nam
         public DateTime CreatedAt { get; set; }
+        public bool? Emergency { get; set; }
 
         // Phần OrderSummary
         public OrderSummaryResponse OrderSummary { get; set; } = new OrderSummaryResponse();

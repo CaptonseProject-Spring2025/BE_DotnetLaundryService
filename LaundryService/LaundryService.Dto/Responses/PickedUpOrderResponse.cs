@@ -9,7 +9,6 @@ namespace LaundryService.Dto.Responses
     public class PickedUpOrderResponse
     {
         public string OrderId { get; set; }
-        public bool Emergency { get; set; }
         public CustomerInfoDto CustomerInfo { get; set; } = new CustomerInfoDto();
         public string ServiceNames { get; set; } = string.Empty;
         public int ServiceCount { get; set; }
@@ -18,6 +17,7 @@ namespace LaundryService.Dto.Responses
         public DateTime? DeliveryTime { get; set; }
         public string CurrentStatus { get; set; } = string.Empty;
         public decimal? TotalPrice { get; set; }
+        public bool? Emergency { get; set; }
     }
 
     public class CustomerInfoDto

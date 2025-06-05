@@ -21,20 +21,20 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
-        /// STEP 1: Lấy danh sách các đơn đã PICKEDUP cho staff Checking
+        /// STEP 1: Lấy danh sách các đơn đã ARRIVED cho staff Checking
         /// </summary>
         /// <returns>Danh sách <see cref="PickedUpOrderResponse"/>.</returns>
         /// <remarks>
         /// **Yêu cầu**: Đăng nhập với vai trò Staff hoặc Admin
         /// 
         /// **Logic**:
-        /// 1) Tìm Order.Currentstatus="PICKEDUP"
+        /// 1) Tìm Order.Currentstatus="ARRIVED"
         /// 2) Phải có ít nhất 1 OrderAssignmentHistory với Status="PICKUP_SUCCESS"
         /// 3) Sort: Emergency = true trước, sau đó theo DeliveryTime gần nhất.
         ///   - Emergency DESC
         ///   - DeliveryTime ASC
         /// </remarks>
-        [HttpGet("orders/pickedup")]
+        [HttpGet("orders/arrived")]
         [ProducesResponseType(typeof(List<PickedUpOrderResponse>), 200)]
         public async Task<IActionResult> GetPickedUpOrders()
         {

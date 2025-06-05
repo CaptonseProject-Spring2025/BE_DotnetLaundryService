@@ -139,6 +139,7 @@ namespace LaundryService.Service
                     PickupTime = order.Pickuptime,
                     CreatedAt = order.Createdat ?? DateTime.UtcNow,
                     TotalPrice = order.Totalprice,
+                    Emergency = order.Emergency,
                     UserDeclineCount = declineCnt
                 };
 
@@ -363,6 +364,7 @@ namespace LaundryService.Service
                     PickupTime = pickupTimeVn,
                     CreatedAt = createdAtVn,
                     TotalPrice = order.Totalprice,
+                    Emergency = order.Emergency,
                     UserDeclineCount = declineCnt
                 };
 
@@ -882,7 +884,8 @@ namespace LaundryService.Service
                     ServiceCount = serviceCount,
                     TotalPrice = order.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
-                    OrderStatus = order.Currentstatus
+                    OrderStatus = order.Currentstatus,
+                    Emergency = order.Emergency
                 };
 
                 result.Add(item);
@@ -890,6 +893,7 @@ namespace LaundryService.Service
 
             return result;
         }
+
         public async Task<List<DriverCashDailyResponse>> GetDriverCashDailyAsync(DateTime date)
         {
             var start = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
