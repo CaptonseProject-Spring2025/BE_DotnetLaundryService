@@ -1408,5 +1408,57 @@ namespace LaundryService.Service
 
             return new PaginationResult<AssignedOrderDetailResponse>(list, total, page, pageSize);
         }
+
+        //Customer hủy đơn hàng
+        public async Task<bool> CancelOrderAsync(string orderId, string notes)
+        {
+            // Lấy order
+            var order = _unitOfWork.Repository<Order>()
+                .GetAll()
+                .FirstOrDefault(o => o.Orderid == orderId);
+
+            var userId = order?.Userid;
+
+            if (order == null)
+                throw new KeyNotFoundException("Order not found or does not belong to the user.");
+
+            // Kiểm tra trạng thái hiện tại
+            if (order.Currentstatus != OrderStatusEnum.PENDING.ToString() &&
+                order.Currentstatus != OrderStatusEnum.CONFIRMED.ToString() &&
+                order.Currentstatus != OrderStatusEnum.SCHEDULED_PICKUP.ToString())
+            {
+                throw new ApplicationException("Cannot cancel an order that is not in PENDING, CONFIRMED, or SCHEDULED_PICKUP status.");
+            }
+
+            await _unitOfWork.BeginTransaction();
+            try
+            {
+                // Cập nhật trạng thái đơn hàng
+                order.Currentstatus = OrderStatusEnum.CANCELLED.ToString();
+                await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
+
+                // Thêm lịch sử trạng thái
+                var history = new Orderstatushistory
+                {
+                    Statushistoryid = Guid.NewGuid(),
+                    Orderid = orderId,
+                    Status = OrderStatusEnum.CANCELLED.ToString(),
+                    Statusdescription = "Đơn hàng đã bị hủy bởi người dùng.",
+                    Notes = notes,
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(history, saveChanges: false);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+                return true;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw;
+            }
+        }
     }
 }

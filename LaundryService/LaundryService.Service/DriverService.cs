@@ -20,13 +20,15 @@ namespace LaundryService.Service
         private readonly IUtil _util;
         private readonly IFileStorageService _fileStorageService;
         private readonly IOrderJobService _jobService;
+        private readonly IOrderService _orderService;
 
-        public DriverService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService, IOrderJobService jobService)
+        public DriverService(IUnitOfWork unitOfWork, IUtil util, IFileStorageService fileStorageService, IOrderJobService jobService, IOrderService orderService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _fileStorageService = fileStorageService;
             _jobService = jobService;
+            _orderService = orderService;
         }
 
         public async Task StartOrderPickupAsync(HttpContext httpContext, string orderId)
@@ -496,13 +498,17 @@ namespace LaundryService.Service
                     if (cashMethodId == Guid.Empty)
                         throw new ApplicationException("Không tìm thấy phương thức thanh toán 'Cash' trong bảng Paymentmethods.");
 
+                    // Lấy thêm phí shipping khi người dùng hủy giao hàng hoặc nhận hàng
+                    var noShow = await _orderService.CalculateFailShippingFeeAsync(orderId);
+                    var noShowFee = noShow.Total;
+
                     // 4) Tạo bản ghi Payment
                     var payment = new Payment
                     {
                         Paymentid = Guid.NewGuid(),
                         Orderid = orderId,
                         Paymentdate = DateTime.UtcNow,
-                        Amount = order.Totalprice ?? 0m,
+                        Amount = order.Totalprice.Value + noShowFee, // Tổng tiền + phí phát sinh nếu có
                         Paymentmethodid = cashMethodId,
                         Paymentstatus = "PAID",
                         Createdat = DateTime.UtcNow,

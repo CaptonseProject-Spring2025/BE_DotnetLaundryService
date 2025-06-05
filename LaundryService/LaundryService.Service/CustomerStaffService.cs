@@ -34,15 +34,7 @@ namespace LaundryService.Service
             _mapboxService = mapboxService;
         }
 
-        /// <summary>
-        /// Chỉ load các order có status = "PENDING"
-        /// và KHÔNG có OrderAssignmentHistory nào có status = "processing"
-        /// </summary>
-        /// <param name="httpContext"></param>
-        /// <param name="page"></param>
-        /// <param name="pageSize"></param>
-        /// <returns></returns>
-        public async Task<PaginationResult<UserOrderResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize)
+        public async Task<PaginationResult<PendingOrdersResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize)
         {
             var currentStaffId = _util.GetCurrentUserIdOrThrow(httpContext);
 
@@ -54,6 +46,7 @@ namespace LaundryService.Service
                         .Where(o => !o.Orderassignmenthistories
                                         .Any(ah => ah.Status == "PROCESSING" &&
                                                    ah.Assignedto != currentStaffId))
+                        .Include(o => o.Orderassignmenthistories)
                         .Include(o => o.Orderitems)
                             .ThenInclude(oi => oi.Service)
                                 .ThenInclude(s => s.Subservice)
@@ -75,18 +68,19 @@ namespace LaundryService.Service
                                   .Where(n => !string.IsNullOrEmpty(n))
                                   .Distinct();
 
-                return new UserOrderResponse
+                return new PendingOrdersResponse
                 {
                     OrderId = o.Orderid,
                     OrderName = string.Join(", ", categories),
                     ServiceCount = o.Orderitems.Count,
                     TotalPrice = o.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(o.Createdat ?? DateTime.UtcNow),
-                    OrderStatus = o.Currentstatus
+                    OrderStatus = o.Currentstatus,
+                    AssignmentId = o.Orderassignmenthistories.FirstOrDefault(aah => aah.Status == "PROCESSING" && aah.Assignedto == currentStaffId)?.Assignmentid
                 };
             }).ToList();
 
-            return new PaginationResult<UserOrderResponse>(
+            return new PaginationResult<PendingOrdersResponse>(
                 data: list,
                 totalRecords: totalRecords,
                 currentPage: page,
@@ -119,7 +113,7 @@ namespace LaundryService.Service
                     .Any(ah => ah.Status == "PROCESSING");
 
                 if (isProcessing)
-                    throw new ApplicationException("Có lỗi xảy ra! Lỗi này thường do đơn hàng đang được xử lý bởi một người khác.");
+                    throw new ApplicationException("Có lỗi xảy ra! Đơn hàng này đã ở trạng thái PROCESSING");
 
                 // 5) Lấy userId từ JWT
                 var userId = _util.GetCurrentUserIdOrThrow(httpContext);
@@ -329,20 +323,6 @@ namespace LaundryService.Service
 
                 if (assignment == null)
                     throw new KeyNotFoundException("Không tìm thấy assignmentId này.");
-
-                // 3) Kiểm tra thời gian, so sánh (UTCNow - Assignedat) <= 30p ?
-                if (!assignment.Assignedat.HasValue)
-                {
-                    // Không có AssignedAt => logic sai
-                    throw new ApplicationException("Assignment chưa có thông tin AssignedAt.");
-                }
-
-                var elapsed = DateTime.UtcNow - assignment.Assignedat.Value;
-                if (elapsed > TimeSpan.FromMinutes(30))
-                {
-                    // Quá 30p => báo lỗi
-                    throw new ApplicationException("Quá thời gian xử lý đơn hàng. Không thể hủy.");
-                }
 
                 // 4) Cập nhật assignment
                 //    Status = SUCCESS (coi như staff kết thúc assignment),
@@ -619,7 +599,8 @@ namespace LaundryService.Service
                     $"Thời gian xử lý không đủ vì món đồ {req.ServiceName} có thời gian xử lý tối thiểu là {min} {unit}.");
             }
 
-            if (req.DeliveryAddressId != Guid.Empty)
+            // Nếu address delivery không null, thì tính phí ship
+            if (req.DeliveryAddressId.HasValue && req.DeliveryAddressId.Value != Guid.Empty)
             {
                 // Kiểm tra địa chỉ pickup/delivery có tồn tại không
                 var deliveryAddr = await _unitOfWork.Repository<Address>().FindAsync(req.DeliveryAddressId)
@@ -828,8 +809,10 @@ namespace LaundryService.Service
             if (order == null)
                 throw new KeyNotFoundException("Order not found.");
 
+            decimal deltaPrice = request.otherPrice - (order.Otherprice ?? 0);
+
             // 2) Cập nhật OtherPrice và Note
-            order.Totalprice += request.otherPrice;
+            order.Totalprice += deltaPrice;
             order.Otherprice = request.otherPrice;
             order.Noteforotherprice = request.otherPriceNote;
             // 3) Cập nhật Order

@@ -676,8 +676,47 @@ namespace LaundryService.Api.Controllers
             }
             catch (KeyNotFoundException ex) { return NotFound(new { Message = ex.Message }); }
             catch (ArgumentException ex) { return BadRequest(new { Message = ex.Message }); }
-            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message}); }
+            catch (Exception ex) { return StatusCode(500, new { Message = ex.Message }); }
         }
 
+        /// <summary>
+        /// Customer hủy đơn hàng đã đặt.
+        /// </summary>
+        /// <param name="orderId"></param>
+        /// <param name="notes"></param>
+        /// <returns></returns>
+        /// <remarks>
+        /// **Mục đích**:  
+        /// Cho phép customer hủy đơn hàng đã đặt, thường là do lý do cá nhân hoặc thay đổi kế hoạch.
+        /// Các đơn hàng đang có trạng thái PENDING, CONFIRMED, or SCHEDULED_PICKUP đều có thể hủy.
+        /// </remarks>
+        [HttpPost("cancel-order")]
+        [Authorize]
+        public async Task<IActionResult> CancelOrder(string orderId, string notes)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            try
+            {
+                var result = await _orderService.CancelOrderAsync(orderId, notes);
+                return Ok(new { Success = result, Message = result ? "Đơn hàng đã được hủy thành công." : "Không thể hủy đơn hàng." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = ex.Message });
+            }
+        }
     }
 }

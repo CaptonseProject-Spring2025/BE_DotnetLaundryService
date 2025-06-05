@@ -25,13 +25,15 @@ namespace LaundryService.Service
         private readonly IUtil _util;
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IOrderService _orderService;
 
-        public PaymentService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, ILogger<PaymentService> logger)
+        public PaymentService(IUnitOfWork unitOfWork, IUtil util, IConfiguration configuration, ILogger<PaymentService> logger, IOrderService orderService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _configuration = configuration;
             _logger = logger;
+            _orderService = orderService;
         }
 
         public async Task<PaymentMethodResponse> CreatePaymentMethodAsync(CreatePaymentMethodRequest request)
@@ -148,8 +150,12 @@ namespace LaundryService.Service
             // Tạo request body gửi sang PayOS
             long orderCodeLong = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+            // Lấy thêm phí shipping khi người dùng hủy giao hàng hoặc nhận hàng
+            var noShow = await _orderService.CalculateFailShippingFeeAsync(request.OrderId);
+            var noShowFee = noShow.Total;
+
             //    - amount = (int)order.Totalprice
-            var amountInt = (int)order.Totalprice.Value;
+            var amountInt = (int)order.Totalprice.Value + (int)noShowFee; // cộng thêm phí no-show nếu có
 
             var cancelUrl = _configuration["PayOS:CancelUrl"];
             var returnUrl = _configuration["PayOS:ReturnUrl"];
@@ -244,7 +250,7 @@ namespace LaundryService.Service
                     Paymentid = paymentId,
                     Orderid = order.Orderid,
                     Paymentdate = DateTime.UtcNow,
-                    Amount = order.Totalprice.Value,
+                    Amount = order.Totalprice.Value + noShowFee, // cộng thêm phí no-show nếu có
                     Paymentmethodid = payosMethod.Paymentmethodid, // method PayOS
                     Paymentstatus = payosResponse.status,          // data.status 
                     Transactionid = payosResponse.paymentLinkId,   // data.paymentLinkId

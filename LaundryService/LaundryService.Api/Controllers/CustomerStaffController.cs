@@ -47,7 +47,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>500</c>: Lỗi hệ thống
         /// </remarks>
         [HttpGet("pending-orders")]
-        [ProducesResponseType(typeof(PaginationResult<UserOrderResponse>), 200)]
+        [ProducesResponseType(typeof(PaginationResult<PendingOrdersResponse>), 200)]
         public async Task<IActionResult> GetPendingOrders(int page = 1, int pageSize = 10)
         {
             try
