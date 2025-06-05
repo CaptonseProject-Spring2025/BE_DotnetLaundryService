@@ -120,14 +120,14 @@ namespace LaundryService.Service
         }
 
         /// <summary>
-        /// Staff nhận đơn (đơn đang PICKEDUP) để kiểm tra/giặt => chuyển Order sang CHECKING.
+        /// Staff nhận đơn (đơn đang ARRIVED) để kiểm tra/giặt => chuyển Order sang CHECKING.
         /// </summary>
         public async Task ReceiveOrderForCheckAsync(HttpContext httpContext, string orderId)
         {
             // 1) Lấy userId (Staff) từ token
             var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
 
-            // 2) Tìm Order => check status = "PICKEDUP"
+            // 2) Tìm Order => check status = "ARRIVED"
             var order = _unitOfWork.Repository<Order>()
                 .GetAll()
                 .FirstOrDefault(o => o.Orderid == orderId);
@@ -137,11 +137,11 @@ namespace LaundryService.Service
                 throw new KeyNotFoundException($"Không tìm thấy OrderId: {orderId}");
             }
 
-            // Kiểm tra trạng thái có phải PICKEDUP không
-            if (order.Currentstatus != OrderStatusEnum.PICKEDUP.ToString())
+            // Kiểm tra trạng thái có phải ARRIVED không
+            if (order.Currentstatus != OrderStatusEnum.ARRIVED.ToString())
             {
                 // Nếu không đúng => throw
-                throw new ApplicationException("Đơn hàng không ở trạng thái PICKEDUP hoặc đang được xử lý bởi Staff khác.");
+                throw new ApplicationException("Đơn hàng không ở trạng thái ARRIVED hoặc đang được xử lý bởi Staff khác.");
             }
 
             // 3) Cập nhật Order => "CHECKING"
