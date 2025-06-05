@@ -688,6 +688,7 @@ namespace LaundryService.Api.Controllers
         /// <remarks>
         /// **Mục đích**:  
         /// Cho phép customer hủy đơn hàng đã đặt, thường là do lý do cá nhân hoặc thay đổi kế hoạch.
+        /// 
         /// Các đơn hàng đang có trạng thái PENDING, CONFIRMED, or SCHEDULED_PICKUP đều có thể hủy.
         /// </remarks>
         [HttpPost("cancel-order")]

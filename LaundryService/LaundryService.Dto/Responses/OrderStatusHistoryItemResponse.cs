@@ -12,6 +12,7 @@ namespace LaundryService.Dto.Responses
         public string? Status { get; set; }
         public string? StatusDescription { get; set; }
         public string? Notes { get; set; }
+        public bool? IsFail { get; set; }
 
         public UpdatedByUser? UpdatedBy { get; set; }
         public DateTime? CreatedAt { get; set; }

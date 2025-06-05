@@ -908,8 +908,13 @@ namespace LaundryService.Service
             return result;
         }
 
-        public async Task<CheckingOrderUpdateResponse> ConfirmOrderQualityCheckedAsync(HttpContext httpContext, string orderId, string? notes, IFormFileCollection? files)
+        public async Task<CheckingOrderUpdateResponse> ConfirmOrderQualityCheckedAsync(HttpContext httpContext, string orderId, string notes, IFormFileCollection files, bool? isFail)
         {
+            if (files == null || files.Count == 0)
+            {
+                throw new ArgumentException("Cần upload ít nhất 1 ảnh để xác nhận kiểm tra chất lượng.");
+            }
+
             // 1) Lấy staffId từ JWT
             var staffId = _util.GetCurrentUserIdOrThrow(httpContext);
 
@@ -945,6 +950,7 @@ namespace LaundryService.Service
                     Statusdescription = "Đơn hàng đã được kiểm tra chất lượng.",
                     Notes = notes,
                     Updatedby = staffId,
+                    Isfail = isFail,
                     Createdat = DateTime.UtcNow
                 };
                 await _unitOfWork.Repository<Orderstatushistory>().InsertAsync(newHistory, saveChanges: false);
@@ -993,6 +999,7 @@ namespace LaundryService.Service
                     Statushistoryid = newHistory.Statushistoryid,
                     OrderId = orderId,
                     Notes = notes,
+                    IsFail = isFail,
                     PhotoUrls = photoInfos
                 };
             }

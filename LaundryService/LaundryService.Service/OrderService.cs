@@ -1100,6 +1100,7 @@ namespace LaundryService.Service
                     StatusDescription = h.Statusdescription,
                     Notes = h.Notes,
                     UpdatedBy = updatedBy,
+                    IsFail = h.Isfail,
                     CreatedAt = _util.ConvertToVnTime((DateTime)h.Createdat),
                     ContainMedia = containMedia
                 };

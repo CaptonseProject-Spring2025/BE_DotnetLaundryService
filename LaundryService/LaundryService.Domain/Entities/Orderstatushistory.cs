@@ -17,6 +17,8 @@ public partial class Orderstatushistory
 
     public Guid? Updatedby { get; set; }
 
+    public bool? Isfail { get; set; }
+
     public DateTime? Createdat { get; set; }
 
     public virtual Order Order { get; set; } = null!;
