@@ -573,6 +573,26 @@ namespace LaundryService.Api.Controllers
         }
 
         /// <summary>
+        /// Lấy danh sách các đơn hàng bị lỗi chất lượng (isFail trong OrderStatusHistory là false).
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("quality-fail")]
+        [ProducesResponseType(typeof(List<UserOrderResponse>), 200)]
+        public async Task<IActionResult> GetFailOrders()
+        {
+            try
+            {
+                var result = await _adminService.GetFailOrdersAsync();
+
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { Message = "Không có đơn hàng bị lỗi chất lượng." });
+                }
+                return Ok(result);
+            }
+            catch { return StatusCode(500, new { Message = "Lỗi không mong muốn." }); }
+        }
+
         /// Lấy báo cáo tiền mặt theo ngày cho tất cả tài xế.
         /// </summary>
         [HttpGet("driver-cash/daily")]
@@ -605,6 +625,7 @@ namespace LaundryService.Api.Controllers
             }
             catch (Exception ex)
             {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
                 return StatusCode(500, new { Message = $"Unexpected error: {ex.Message}" });
             }
 
