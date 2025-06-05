@@ -181,6 +181,7 @@ CREATE TABLE OrderStatusHistory (
     StatusDescription TEXT,  -- Mô tả chi tiết trạng thái (VD: "Đơn hàng đã rời khỏi kho", "Shipper đang giao hàng")
 	Notes TEXT,
    	UpdatedBy UUID REFERENCES Users(UserID), -- Ai đã thay đổi trạng thái này?
+    IsFail BOOLEAN DEFAULT FALSE,
 	CreatedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

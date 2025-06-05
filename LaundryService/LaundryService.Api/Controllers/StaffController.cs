@@ -457,6 +457,7 @@ namespace LaundryService.Api.Controllers
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
         /// <param name="notes">Ghi chú (tùy chọn)</param>
         /// <param name="files">Danh sách ảnh (tùy chọn)</param>
+        /// <param name="isFail">Đánh dấu đơn không đạt chất lượng (tùy chọn, mặc định là false)</param>
         /// <remarks>
         /// **Logic**:
         /// 1) Kiểm tra Order đang ở trạng thái WASHED.
@@ -478,13 +479,14 @@ namespace LaundryService.Api.Controllers
         [ProducesResponseType(typeof(CheckingOrderUpdateResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> ConfirmOrderQualityChecked(
             [FromForm] string orderId,
-            [FromForm] string? notes,
-            [FromForm] IFormFileCollection? files
+            [FromForm] string notes,
+            [FromForm] IFormFileCollection files,
+            [FromForm] bool? isFail = false  // Thêm tham số isFail nếu cần thiết (ví dụ: để đánh dấu đơn không đạt chất lượng
         )
         {
             try
             {
-                var result = await _staffService.ConfirmOrderQualityCheckedAsync(HttpContext, orderId, notes, files);
+                var result = await _staffService.ConfirmOrderQualityCheckedAsync(HttpContext, orderId, notes, files, isFail);
                 return Ok(result);  // CheckingOrderUpdateResponse
             }
             catch (KeyNotFoundException ex)

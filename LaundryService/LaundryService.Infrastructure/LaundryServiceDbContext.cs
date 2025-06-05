@@ -656,6 +656,9 @@ public partial class LaundryServiceDbContext : DbContext
             entity.Property(e => e.Status).HasColumnName("status");
             entity.Property(e => e.Statusdescription).HasColumnName("statusdescription");
             entity.Property(e => e.Updatedby).HasColumnName("updatedby");
+            entity.Property(e => e.Isfail)
+                .HasDefaultValueSql("false")
+                .HasColumnName("isfail");
 
             entity.HasOne(d => d.Order).WithMany(p => p.Orderstatushistories)
                 .HasForeignKey(d => d.Orderid)
