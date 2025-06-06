@@ -114,8 +114,8 @@ public class ChatHub : Hub
                     Ispushenabled = true // Bật push notification
                 };
 
-                await _unitOfWork.Repository<Notification>().InsertAsync(notification);
-                await _unitOfWork.SaveChangesAsync();
+                // await _unitOfWork.Repository<Notification>().InsertAsync(notification);
+                // await _unitOfWork.SaveChangesAsync();
 
                 // Gửi real-time notification đến user
                 await Clients.User(receiverId.ToString()).SendAsync("ReceiveNotification", new
