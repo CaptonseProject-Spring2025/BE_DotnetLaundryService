@@ -194,12 +194,14 @@ namespace LaundryService.Api.Controllers
                 // 2) Tuỳ: 
                 //    - Trả JSON => client fetch => redirect
                 //    - Hoặc 302 redirect server side
+                return Redirect(finalLink);
+
                 // Ở đây ta làm JSON:
-                return Ok(new
-                {
-                    Message = "Cập nhật Payment thành công.",
-                    RedirectUrl = finalLink
-                });
+                ////return Ok(new
+                ////{
+                ////    Message = "Cập nhật Payment thành công.",
+                ////    RedirectUrl = finalLink
+                ////});
             }
             catch (KeyNotFoundException ex)
             {
