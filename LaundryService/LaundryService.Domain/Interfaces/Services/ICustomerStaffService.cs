@@ -37,5 +37,7 @@ namespace LaundryService.Domain.Interfaces.Services
         Task<AddressResponse> CreateAddressAsync(Guid userId, CreateAddressRequest request);
 
         Task AddOtherPrice(string orderId, AddOtherPriceRequest request);
+
+        Task ConfirmOrderComplete(HttpContext httpContext, string orderId, string notes);
     }
 }

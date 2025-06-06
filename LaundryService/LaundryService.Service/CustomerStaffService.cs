@@ -24,14 +24,16 @@ namespace LaundryService.Service
         private readonly IOrderService _orderService;
         private readonly IAddressService _addressService;
         private readonly IMapboxService _mapboxService;
+        private readonly IOrderJobService _jobService;
 
-        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService, IAddressService addressService, IMapboxService mapboxService)
+        public CustomerStaffService(IUnitOfWork unitOfWork, IUtil util, IOrderService orderService, IAddressService addressService, IMapboxService mapboxService, IOrderJobService jobService)
         {
             _unitOfWork = unitOfWork;
             _util = util;
             _orderService = orderService;
             _addressService = addressService;
             _mapboxService = mapboxService;
+            _jobService = jobService;
         }
 
         public async Task<PaginationResult<PendingOrdersResponse>> GetPendingOrdersForStaffAsync(HttpContext httpContext, int page, int pageSize)
@@ -900,6 +902,102 @@ namespace LaundryService.Service
             // 3) Cập nhật Order
             await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: true);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        // CustomerStaff xác nhận hoàn thành đơn hàng, thu tiền bằng tiền mặt
+        public async Task ConfirmOrderComplete(HttpContext httpContext, string orderId, string? notes)
+        {
+            await _unitOfWork.BeginTransaction();
+
+            try
+            {
+                var statusDelivered = OrderStatusEnum.DELIVERED.ToString();
+
+                var userId = _util.GetCurrentUserIdOrThrow(httpContext);
+
+                var orderRepo = _unitOfWork.Repository<Order>();
+                var statusHistoryRepo = _unitOfWork.Repository<Orderstatushistory>();
+
+                //Lấy đơn hàng
+                var order = await orderRepo
+                    .GetAll()
+                    .FirstOrDefaultAsync(o => o.Orderid == orderId);
+
+                if (order == null)
+                    throw new KeyNotFoundException("Đơn hàng không tồn tại.");
+
+                //Cập nhật trạng thái đơn hàng
+                order.Currentstatus = statusDelivered;
+                await orderRepo.UpdateAsync(order, saveChanges: false);
+
+                //Ghi nhận lịch sử trạng thái
+                var history = new Orderstatushistory
+                {
+                    Statushistoryid = Guid.NewGuid(),
+                    Orderid = orderId,
+                    Status = statusDelivered,
+                    Statusdescription = "Người dùng đã nhận hàng tại cửa hàng.",
+                    Notes = notes,
+                    Updatedby = userId,
+                    Createdat = DateTime.UtcNow
+                };
+                await statusHistoryRepo.InsertAsync(history, saveChanges: false);
+
+                /************   GHI NHẬN THANH TOÁN TIỀN MẶT  ************/
+                var paymentRepo = _unitOfWork.Repository<Payment>();
+
+                // 2) Đã có payment cho đơn này chưa?
+                bool paymentExisted = paymentRepo.GetAll().Any(p => p.Orderid == orderId);
+
+                if (!paymentExisted)
+                {
+                    // 3) Lấy PaymentMethodId của “Cash”
+                    Guid cashMethodId = _unitOfWork.Repository<Paymentmethod>()
+                                                   .GetAll()
+                                                   .Where(pm => pm.Name.ToLower() == "cash")
+                                                   .Select(pm => pm.Paymentmethodid)
+                                                   .FirstOrDefault();
+
+                    if (cashMethodId == Guid.Empty)
+                        throw new ApplicationException("Không tìm thấy phương thức thanh toán 'Cash' trong bảng Paymentmethods.");
+
+                    // Lấy thêm phí shipping khi người dùng hủy giao hàng hoặc nhận hàng
+                    var noShow = await _orderService.CalculateFailShippingFeeAsync(orderId);
+                    var noShowFee = noShow.Total;
+
+                    // 4) Tạo bản ghi Payment
+                    var payment = new Payment
+                    {
+                        Paymentid = Guid.NewGuid(),
+                        Orderid = orderId,
+                        Paymentdate = DateTime.UtcNow,
+                        Amount = order.Totalprice.Value + noShowFee, // Tổng tiền + phí phát sinh nếu có
+                        Paymentmethodid = cashMethodId,
+                        Paymentstatus = "PAID",
+                        Createdat = DateTime.UtcNow,
+                        Collectedby = userId,
+                        Isreturnedtoadmin = false
+                    };
+
+                    await paymentRepo.InsertAsync(payment, saveChanges: false);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransaction();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransaction();
+                throw new ApplicationException("Error confirming order completion.", ex);
+            }
+
+            /* ===== Schedule job & lưu JobId (ngoài transaction) ===== */
+            var jobId = _jobService.ScheduleAutoComplete(orderId, DateTime.UtcNow);
+
+            await _unitOfWork.Repository<Order>()     // dùng Repo đã có extension
+                             .ExecuteUpdateAsync(
+                                 set => set.SetProperty(o => o.AutoCompleteJobId, jobId),
+                                 o => o.Orderid == orderId);
         }
     }
 }

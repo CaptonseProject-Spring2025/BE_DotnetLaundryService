@@ -749,5 +749,57 @@ namespace LaundryService.Api.Controllers
                 return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
             }
         }
+
+        /// <summary>
+        /// Customer-staff xác nhận đơn hàng đã hoàn tất và thu tiền mặt tại quầy.
+        /// </summary>
+        /// <param name="orderId">Mã đơn hàng cần xác nhận hoàn tất.</param>
+        /// <param name="notes">Ghi chú (tùy chọn).</param>
+        /// <remarks>
+        /// **Luồng xử lý**
+        /// 1. Service <c>ConfirmOrderComplete</c> sẽ:
+        ///    * cập nhật <c>Order.CurrentStatus = "DELIVERED"</c>,
+        ///    * ghi lịch sử trạng thái,
+        ///    * tạo bản ghi <c>Payment</c> (phương thức <i>Cash</i>),
+        ///    * cộng thêm phí no-show (nếu có).
+        ///
+        /// **Response codes**
+        /// * 200 – Xác nhận thành công.  
+        /// * 404 – Không tìm thấy đơn.  
+        /// * 400 – Lỗi logic (trạng thái không hợp lệ, v.v.).  
+        /// * 401 – Không có quyền.  
+        /// * 500 – Lỗi hệ thống.
+        /// </remarks>
+        [HttpPost("order/confirm-complete")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ConfirmOrderComplete([FromQuery] string orderId, [FromQuery] string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(orderId))
+                return BadRequest(new { Message = "orderId is required." });
+
+            try
+            {
+                // 1) Gọi Service xử lý nghiệp vụ
+                await _customerStaffService.ConfirmOrderComplete(HttpContext, orderId, notes);
+                return Ok(new { Message = "Đơn hàng đã được xác nhận hoàn thành." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = $"An unexpected error occurred: {ex.Message}" });
+            }
+        }
+
     }
 }
