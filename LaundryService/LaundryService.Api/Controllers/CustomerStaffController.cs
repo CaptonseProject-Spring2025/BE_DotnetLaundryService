@@ -597,7 +597,7 @@ namespace LaundryService.Api.Controllers
             {
                 var orderId = await _customerStaffService.CusStaffPlaceOrderAsync(HttpContext, userId, request);
 
-                return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: PENDING" });
+                return Ok(new { OrderId = orderId, Message = "Đặt hàng thành công! Trạng thái: ARRIVED" });
             }
             catch (KeyNotFoundException ex)
             {

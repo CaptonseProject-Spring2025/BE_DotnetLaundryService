@@ -837,18 +837,18 @@ namespace LaundryService.Service
                 order.Applicablefee = applicableFee;
                 order.Discount = discount;
                 order.Totalprice = finalTotal;
-                order.Currentstatus = "CHECKING";
+                order.Currentstatus = "ARRIVED";
                 order.Createdat = DateTime.UtcNow; //thay đổi ngày tạo thành ngày place order
 
                 // Update Order
                 await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
 
-                // 8) Tạo OrderStatusHistory: "CHECKING"
+                // 8) Tạo OrderStatusHistory: "ARRIVED"
                 var newStatusHistory = new Orderstatushistory
                 {
                     Orderid = order.Orderid,
-                    Status = "CHECKING",
-                    Statusdescription = "Đơn hàng đang được kiểm tra.",
+                    Status = "ARRIVED",
+                    Statusdescription = "Đơn hàng được tạo tại cửa hàng",
                     Notes = request.Note,
                     Updatedby = _util.GetCurrentUserIdOrThrow(httpContext),
                     Createdat = DateTime.UtcNow
