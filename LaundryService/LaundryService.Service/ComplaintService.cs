@@ -239,6 +239,7 @@ namespace LaundryService.Service
                     Orderid = orderId,
                     Status = OrderStatusEnum.COMPLAINT.ToString(),
                     Statusdescription = "Admin hoặc CustomerStaff tạo đơn khiếu nại",
+                    Notes = complaintDescription,
                     Updatedby = adminOrCustomerStaffId,
                     Createdat = DateTime.UtcNow
                 };

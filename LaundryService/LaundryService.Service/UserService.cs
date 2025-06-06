@@ -346,8 +346,8 @@ namespace LaundryService.Service
                 .GetAll()
                 .AsNoTracking()
                 .Where(a =>
-                    (a.Absentfrom <= now && a.Absentto >= now) ||
-                    (a.Absentfrom <= nowVn && a.Absentto >= nowVn));
+                    (_util.ConvertToVnTime(a.Absentfrom) <= now && _util.ConvertToVnTime(a.Absentto) >= now) ||
+                    (_util.ConvertToVnTime(a.Absentfrom) <= nowVn && _util.ConvertToVnTime(a.Absentto) >= nowVn));
 
             var openOrdersQuery = _unitOfWork.Repository<Orderassignmenthistory>()
                 .GetAll()
