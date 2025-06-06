@@ -452,7 +452,7 @@ namespace LaundryService.Service
                 if (string.IsNullOrEmpty(thankYouUrl))
                 {
                     // fallback
-                    thankYouUrl = "captonse-project-fe.vercel.app";
+                    thankYouUrl = "https://captonse-project-fe.vercel.app/list-orders-quality-checked";
                 }
 
                 // Tuỳ ý gắn param => "?paymentId=..."
