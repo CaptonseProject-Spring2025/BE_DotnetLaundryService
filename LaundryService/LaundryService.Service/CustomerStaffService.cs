@@ -390,13 +390,6 @@ namespace LaundryService.Service
                     throw new ApplicationException("Assignment chưa có AssignedAt nên không thể hủy xử lý.");
                 }
 
-                var elapsed = DateTime.UtcNow - assignment.Assignedat.Value;
-                if (elapsed > TimeSpan.FromMinutes(30))
-                {
-                    // Quá 30p => báo lỗi
-                    throw new ApplicationException("Quá thời gian xử lý đơn hàng. Không thể hủy.");
-                }
-
                 // 4) Cập nhật assignment => staff thoát xử lý
                 assignment.Status = "SUCCESS";  // Hoặc "DONE", tùy logic
                 assignment.Declinereason = note; // Lưu ghi chú/note
