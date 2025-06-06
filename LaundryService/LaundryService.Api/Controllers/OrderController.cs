@@ -383,7 +383,7 @@ namespace LaundryService.Api.Controllers
         /// - <c>401</c>: Token không hợp lệ hoặc không có quyền.
         /// - <c>500</c>: Lỗi hệ thống.
         /// </remarks>
-        [Authorize(Roles = "Admin,Staff")]
+        [Authorize(Roles = "Admin,Staff,CustomerStaff")]
         [HttpGet("all-orders")]
         [ProducesResponseType(typeof(PaginationResult<UserOrderResponse>), 200)]
         public async Task<IActionResult> GetAllOrders([FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)

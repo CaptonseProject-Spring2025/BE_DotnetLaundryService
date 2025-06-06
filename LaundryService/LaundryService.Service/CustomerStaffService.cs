@@ -459,7 +459,6 @@ namespace LaundryService.Service
                 if (serviceDetail == null)
                     throw new KeyNotFoundException("Service detail not found.");
 
-                // 2) Tìm Order INCART
                 var order = _unitOfWork.Repository<Order>().GetAll().FirstOrDefault(o => o.Orderid == orderId);
 
                 // 3) Kiểm tra ExtraIds
@@ -583,8 +582,8 @@ namespace LaundryService.Service
                 if (orderItem == null)
                     throw new KeyNotFoundException("Order item not found.");
 
-                if (orderItem.Order.Currentstatus != "PENDING")
-                    throw new ApplicationException("Cannot edit items in a non-PENDING order.");
+                if (orderItem.Order.Currentstatus != "PENDING" && orderItem.Order.Currentstatus != "CHECKING")
+                    throw new ApplicationException("Không thể edit item  khi order không ở trạng thái PENDING hoặc CHECKING.");
 
                 var order = orderItem.Order;
             
