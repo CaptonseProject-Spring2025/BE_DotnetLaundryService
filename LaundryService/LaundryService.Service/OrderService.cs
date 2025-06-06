@@ -1225,15 +1225,12 @@ namespace LaundryService.Service
                     .Distinct()
                     .ToList();
 
-                // Gộp thành 1 chuỗi, vd: "Giặt giày, Giặt sấy"
-                var orderName = string.Join(", ", categoryNames);
-
                 var rewardHistory = new Rewardhistory()
                 {
                     Rewardhistoryid = Guid.NewGuid(),
                     Userid = userId,
                     Orderid = orderId,
-                    Ordername = orderName,
+                    Ordername = string.Join(", ", categoryNames),
                     Points = points,
                     Datecreated = DateTime.UtcNow
                 };
