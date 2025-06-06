@@ -874,7 +874,7 @@ namespace LaundryService.Service
                 {
                     OrderId = order.Orderid,
                     OrderName = string.Join(", ", categoryNames),
-                    ServiceCount = order.Orderitems.Count,
+                    ServiceCount = order.Orderitems.Sum(oi => oi.Quantity),
                     TotalPrice = order.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
                     OrderStatus = order.Currentstatus,
