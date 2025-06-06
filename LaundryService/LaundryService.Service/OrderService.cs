@@ -799,17 +799,11 @@ namespace LaundryService.Service
                     .Distinct()
                     .ToList();
 
-                // Gộp thành 1 chuỗi, vd: "Giặt giày, Giặt sấy"
-                var orderName = string.Join(", ", categoryNames);
-
-                // Số lượng service = số dòng orderItem
-                var serviceCount = order.Orderitems.Count;
-
                 var item = new UserOrderResponse
                 {
                     OrderId = order.Orderid,
-                    OrderName = orderName,
-                    ServiceCount = serviceCount,
+                    OrderName = string.Join(", ", categoryNames),
+                    ServiceCount = order.Orderitems.Sum(oi => oi.Quantity),
                     TotalPrice = order.Totalprice,
                     OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
                     OrderStatus = order.Currentstatus,
@@ -922,7 +916,7 @@ namespace LaundryService.Service
             {
                 OrderId = order.Orderid,
                 OrderName = string.Join(", ", categoryNames),
-                ServiceCount = order.Orderitems.Count,
+                ServiceCount = order.Orderitems.Sum(oi => oi.Quantity),
                 TotalPrice = order.Totalprice,
                 OrderedDate = _util.ConvertToVnTime(order.Createdat ?? DateTime.UtcNow),
                 OrderStatus = order.Currentstatus,
