@@ -117,64 +117,65 @@ namespace LaundryService.Api.Controllers
             }
         }
 
-        /// <summary>
-        /// STEP 3: Staff cập nhật ảnh + ghi chú cho đơn đang CHECKING (mà staff này phụ trách).
-        /// </summary>
-        /// <param name="orderId">Mã đơn hàng</param>
-        /// <param name="notes">Ghi chú (optional)</param>
-        /// <param name="files">Danh sách ảnh (optional)</param>
-        /// <remarks>
-        /// **Logic**:
-        /// 1) Xác thực staff là người đã cập nhật đơn sang "CHECKING"
-        /// 2) Nếu có notes => update notes cho record Orderstatushistory.
-        /// 3) Nếu có files => upload => ghi vào Orderphoto.
-        /// 
-        ///  **Request Body**: Phải là `multipart/form-data`.
-        /// - `OrderId`: string (bắt buộc)
-        /// - `Notes`: string (tùy chọn)
-        /// - `Files`: list các file ảnh (tùy chọn)
-        /// 
-        /// **Response Codes**:
-        /// - `200 OK`: Cập nhật thành công.
-        /// - `400 Bad Request`: Dữ liệu không hợp lệ, Order không đúng trạng thái.
-        /// - `401 Unauthorized`: Staff không có quyền cập nhật đơn này.
-        /// - `404 Not Found`: Không tìm thấy Order.
-        /// - `500 Internal Server Error`: Lỗi upload file hoặc lỗi hệ thống khác.
-        /// </remarks>
-        [HttpPost("orders/checking/update")]
-        [ProducesResponseType(typeof(CheckingOrderUpdateResponse), StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateCheckingOrder(
-            [FromForm] string orderId,
-            [FromForm] string? notes,
-            [FromForm] IFormFileCollection? files
-        )
-        {
-            try
-            {
-                // Gọi service => ném exception nếu không hợp lệ
-                var result = await _staffService.UpdateCheckingOrderAsync(HttpContext, orderId, notes, files);
-                return Ok(result); // CheckingOrderUpdateResponse
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { Message = ex.Message });
-            }
-            catch (ApplicationException ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Log...
-                return StatusCode(500, new { Message = $"An error occurred: {ex.Message}" });
-            }
-        }
+        /////// <summary>
+        /////// STEP 3: Staff cập nhật ảnh + ghi chú cho đơn đang CHECKING (mà staff này phụ trách).
+        /////// </summary>
+        /////// <param name="orderId">Mã đơn hàng</param>
+        /////// <param name="notes">Ghi chú (optional)</param>
+        /////// <param name="files">Danh sách ảnh (optional)</param>
+        /////// <remarks>
+        /////// **Logic**:
+        /////// 1) Xác thực staff là người đã cập nhật đơn sang "CHECKING"
+        /////// 2) Nếu có notes => update notes cho record Orderstatushistory.
+        /////// 3) Nếu có files => upload => ghi vào Orderphoto.
+        /////// 
+        ///////  **Request Body**: Phải là `multipart/form-data`.
+        /////// - `OrderId`: string (bắt buộc)
+        /////// - `Notes`: string (tùy chọn)
+        /////// - `Files`: list các file ảnh (tùy chọn)
+        /////// 
+        /////// **Response Codes**:
+        /////// - `200 OK`: Cập nhật thành công.
+        /////// - `400 Bad Request`: Dữ liệu không hợp lệ, Order không đúng trạng thái.
+        /////// - `401 Unauthorized`: Staff không có quyền cập nhật đơn này.
+        /////// - `404 Not Found`: Không tìm thấy Order.
+        /////// - `500 Internal Server Error`: Lỗi upload file hoặc lỗi hệ thống khác.
+        /////// </remarks>
+        ////[HttpPost("orders/checking/update")]
+        ////[ProducesResponseType(typeof(CheckingOrderUpdateResponse), StatusCodes.Status200OK)]
+        ////public async Task<IActionResult> UpdateCheckingOrder(
+        ////    [FromForm] string orderId,
+        ////    [FromForm] string? notes,
+        ////    [FromForm] IFormFileCollection? files
+        ////)
+        ////{
+        ////    try
+        ////    {
+        ////        // Gọi service => ném exception nếu không hợp lệ
+        ////        var result = await _staffService.UpdateCheckingOrderAsync(HttpContext, orderId, notes, files);
+        ////        return Ok(result); // CheckingOrderUpdateResponse
+        ////    }
+        ////    catch (KeyNotFoundException ex)
+        ////    {
+        ////        return NotFound(new { Message = ex.Message });
+        ////    }
+        ////    catch (ApplicationException ex)
+        ////    {
+        ////        return BadRequest(new { Message = ex.Message });
+        ////    }
+        ////    catch (Exception ex)
+        ////    {
+        ////        // Log...
+        ////        return StatusCode(500, new { Message = $"An error occurred: {ex.Message}" });
+        ////    }
+        ////}
 
         /// <summary>
         /// STEP 4: Staff xác nhận đơn hàng CHECKING => CHECKED, sau khi kiểm tra xong.
         /// </summary>
         /// <param name="orderId">Mã đơn hàng (bắt buộc)</param>
-        /// <param name="notes">Ghi chú (tùy chọn)</param>
+        /// <param name="notes">Ghi chú (bắt buộc)</param>
+        /// <param name="files">Danh sách file ảnh (bắt buộc)</param>
         /// <remarks>
         /// **Logic**:
         /// 1) Kiểm tra order có status = CHECKING
@@ -187,11 +188,11 @@ namespace LaundryService.Api.Controllers
         /// <response code="404">Không tìm thấy Order</response>
         /// <response code="500">Lỗi server</response>
         [HttpPost("orders/checking/confirm")]
-        public async Task<IActionResult> ConfirmCheckingDone([FromQuery] string orderId, [FromQuery] string? notes)
+        public async Task<IActionResult> ConfirmCheckingDone([FromQuery] string orderId, [FromQuery] string notes, [FromForm] IFormFileCollection files)
         {
             try
             {
-                await _staffService.ConfirmCheckingDoneAsync(HttpContext, orderId, notes ?? "");
+                await _staffService.ConfirmCheckingDoneAsync(HttpContext, orderId, notes, files);
                 return Ok(new { Message = "Đơn hàng đã được xác nhận CHECKED thành công." });
             }
             catch (KeyNotFoundException ex)
