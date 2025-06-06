@@ -334,7 +334,7 @@ namespace LaundryService.Service
 
         public async Task<List<DriverResponse>> GetAvailableDriversAsync()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.UtcNow.AddHours(7);
             //var nowVn = now.AddHours(7);
 
             var baseDriversQuery = _unitOfWork.Repository<User>()
