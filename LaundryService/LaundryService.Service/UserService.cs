@@ -335,7 +335,7 @@ namespace LaundryService.Service
         public async Task<List<DriverResponse>> GetAvailableDriversAsync()
         {
             var now = DateTime.UtcNow;
-            var nowVn = now.AddHours(7);
+            //var nowVn = now.AddHours(7);
 
             var baseDriversQuery = _unitOfWork.Repository<User>()
                 .GetAll()
@@ -346,8 +346,7 @@ namespace LaundryService.Service
                 .GetAll()
                 .AsNoTracking()
                 .Where(a =>
-                    (_util.ConvertToVnTime(a.Absentfrom) <= now && _util.ConvertToVnTime(a.Absentto) >= now) ||
-                    (_util.ConvertToVnTime(a.Absentfrom) <= nowVn && _util.ConvertToVnTime(a.Absentto) >= nowVn));
+                    (a.Absentfrom <= now && a.Absentto >= now));
 
             var openOrdersQuery = _unitOfWork.Repository<Orderassignmenthistory>()
                 .GetAll()
