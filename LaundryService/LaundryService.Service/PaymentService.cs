@@ -587,18 +587,6 @@ namespace LaundryService.Service
 
                 await paymentRepo.UpdateAsync(payment, saveChanges: false);
 
-                // Cập nhật Order status
-                var order = await _unitOfWork.Repository<Order>()
-                    .GetAll()
-                    .FirstOrDefaultAsync(o => o.Orderid == payment.Orderid);
-
-                if (order != null)
-                {
-                    order.Currentstatus = OrderStatusEnum.DELIVERED.ToString(); // Cập nhật trạng thái đơn hàng
-
-                    await _unitOfWork.Repository<Order>().UpdateAsync(order, saveChanges: false);
-                }
-
                 // 4.3) Lưu + commit
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransaction();
