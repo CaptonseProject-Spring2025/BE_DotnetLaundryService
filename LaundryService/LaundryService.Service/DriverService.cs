@@ -933,7 +933,7 @@ namespace LaundryService.Service
                 CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
                 AssignmentStatus = a.Status!,
-                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                PaymentName = a.Status == AssignStatusEnum.DELIVERY_SUCCESS.ToString()
                                      ? a.Order.Payments
                                            .OrderByDescending(p => p.Paymentdate)
                                            .FirstOrDefault()?
@@ -960,7 +960,7 @@ namespace LaundryService.Service
                 CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
                 AssignmentStatus = a.Status!,
-                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                PaymentName = a.Status == AssignStatusEnum.DELIVERY_SUCCESS.ToString()
                                      ? a.Order.Payments
                                            .OrderByDescending(p => p.Paymentdate)
                                            .FirstOrDefault()?
@@ -988,7 +988,7 @@ namespace LaundryService.Service
                 CompletedAt = DateTime.SpecifyKind(a.Completedat!.Value, DateTimeKind.Utc),
                 TotalPrice = a.Order.Totalprice ?? 0m,
                 AssignmentStatus = a.Status!,
-                PaymentName = a.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
+                PaymentName = a.Status == AssignStatusEnum.DELIVERY_SUCCESS.ToString()
                                      ? a.Order.Payments
                                            .OrderByDescending(p => p.Paymentdate)
                                            .FirstOrDefault()?
