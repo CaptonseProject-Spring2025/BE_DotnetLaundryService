@@ -48,15 +48,7 @@ namespace LaundryService.Service
                 .Include(o => o.Orderitems)
                     .ThenInclude(oi => oi.Service)
                 .Include(o => o.Orderassignmenthistories)
-                .Where(o =>
-                    o.Currentstatus == OrderStatusEnum.ARRIVED.ToString()
-                    && o.Orderassignmenthistories.Any(ah =>
-                           ah.Status == AssignStatusEnum.PICKUP_SUCCESS.ToString()
-                       // Bạn có thể kiểm tra "mới nhất" = so sánh ah.Completedat == max ...
-                       // .OrderByDescending(ah => ah.Completedat).FirstOrDefault() 
-                       // Tùy logic, ở đây chỉ cần "có" 1 record PICKUP_SUCCESS
-                       )
-                );
+                .Where(o => o.Currentstatus == OrderStatusEnum.ARRIVED.ToString());
 
             // (3) Lấy dữ liệu, sắp xếp:
             //     - Emergency desc (true trước)
