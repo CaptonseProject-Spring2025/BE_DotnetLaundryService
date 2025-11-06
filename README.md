@@ -1,10 +1,11 @@
 # Laundry Service Application - Ecolaundry
-Capstone project - Building Laundry Service Application for Green Shine Trading Service Company Limited
+### Capstone project - Building Laundry Service Application for Green Shine Trading Service Company Limited
+
 [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)]()
 [![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-success)]()
 
-## Overview
+## 1. Overview
 
 **Project Title:** Building Laundry Service Application for Green Shine Trading Service Company Limited  
 
@@ -19,7 +20,7 @@ By digitizing the full service lifecycle, Green Shine aims to improve operationa
 - **Web App** for Admin, Laundry Staff, and Customer Service operations.  
 - **Backend Web API** providing secure, role-based services, data management, and integrations (authentication, payments, notifications, maps).
 
-## Tech Stack
+## 2. Tech Stack
 - **Backend:** ASP.NET Core 8.0, C#, Entity Framework Core  
 - **Database:** PostgreSQL
 - **Storage:** Backblaze B2 (S3-compatible)  
@@ -28,7 +29,7 @@ By digitizing the full service lifecycle, Green Shine aims to improve operationa
 - **DevOps:** Docker, Nginx, GitHub Actions CI/CD  
 
 
-## ⚙️ Functional Requirements
+## 3. Functional Requirements
 
 ### **1. Administrator**
 - **Account Management:** Create/edit/delete/ban accounts; role/permission control.
@@ -66,7 +67,7 @@ By digitizing the full service lifecycle, Green Shine aims to improve operationa
 - **Manage Complaint:** View complaints,  handle customer complaints
 - **Manage Order :** View order, Update order
 
-## Features
+## 4. Features
 - RESTful APIs for full order lifecycle (create, update, payment, quality check)
 - Role-based JWT Authentication
 - PayOS QR & bank-transfer payment integration
@@ -75,9 +76,9 @@ By digitizing the full service lifecycle, Green Shine aims to improve operationa
 - Dockerized deployment with Nginx reverse proxy
 - GitHub Actions CI/CD pipeline
 
-## Deployment
+## 5. Deployment
 The backend is containerized using Docker and deployed to a VPS behind Nginx reverse proxy.  
 GitHub Actions automates build, test, and deployment with zero-downtime rolling updates.
 
-## API Documentation
+## 6. API Documentation
 Swagger UI available at:
